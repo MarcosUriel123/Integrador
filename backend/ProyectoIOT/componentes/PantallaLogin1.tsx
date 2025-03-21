@@ -6,20 +6,18 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define la interfaz para la respuesta del login
+// Definir la interfaz para la respuesta del servidor
 interface LoginResponse {
-    _id: string;
-    name?: string;
-    email: string;
-    token: string;
-    [key: string]: any; // Para cualquier otra propiedad que pueda tener
+    token: string; // El token JWT
+    name: string;  // El nombre del usuario
+    [key: string]: any; // Para cualquier otra propiedad
 }
 
 export default function PantallaLogin() {
@@ -30,28 +28,26 @@ export default function PantallaLogin() {
 
     const handleLogin = async () => {
         try {
+            // Especificar el tipo de respuesta esperada (LoginResponse)
             const response = await axios.post<LoginResponse>('http://localhost:8082/api/users/login', {
                 email,
                 password,
             });
-            
-            if (response.status === 200) {
-                // Guardar el token en AsyncStorage
-                if (response.data && response.data.token) {
-                    await AsyncStorage.setItem('userToken', response.data.token);
-                    console.log('Token guardado:', response.data.token);
-                } else {
-                    console.error('No se recibió un token del servidor');
-                }
 
-                // Redirige a la pantalla principal usando expo-router
+            if (response.status === 200) {
+                // Guardar el token y el nombre del usuario en AsyncStorage
+                await AsyncStorage.setItem('userToken', response.data.token);
+                await AsyncStorage.setItem('userName', response.data.name);
+
+                console.log('Token y nombre guardados:', response.data.token, response.data.name);
+
+                // Redirigir a la pantalla principal
                 router.push('/Principal');
             }
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             setErrorMessage("Credenciales inválidas");
         }
-
     };
 
     return (
@@ -82,14 +78,14 @@ export default function PantallaLogin() {
                             onChangeText={setPassword}
                         />
                         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                            <Text style={styles.buttonText}>Iniciar Sesión</Text>
+                        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => router.push('/registro1')}>
-                            <Text>¿No tienes cuenta? Regístrate aquí</Text>
+                            <Text style={styles.forgotPasswordText}>¿No tienes cuenta? Regístrate aquí</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => router.push('/recovery')}>
-                            <Text>¿Olvidaste tu contraseña?</Text>
+                            <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -101,69 +97,83 @@ export default function PantallaLogin() {
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#CFE2FF',
     },
     scrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
-        alignItems: 'center',
     },
     cardContainer: {
-        width: '90%',
-        backgroundColor: '#fff',
-        borderRadius: 10,
+        marginHorizontal: 20,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 15,
         padding: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 6,
     },
     topBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
         marginBottom: 20,
+        paddingBottom: 10,
     },
     logo: {
         fontSize: 24,
         fontWeight: 'bold',
+        color: '#1E1E1E',
     },
     contentContainer: {
         alignItems: 'center',
     },
     icon: {
-        marginBottom: 20,
+        marginBottom: 10,
     },
     title: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
         marginBottom: 20,
+        color: '#1E1E1E',
     },
     label: {
-        alignSelf: 'flex-start',
+        width: '100%',
         fontSize: 16,
+        marginTop: 10,
         marginBottom: 5,
+        color: '#1E1E1E',
     },
     input: {
         width: '100%',
         height: 40,
-        borderColor: '#ccc',
-        borderWidth: 1,
-        borderRadius: 5,
-        marginBottom: 15,
+        backgroundColor: '#F9F9F9',
+        borderRadius: 10,
+        fontSize: 16,
         paddingHorizontal: 10,
+        marginBottom: 15,
     },
-    button: {
+    loginButton: {
         width: '100%',
-        height: 50,
-        backgroundColor: '#007bff',
-        borderRadius: 5,
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: '#1E1E1E',
+        borderRadius: 10,
+        paddingVertical: 12,
+        marginTop: 10,
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
+    loginButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    forgotPasswordText: {
+        fontSize: 14,
+        color: '#007BFF',
+        marginTop: 20,
+        textDecorationLine: 'underline',
     },
     error: {
         color: 'red',
