@@ -1,16 +1,22 @@
+import dotenv from 'dotenv';
+dotenv.config(); // Agregar esto al principio
+ 
 import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db';
 import fingerprintRoutes from './routes/fingerprintRoutes';
 import passwordRoutes from './routes/passwordRoutes';
 import userRoutes from './routes/userRoutes';
-import huellaRoutes from './routes/huellaRoutes';
+import huellaRoutes from './routes/huellaRoutes'; 
 import doorRoutes from './routes/doorRoutes';  
 import productRoutes from './routes/productRoutes'; // Import product routes
 import empresaRoutes from './routes/empresaRoutes';
 import deviceRoutes from './routes/deviceRoutes';  // Importamos las rutas del dispositivo
 import registroRoutes from './routes/registroRoutes';
 import loginRoutes from './routes/loginRoutes'
+
+
+// import './ProyectoIOT/src/express/index.d.ts'; // Asegúrate de que la ruta sea correcta
 
 const app = express();
 const PORT = process.env.PORT || 8082;

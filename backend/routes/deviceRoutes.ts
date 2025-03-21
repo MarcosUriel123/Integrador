@@ -1,12 +1,16 @@
-import { Router } from 'express';
+import express from 'express';
 import { registerDevice, getDevices } from '../controllers/deviceController';
+import { protect } from '../middlewares/authMiddleware';
 
-const router = Router();
+const router = express.Router();
 
-// POST /api/devices/register - Registrar dispositivo
-router.post('/register', registerDevice);
+// Protege todas las rutas con el middleware de autenticación
+router.use(protect);
 
-// GET /api/devices - Obtener lista de dispositivos
-router.get('/', getDevices);
+// Ruta para registrar un dispositivo
+router.post('/register', registerDevice as express.RequestHandler);
+
+// Ruta para obtener los dispositivos del usuario
+router.get('/', getDevices as express.RequestHandler);
 
 export default router;

@@ -71,6 +71,7 @@ export default function PantallaPrincipal() {
                                 <TouchableOpacity style={styles.closeButton} onPress={() => setMenuVisible(false)}>
                                     <Text style={styles.closeButtonText}>Cerrar</Text>
                                 </TouchableOpacity>
+
                             </View>
                         </View>
                     </Modal>

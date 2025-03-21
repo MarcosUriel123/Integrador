@@ -6,29 +6,56 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
+    Alert
 } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PantallaRegistroDispositivo() {
     const [macAddress, setMacAddress] = useState('');
     const [name, setName] = useState('');
     const [location, setLocation] = useState('');
     const [message, setMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleRegisterDevice = async () => {
+        // Validaciones básicas
+        if (!macAddress || !name || !location) {
+            setMessage('Todos los campos son requeridos');
+            return;
+        }
+
+        setIsLoading(true);
         try {
-            const response = await axios.post('http://192.168.8.6:8082/api/devices/register', { //(IPCONFIG)
-                macAddress,
-                name,
-                location
-            });
+            // Obtener el token de autenticación de AsyncStorage
+            const token = await AsyncStorage.getItem('userToken');
+
+            if (!token) {
+                setMessage('No se encontró el token de autenticación. Por favor inicie sesión.');
+                setIsLoading(false);
+                return;
+            }
+
+            // Realizar la solicitud al backend
+            const response = await axios.post(
+                'http://localhost:8082/api/devices/register',
+                { macAddress, name, location },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
             if (response.status === 201) {
                 setMessage('Dispositivo registrado con éxito');
+                // Limpiar los campos
+                setMacAddress('');
+                setName('');
+                setLocation('');
             }
         } catch (error) {
+            console.error('Error registrando dispositivo:', error);
             setMessage('Error al registrar el dispositivo');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -63,11 +90,23 @@ export default function PantallaRegistroDispositivo() {
                         onChangeText={setLocation}
                     />
 
-                    <TouchableOpacity style={styles.button} onPress={handleRegisterDevice}>
-                        <Text style={styles.buttonText}>Registrar</Text>
+                    <TouchableOpacity
+                        style={[styles.button, isLoading && styles.buttonDisabled]}
+                        onPress={handleRegisterDevice}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.buttonText}>
+                            {isLoading ? 'Registrando...' : 'Registrar'}
+                        </Text>
                     </TouchableOpacity>
 
-                    {message ? <Text style={styles.message}>{message}</Text> : null}
+                    {message ? (
+                        <Text style={[styles.message,
+                        message.includes('éxito') ? styles.successMessage : styles.errorMessage
+                        ]}>
+                            {message}
+                        </Text>
+                    ) : null}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -83,13 +122,18 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 20,
     },
     cardContainer: {
-        width: '90%',
+        width: '100%',
         backgroundColor: '#fff',
         borderRadius: 10,
         padding: 20,
         elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
     },
     title: {
         fontSize: 24,
@@ -103,12 +147,12 @@ const styles = StyleSheet.create({
     },
     input: {
         width: '100%',
-        height: 40,
+        height: 45,
         borderColor: '#ccc',
         borderWidth: 1,
         borderRadius: 5,
         marginBottom: 15,
-        paddingHorizontal: 10,
+        paddingHorizontal: 15,
     },
     button: {
         width: '100%',
@@ -117,6 +161,10 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 10,
+    },
+    buttonDisabled: {
+        backgroundColor: '#cccccc',
     },
     buttonText: {
         color: '#fff',
@@ -124,9 +172,18 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     message: {
-        marginTop: 10,
+        marginTop: 15,
         fontSize: 16,
         textAlign: 'center',
-        color: 'green',
+        padding: 10,
+        borderRadius: 5,
+    },
+    successMessage: {
+        backgroundColor: '#d4edda',
+        color: '#155724',
+    },
+    errorMessage: {
+        backgroundColor: '#f8d7da',
+        color: '#721c24',
     },
 });

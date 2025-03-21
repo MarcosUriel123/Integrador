@@ -1,30 +1,48 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-const DeviceSchema = new mongoose.Schema({
+export interface IDevice extends Document {
+    userId: mongoose.Types.ObjectId;
+    macAddress: string;
+    name: string;
+    location: string;
+    isOnline?: boolean;
+    lastConnection?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const DeviceSchema: Schema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     macAddress: {
         type: String,
         required: true,
-        unique: true,  // Evita que haya dispositivos duplicados con la misma MAC
+        unique: true,
         trim: true
     },
     name: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
     location: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
+    isOnline: {
+        type: Boolean,
+        default: false
     },
-    createdAt: {
+    lastConnection: {
         type: Date,
-        default: Date.now
+        default: null
     }
+}, {
+    timestamps: true
 });
 
-const Device = mongoose.model('Device', DeviceSchema);
-export default Device;
+export default mongoose.model<IDevice>('Device', DeviceSchema);

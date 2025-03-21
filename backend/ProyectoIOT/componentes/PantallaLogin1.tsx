@@ -8,9 +8,19 @@ import {
     TouchableOpacity,
     StyleSheet
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+
+// Define la interfaz para la respuesta del login
+interface LoginResponse {
+    _id: string;
+    name?: string;
+    email: string;
+    token: string;
+    [key: string]: any; // Para cualquier otra propiedad que pueda tener
+}
 
 export default function PantallaLogin() {
     const router = useRouter();
@@ -20,18 +30,28 @@ export default function PantallaLogin() {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post('http://localhost:8082/api/users/login', {
+            const response = await axios.post<LoginResponse>('http://localhost:8082/api/users/login', {
                 email,
                 password,
             });
+            
             if (response.status === 200) {
+                // Guardar el token en AsyncStorage
+                if (response.data && response.data.token) {
+                    await AsyncStorage.setItem('userToken', response.data.token);
+                    console.log('Token guardado:', response.data.token);
+                } else {
+                    console.error('No se recibió un token del servidor');
+                }
+
                 // Redirige a la pantalla principal usando expo-router
-                router.push('/PantallaPrincipal');
+                router.push('/Principal');
             }
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             setErrorMessage("Credenciales inválidas");
         }
+
     };
 
     return (
