@@ -25,7 +25,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <PantallaLogin onLogin={handleLoginSuccess} />
+                <PantallaLogin />
             )}
         </View>
     );

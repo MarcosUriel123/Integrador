@@ -85,6 +85,12 @@ export default function PantallaLogin() {
                         <TouchableOpacity style={styles.button} onPress={handleLogin}>
                             <Text style={styles.buttonText}>Iniciar Sesión</Text>
                         </TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/registro1')}>
+                            <Text>¿No tienes cuenta? Regístrate aquí</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/recovery')}>
+                            <Text>¿Olvidaste tu contraseña?</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>

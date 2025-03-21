@@ -10,22 +10,29 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
+import { push } from 'expo-router/build/global-state/routing';
 
-type Props = {
-    onNext: () => void;
+interface PantallaRegistro1Props {
+    onNext: (email: string, password: string) => void;
+    isLoading?: boolean;
 };
 
-export default function PantallaRegistro1({ onNext }: Props) {
+export default function PantallaRegistro1({ onNext, isLoading = false }: PantallaRegistro1Props) {
     const [name, setName] = useState('');
     const [lastName, setLastName] = useState('');
     const [surname, setSurname] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [message, setMessage] = useState('');
+    const [isRegistering, setIsRegistering] = useState(false); // Añadir este estado
 
-    const handleNext = async () => {
+
+    // Cambiar nombre de handleNext a handleRegister para que coincida con el botón
+    const handleRegister = async () => {
         try {
-            const response = await axios.post('http://192.168.8.6:8082/api/users/register', { //(IPCONFIG)
+            setIsRegistering(true); // Establecer estado de registro
+            const response = await axios.post('http://localhost:8082/api/users/register', { //(IPCONFIG)
                 name,
                 lastName,
                 surname,
@@ -34,10 +41,15 @@ export default function PantallaRegistro1({ onNext }: Props) {
                 password,
             });
             if (response.status === 201) {
-                onNext();
+                setMessage('Registro exitoso!');
+                // En lugar de redireccionar aquí, pasamos el email y password al padre
+                onNext(email, password);
             }
         } catch (error) {
             console.error('Error al registrar el usuario:', error);
+            setMessage('Error al registrar usuario');
+        } finally {
+            setIsRegistering(false);
         }
     };
 
@@ -94,9 +106,16 @@ export default function PantallaRegistro1({ onNext }: Props) {
                             value={password}
                             onChangeText={setPassword}
                         />
-                        <TouchableOpacity style={styles.button} onPress={handleNext}>
-                            <Text style={styles.buttonText}>Registrarse</Text>
+                        <TouchableOpacity
+                            style={[styles.button, (isRegistering || isLoading) && styles.buttonDisabled]}
+                            onPress={handleRegister}
+                            disabled={isRegistering || isLoading}
+                        >
+                            <Text style={styles.buttonText}>
+                                {isRegistering ? 'Registrando...' : isLoading ? 'Iniciando sesión...' : 'Registrarse'}
+                            </Text>
                         </TouchableOpacity>
+                        
                     </View>
                 </View>
             </ScrollView>
@@ -171,4 +190,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
     },
+    buttonDisabled: {
+        backgroundColor: '#ccc',
+    },
 });
+
+function setIsRegistering(arg0: boolean) {
+    throw new Error('Function not implemented.');
+}
