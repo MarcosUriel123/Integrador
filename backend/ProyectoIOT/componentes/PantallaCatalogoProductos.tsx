@@ -14,14 +14,14 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Entypo } from '@expo/vector-icons';
 
-interface Product {
+type Product = {
     _id: string;
     name: string;
     description: string;
     price: number;
     category: string;
-    image: string; // Asegúrate de que este campo esté presente
-}
+    image: string;
+};
 
 export default function PantallaCatalogoProductos() {
     const router = useRouter();
@@ -32,7 +32,7 @@ export default function PantallaCatalogoProductos() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await axios.get('http://192.168.8.6:8082/api/products/get'); //(IPCONFIG)
+                const response = await axios.get('http://192.168.8.9:8082/api/products/get');
                 if (response.status === 200) {
                     setProducts(response.data as Product[]);
                 }
@@ -46,16 +46,26 @@ export default function PantallaCatalogoProductos() {
         fetchProducts();
     }, []);
 
+    const handleProductPress = (product: Product) => {
+        // Navegar a la pantalla de detalles y pasar los datos del producto
+        router.push({
+            pathname: '/productoDetail',
+            params: { product: JSON.stringify(product) }, // Pasar el producto como string
+        });
+    };
+
     const renderProductItem = ({ item }: { item: Product }) => (
-        <View style={styles.productCard}>
-            <Image source={{ uri: item.image }} style={styles.productImage} />
-            <Text style={styles.productName}>{item.name}</Text>
-            <Text style={styles.productDescription}>{item.description}</Text>
-            <View style={styles.detailsContainer}>
-                <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
-                <Text style={styles.categoryText}>{item.category}</Text>
+        <TouchableOpacity onPress={() => handleProductPress(item)}>
+            <View style={styles.productCard}>
+                <Image source={{ uri: item.image }} style={styles.productImage} />
+                <Text style={styles.productName}>{item.name}</Text>
+                <Text style={styles.productDescription}>{item.description}</Text>
+                <View style={styles.detailsContainer}>
+                    <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
+                    <Text style={styles.categoryText}>{item.category}</Text>
+                </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     if (loading) {
@@ -78,7 +88,6 @@ export default function PantallaCatalogoProductos() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    {/* Header idéntico a PantallaPrincipal */}
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
                         <View style={styles.nav}>
@@ -106,7 +115,6 @@ export default function PantallaCatalogoProductos() {
                         </View>
                     </View>
 
-                    {/* Contenido principal del catálogo */}
                     <Text style={styles.title}>Catálogo de Productos</Text>
                     <FlatList
                         data={products}
@@ -116,7 +124,6 @@ export default function PantallaCatalogoProductos() {
                         contentContainerStyle={styles.listContent}
                     />
 
-                    {/* Footer idéntico a PantallaPrincipal */}
                     <View style={styles.footer}>
                         <View style={styles.footerLeft}>
                             <TouchableOpacity onPress={() => console.log('Términos y condiciones')}>
@@ -290,6 +297,6 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     socialIcon: {
-        marginRight: 15,
-    },
+        marginRight: 15,
+    },
 });

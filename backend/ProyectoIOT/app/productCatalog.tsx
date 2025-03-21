@@ -1,60 +1,78 @@
-// app/productCatalog.tsx
 import React from 'react';
 import { SafeAreaView, ScrollView, View, FlatList, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 // Suponiendo que tienes un ProductCard en ../components/ProductCard
-// y un array de productos en ../navigation/products
 import ProductCard from '@/componentes/ProductCard ';
-import { products } from '@/app/navigation/AppNavigator'; 
+
+// Datos de ejemplo (puedes reemplazarlos con los datos de tu API)
+const products = [
+    {
+        _id: '67d48bbd20a3a3c81ac8d741',
+        name: 'Cerveza',
+        description: 'Fría',
+        price: 40,
+        category: 'Bebidas',
+        image: 'https://blog.homedepot.com.mx/wp-content/uploads/2022/08/CerradurasInt…',
+    },
+    {
+        _id: '67d48bbd20a3a3c81ac8d742',
+        name: 'Pizza',
+        description: 'Con queso',
+        price: 120,
+        category: 'Comida',
+        image: 'https://example.com/pizza.jpg',
+    },
+];
 
 export default function ProductCatalogScreen() {
     const router = useRouter();
 
     // Función para manejar el clic en un producto
-    const handleProductPress = (productId: string) => {
-        // Navegamos a la ruta de detalle del producto
-        // Por ejemplo: /productDetail?productId=XXX
-        router.push(`/productoDetail?productId=${productId}` as any);
+    const handleProductPress = (product: any) => {
+        // Navegamos a la ruta de detalle del producto y pasamos los datos del producto
+        router.push({
+            pathname: '/productoDetail',
+            params: { product: JSON.stringify(product) },
+        });
     };
 
     return (
         <SafeAreaView style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-            {/* Tarjeta blanca */}
-            <View style={styles.cardContainer}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                {/* Tarjeta blanca */}
+                <View style={styles.cardContainer}>
+                    {/* Barra Superior */}
+                    <View style={styles.topBar}>
+                        <Text style={styles.logo}>Segurix</Text>
+                    </View>
 
-            {/* Barra Superior */}
-            <View style={styles.topBar}>
-                <Text style={styles.logo}>Segurix</Text>
-            </View>
+                    {/* Contenido principal */}
+                    <View style={styles.contentContainer}>
+                        <Feather name="shopping-cart" size={60} color="black" style={styles.icon} />
+                        <Text style={styles.title}>Catálogo de Productos</Text>
 
-            {/* Contenido principal */}
-            <View style={styles.contentContainer}>
-                <Feather name="shopping-cart" size={60} color="black" style={styles.icon} />
-                <Text style={styles.title}>Catálogo de Productos</Text>
-
-                <FlatList
-                data={products}
-                keyExtractor={(item) => item.id}
-                style={styles.list}
-                renderItem={({ item }) => (
-                    <ProductCard
-                    product={item}
-                    onPress={() => handleProductPress(item.id)}
-                    />
-                )}
-                />
-            </View>
-
-            </View>
-        </ScrollView>
+                        {/* Lista de productos */}
+                        <FlatList
+                            data={products}
+                            keyExtractor={(item) => item._id}
+                            style={styles.list}
+                            renderItem={({ item }) => (
+                                <ProductCard
+                                    product={item}
+                                    onPress={() => handleProductPress(item)}
+                                />
+                            )}
+                        />
+                    </View>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
-    }
+}
 
-    const styles = StyleSheet.create({
+const styles = StyleSheet.create({
     // Fondo azul, igual que en tus otras pantallas
     screen: {
         flex: 1,
