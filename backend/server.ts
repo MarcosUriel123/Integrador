@@ -14,6 +14,7 @@ import empresaRoutes from './routes/empresaRoutes';
 import deviceRoutes from './routes/deviceRoutes';  // Importamos las rutas del dispositivo
 import registroRoutes from './routes/registroRoutes';
 import loginRoutes from './routes/loginRoutes'
+import subUserRoutes from './routes/subUserRoutes'; // Importamos las rutas de subusuarios
 
 
 // import './ProyectoIOT/src/express/index.d.ts'; // Asegúrate de que la ruta sea correcta
@@ -59,6 +60,7 @@ app.use('/api', empresaRoutes); // Rutas para el control de los datos de la empr
 app.use('/api/devices', deviceRoutes); // Ruta para los dispositivos IoT
 app.use('/api/registros', registroRoutes);
 app.use('/api/users', loginRoutes);
+app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
 
 // Iniciar servidor
 app.listen(PORT, () => {
