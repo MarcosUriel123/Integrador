@@ -3,7 +3,9 @@ dotenv.config(); // Agregar esto al principio
  
 import express from 'express';
 import cors from 'cors';
+
 import connectDB from './config/db';
+
 import fingerprintRoutes from './routes/fingerprintRoutes';
 import passwordRoutes from './routes/passwordRoutes';
 import userRoutes from './routes/userRoutes';
@@ -15,6 +17,7 @@ import deviceRoutes from './routes/deviceRoutes';  // Importamos las rutas del d
 import registroRoutes from './routes/registroRoutes';
 import loginRoutes from './routes/loginRoutes'
 import subUserRoutes from './routes/subUserRoutes'; // Importamos las rutas de subusuarios
+import secretQuestionRoutes from './routes/secretQuestionRoutes';
 
 
 // import './ProyectoIOT/src/express/index.d.ts'; // Asegúrate de que la ruta sea correcta
@@ -60,6 +63,7 @@ app.use('/api', empresaRoutes); // Rutas para el control de los datos de la empr
 app.use('/api/devices', deviceRoutes); // Ruta para los dispositivos IoT
 app.use('/api/registros', registroRoutes);
 app.use('/api/users', loginRoutes);
+app.use('/api/secretQuestions', secretQuestionRoutes);
 app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
 
 // Iniciar servidor

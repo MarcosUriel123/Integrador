@@ -1,4 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+
+declare module 'express-serve-static-core' {
+    interface Request {
+        user?: any;
+    }
+}
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 

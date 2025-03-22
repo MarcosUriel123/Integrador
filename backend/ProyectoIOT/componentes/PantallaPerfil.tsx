@@ -1,62 +1,119 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Define la interfaz para el objeto Usuario
+interface User {
+    _id: string;
+    name: string;
+    lastName: string;
+    surname?: string;
+    phone?: string;
+    email: string;
+    // Otros campos que pueda tener tu usuario
+}
 
 type Props = {
-    userId: string;
+    userId?: string;
 };
 
 export default function PantallaPerfil({ userId }: Props) {
-    const [name, setName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [surname, setSurname] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const router = useRouter();
+    const [userData, setUserData] = useState<User | null>(null);
+    const [localUserId, setLocalUserId] = useState<string | null>(userId || null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
+    // Obtener el userId desde AsyncStorage si no se proporcionó como prop
     useEffect(() => {
-        fetchUserData();
-    }, []);
-
-    const fetchUserData = async () => {
-        try {
-            const response = await axios.get(`http://192.168.8.6:8082/api/users/${userId}`); //(IPCONFIG)
-            const user:any  = response.data;
-            setName(user.name);
-            setLastName(user.lastName);
-            setSurname(user.surname);
-            setPhone(user.phone);
-            setEmail(user.email);
-        } catch (error) {
-            console.error('Error al obtener datos del usuario:', error);
-        }
-    };
-
-    const handleSubmit = async () => {
-        const updateData: any = {
-            name,
-            lastName,
-            surname,
-            phone,
-            email,
+        const getUserIdFromStorage = async () => {
+            try {
+                if (!localUserId) {
+                    const storedUserId = await AsyncStorage.getItem('userId');
+                    if (storedUserId) {
+                        setLocalUserId(storedUserId);
+                    } else {
+                        setError('No se pudo encontrar el ID de usuario');
+                    }
+                }
+            } catch (err) {
+                console.error('Error al obtener userId de AsyncStorage:', err);
+                setError('Error al cargar datos de usuario');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        if (password) {
-            updateData.password = password;
+        getUserIdFromStorage();
+    }, []);
+
+    // Cargar datos del usuario cuando tengamos un userId válido
+    useEffect(() => {
+        if (localUserId) {
+            fetchUserData();
+        }
+    }, [localUserId]);
+
+    const fetchUserData = async () => {
+        if (!localUserId) {
+            console.error('No hay userId disponible para obtener datos');
+            setError('No se puede cargar el perfil sin ID de usuario');
+            return;
         }
 
         try {
-            const response = await axios.put(`http://192.168.8.6:8082/api/users/update/${userId}`, updateData); //(IPCONFIG)
-            if (response.status === 200) {
-                Alert.alert('Éxito', 'Datos actualizados correctamente');
-                setPassword('');
-            }
+            setLoading(true);
+            console.log(`Intentando obtener datos para userId: ${localUserId}`);
+            const response = await axios.get<User>(`http://localhost:8082/api/users/${localUserId}`);
+            setUserData(response.data);
+            setError('');
         } catch (error) {
-            Alert.alert('Error', 'No se pudo actualizar la información');
-            console.error('Error al actualizar:', error);
+            console.error('Error al obtener datos del usuario:', error);
+            setError('Error al cargar los datos del perfil');
+        } finally {
+            setLoading(false);
         }
     };
+
+    const handleUpdateProfile = () => {
+        // Navegar a la pantalla de actualización pasando el userId
+        router.push({
+            pathname: '/actualizar-perfil',
+            params: { userId: localUserId }
+        });
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.screen, styles.centeredContainer]}>
+                <ActivityIndicator size="large" color="#007bff" />
+                <Text style={styles.loadingText}>Cargando perfil...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={[styles.screen, styles.centeredContainer]}>
+                <Feather name="alert-circle" size={50} color="red" />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity style={styles.button} onPress={() => fetchUserData()}>
+                    <Text style={styles.buttonText}>Reintentar</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    if (!userData) {
+        return (
+            <View style={[styles.screen, styles.centeredContainer]}>
+                <Text style={styles.errorText}>No se encontraron datos del usuario</Text>
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -65,55 +122,48 @@ export default function PantallaPerfil({ userId }: Props) {
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Mi Perfil</Text>
                     </View>
+
                     <View style={styles.contentContainer}>
-                        <Feather name="user" size={80} color="black" style={styles.icon} />
+                        <View style={styles.profileImageContainer}>
+                            <Feather name="user" size={80} color="#007bff" />
+                        </View>
 
-                        <Text style={styles.label}>Nombre</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={name}
-                            onChangeText={setName}
-                        />
+                        <View style={styles.infoSection}>
+                            <Text style={styles.userName}>{userData.name} {userData.lastName} {userData.surname || ''}</Text>
+                            <Text style={styles.userEmail}>{userData.email}</Text>
+                        </View>
 
-                        <Text style={styles.label}>Apellido paterno</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={lastName}
-                            onChangeText={setLastName}
-                        />
+                        <View style={styles.detailsContainer}>
+                            <View style={styles.detailItem}>
+                                <Feather name="user" size={20} color="#555" />
+                                <View style={styles.detailTextContainer}>
+                                    <Text style={styles.detailLabel}>Nombre completo</Text>
+                                    <Text style={styles.detailValue}>
+                                        {userData.name} {userData.lastName} {userData.surname || ''}
+                                    </Text>
+                                </View>
+                            </View>
 
-                        <Text style={styles.label}>Apellido materno</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={surname}
-                            onChangeText={setSurname}
-                        />
+                            <View style={styles.detailItem}>
+                                <Feather name="mail" size={20} color="#555" />
+                                <View style={styles.detailTextContainer}>
+                                    <Text style={styles.detailLabel}>Correo electrónico</Text>
+                                    <Text style={styles.detailValue}>{userData.email}</Text>
+                                </View>
+                            </View>
 
-                        <Text style={styles.label}>Teléfono</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={phone}
-                            onChangeText={setPhone}
-                        />
+                            <View style={styles.detailItem}>
+                                <Feather name="phone" size={20} color="#555" />
+                                <View style={styles.detailTextContainer}>
+                                    <Text style={styles.detailLabel}>Teléfono</Text>
+                                    <Text style={styles.detailValue}>{userData.phone || 'No especificado'}</Text>
+                                </View>
+                            </View>
+                        </View>
 
-                        <Text style={styles.label}>Correo electrónico</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={email}
-                            onChangeText={setEmail}
-                        />
-
-                        <Text style={styles.label}>Nueva Contraseña</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Dejar en blanco para no cambiar"
-                            secureTextEntry
-                            value={password}
-                            onChangeText={setPassword}
-                        />
-
-                        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                            <Text style={styles.buttonText}>Guardar Cambios</Text>
+                        <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
+                            <Feather name="edit" size={18} color="#fff" style={styles.buttonIcon} />
+                            <Text style={styles.buttonText}>Actualizar Perfil</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -121,8 +171,6 @@ export default function PantallaPerfil({ userId }: Props) {
         </SafeAreaView>
     );
 }
-
-// Reutilizar los mismos estilos de PantallaRegistro1 o modificar según necesidad
 
 const styles = StyleSheet.create({
     screen: {
@@ -133,62 +181,123 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: 15,
+    },
+    centeredContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     cardContainer: {
-        width: '90%',
+        width: '100%',
         backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 20,
+        borderRadius: 15,
+        overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
         elevation: 5,
     },
     topBar: {
         alignItems: 'center',
-        marginBottom: 20,
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
     logo: {
         fontSize: 24,
         fontWeight: 'bold',
+        color: '#007bff',
     },
     contentContainer: {
+        padding: 20,
+    },
+    profileImageContainer: {
         alignItems: 'center',
-    },
-    icon: {
         marginBottom: 20,
+        backgroundColor: '#f0f8ff',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: 'center',
+        alignSelf: 'center',
     },
-    title: {
-        fontSize: 24,
+    infoSection: {
+        alignItems: 'center',
+        marginBottom: 30,
+        paddingBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eeeeee',
+    },
+    userName: {
+        fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 20,
-    },
-    label: {
-        alignSelf: 'flex-start',
-        fontSize: 16,
         marginBottom: 5,
+        color: '#333',
     },
-    input: {
-        width: '100%',
-        height: 40,
-        borderColor: '#ccc',
-        borderWidth: 1,
-        borderRadius: 5,
+    userEmail: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 10,
+    },
+    detailsContainer: {
+        marginBottom: 25,
+    },
+    detailItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 15,
-        paddingHorizontal: 10,
+        paddingBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eeeeee',
     },
-    button: {
-        width: '100%',
-        height: 50,
+    detailTextContainer: {
+        marginLeft: 15,
+        flex: 1,
+    },
+    detailLabel: {
+        fontSize: 14,
+        color: '#888',
+        marginBottom: 3,
+    },
+    detailValue: {
+        fontSize: 16,
+        color: '#333',
+    },
+    updateButton: {
         backgroundColor: '#007bff',
-        borderRadius: 5,
+        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
+        borderRadius: 10,
+        paddingVertical: 14,
+        width: '100%',
+        marginTop: 10,
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
     buttonText: {
         color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#555',
+    },
+    errorText: {
+        marginTop: 10,
+        color: 'red',
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 15,
+    },
+    button: {
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        backgroundColor: '#007bff',
+        borderRadius: 8,
     },
 });

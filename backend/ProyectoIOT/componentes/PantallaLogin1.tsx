@@ -39,6 +39,7 @@ export default function PantallaLogin() {
                 // Guardar el token en AsyncStorage
                 if (response.data && response.data.token) {
                     await AsyncStorage.setItem('userToken', response.data.token);
+                    await AsyncStorage.setItem('userId', response.data._id);
                     console.log('Token guardado:', response.data.token);
                 } else {
                     console.error('No se recibió un token del servidor');

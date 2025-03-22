@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -6,16 +6,21 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
 } from 'react-native';
+import DropDownPicker from 'react-native-dropdown-picker';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
-import { push } from 'expo-router/build/global-state/routing';
 
 interface PantallaRegistro1Props {
     onNext: (email: string, password: string) => void;
     isLoading?: boolean;
 };
+
+interface SecretQuestion {
+    _id: number;
+    pregunta: string;
+}
 
 export default function PantallaRegistro1({ onNext, isLoading = false }: PantallaRegistro1Props) {
     const [name, setName] = useState('');
@@ -25,24 +30,70 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false); // Añadir este estado
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [secretQuestions, setSecretQuestions] = useState<SecretQuestion[]>([]);
+    const [selectedQuestion, setSelectedQuestion] = useState<number>(0);
+    const [secretAnswer, setSecretAnswer] = useState('');
+    const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
 
+    // Estados necesarios para DropDownPicker
+    const [open, setOpen] = useState(false);
+    const [items, setItems] = useState<{ label: string, value: number }[]>([]);
 
-    // Cambiar nombre de handleNext a handleRegister para que coincida con el botón
+    // Cargar preguntas secretas al montar el componente
+    useEffect(() => {
+        const loadSecretQuestions = async () => {
+            try {
+                setIsLoadingQuestions(true);
+                // Añadir el tipo genérico para la respuesta
+                const response = await axios.get<SecretQuestion[]>('http://localhost:8082/api/secretQuestions');
+                if (response.status === 200) {
+                    setSecretQuestions(response.data);
+
+                    // Convertir las preguntas al formato que necesita DropDownPicker
+                    const dropdownItems = response.data.map(question => ({
+                        label: question.pregunta,
+                        value: question._id
+                    }));
+                    setItems(dropdownItems);
+
+                    // Seleccionar la primera pregunta por defecto si hay preguntas
+                    if (response.data.length > 0) {
+                        setSelectedQuestion(response.data[0]._id);
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar preguntas secretas:', error);
+            } finally {
+                setIsLoadingQuestions(false);
+            }
+        };
+
+        loadSecretQuestions();
+    }, []); 
+
     const handleRegister = async () => {
+        // Validar campos
+        if (!name || !lastName || !email || !password || !selectedQuestion || !secretAnswer) {
+            setMessage('Por favor completa todos los campos obligatorios');
+            return;
+        }
+
         try {
-            setIsRegistering(true); // Establecer estado de registro
-            const response = await axios.post('http://localhost:8082/api/users/register', { //(IPCONFIG)
+            setIsRegistering(true);
+            const response = await axios.post('http://localhost:8082/api/users/register', {
                 name,
                 lastName,
                 surname,
                 phone,
                 email,
                 password,
+                secretQuestion: selectedQuestion,
+                secretAnswer
             });
+
             if (response.status === 201) {
                 setMessage('Registro exitoso!');
-                // En lugar de redireccionar aquí, pasamos el email y password al padre
                 onNext(email, password);
             }
         } catch (error) {
@@ -106,6 +157,42 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
                             value={password}
                             onChangeText={setPassword}
                         />
+
+                        {/* Reemplazar el Picker con DropDownPicker */}
+                        <Text style={styles.label}>Pregunta secreta</Text>
+                        {isLoadingQuestions ? (
+                            <Text>Cargando preguntas...</Text>
+                        ) : (
+                            <View style={styles.dropdownContainer}>
+                                <DropDownPicker
+                                    open={open}
+                                    value={selectedQuestion}
+                                    items={items}
+                                    setOpen={setOpen}
+                                    setValue={setSelectedQuestion}
+                                    setItems={setItems}
+                                    placeholder="Selecciona una pregunta secreta"
+                                    style={styles.dropdown}
+                                    dropDownContainerStyle={styles.dropdownList}
+                                    listMode="SCROLLVIEW"
+                                    scrollViewProps={{
+                                        nestedScrollEnabled: true,
+                                    }}
+                                />
+                            </View>
+                        )}
+
+
+                        {/* Campo para respuesta secreta */}
+                        <Text style={styles.label}>Respuesta secreta</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Ingresa tu respuesta secreta"
+                            value={secretAnswer}
+                            onChangeText={setSecretAnswer}
+                        />
+
+                        {message ? <Text style={styles.messageText}>{message}</Text> : null}
                         <TouchableOpacity
                             style={[styles.button, (isRegistering || isLoading) && styles.buttonDisabled]}
                             onPress={handleRegister}
@@ -115,7 +202,6 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
                                 {isRegistering ? 'Registrando...' : isLoading ? 'Iniciando sesión...' : 'Registrarse'}
                             </Text>
                         </TouchableOpacity>
-                        
                     </View>
                 </View>
             </ScrollView>
@@ -177,6 +263,18 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         paddingHorizontal: 10,
     },
+    pickerContainer: {
+        width: '100%',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        marginBottom: 15,
+        overflow: 'hidden',
+    },
+    picker: {
+        width: '100%',
+        height: 40,
+    },
     button: {
         width: '100%',
         height: 50,
@@ -193,8 +291,22 @@ const styles = StyleSheet.create({
     buttonDisabled: {
         backgroundColor: '#ccc',
     },
+    messageText: {
+        marginVertical: 10,
+        color: 'red',
+        alignSelf: 'center',
+    },
+    dropdownContainer: {
+        width: '100%',
+        marginBottom: 15,
+        zIndex: 1000, // Importante para que el dropdown se muestre sobre otros elementos
+    },
+    dropdown: {
+        borderColor: '#ccc',
+        borderRadius: 5,
+    },
+    dropdownList: {
+        borderColor: '#ccc',
+        maxHeight: 200,
+    },
 });
-
-function setIsRegistering(arg0: boolean) {
-    throw new Error('Function not implemented.');
-}

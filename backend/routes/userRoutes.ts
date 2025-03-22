@@ -2,7 +2,9 @@ import express, { Router, RequestHandler } from 'express';
 import {
     registerUser,
     getUserById,
-    updateUser
+    updateUser,
+    verifyRecovery,
+    resetPassword
 } from '../controllers/userController';
 
 const router: Router = express.Router();
@@ -11,5 +13,7 @@ const router: Router = express.Router();
 router.post('/register', registerUser as RequestHandler);
 router.get('/:id', getUserById as RequestHandler);
 router.put('/update/:id', updateUser as RequestHandler);
+router.post('/verify-recovery', verifyRecovery as RequestHandler);
+router.post('/reset-password', resetPassword as RequestHandler);
 
 export default router;

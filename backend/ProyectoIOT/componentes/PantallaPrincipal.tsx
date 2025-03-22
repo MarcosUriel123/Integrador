@@ -56,7 +56,7 @@ export default function PantallaPrincipal() {
                                 <TouchableOpacity onPress={() => { router.push('/rfidControl'); setMenuVisible(false); }}>
                                     <Text style={styles.modalText}>RFID</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/perfil'); setMenuVisible(false); }}>
+                                <TouchableOpacity onPress={() => { router.push('/Datosperfil'); setMenuVisible(false); }}>
                                     <Text style={styles.modalText}>Perfil</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => { router.push('/registroUsuarios'); setMenuVisible(false); }}>
