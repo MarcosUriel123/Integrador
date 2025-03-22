@@ -20,7 +20,7 @@ export default function PantallaPrincipal() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                
+
                     {/* Barra Superior */}
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#1E1E1E',
     },
-    
+
     /* Footer */
     footer: {
         flexDirection: 'row',
@@ -261,4 +261,3 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
 });
-

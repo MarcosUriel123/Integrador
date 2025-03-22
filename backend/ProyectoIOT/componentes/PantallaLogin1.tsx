@@ -34,7 +34,7 @@ export default function PantallaLogin() {
                 email,
                 password,
             });
-            
+
             if (response.status === 200) {
                 // Guardar el token en AsyncStorage
                 if (response.data && response.data.token) {
