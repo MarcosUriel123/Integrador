@@ -15,41 +15,60 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function PantallaRegistroDispositivo() {
     const [macAddress, setMacAddress] = useState('');
     const [name, setName] = useState('');
-    const [location, setLocation] = useState('');
+    const [pin, setPin] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleRegisterDevice = async () => {
         // Validaciones básicas
-        if (!macAddress || !name || !location) {
+        if (!macAddress || !name || !pin) {
             setMessage('Todos los campos son requeridos');
+            return;
+        }
+
+        // Validar que el PIN sea numérico y tenga entre 4 y 6 dígitos
+        if (!/^\d{4,6}$/.test(pin)) {
+            setMessage('El PIN debe ser numérico y tener entre 4 y 6 dígitos');
             return;
         }
 
         setIsLoading(true);
         try {
-            // Obtener el token de autenticación de AsyncStorage
+            // Obtener el token de autenticación y userId de AsyncStorage
             const token = await AsyncStorage.getItem('userToken');
+            const userId = await AsyncStorage.getItem('userId');
 
-            if (!token) {
-                setMessage('No se encontró el token de autenticación. Por favor inicie sesión.');
+            if (!token || !userId) {
+                setMessage('No se encontró la información de autenticación. Por favor inicie sesión.');
                 setIsLoading(false);
                 return;
             }
 
-            // Realizar la solicitud al backend
-            const response = await axios.post(
+            // Realizar la solicitud al backend para registrar el dispositivo
+            const deviceResponse = await axios.post(
                 'http://localhost:8082/api/devices/register',
-                { macAddress, name, location },
+                { macAddress, name },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            if (response.status === 201) {
-                setMessage('Dispositivo registrado con éxito');
-                // Limpiar los campos
-                setMacAddress('');
-                setName('');
-                setLocation('');
+            // Si el dispositivo se registró correctamente, actualizar el usuario con el PIN
+            if (deviceResponse.status === 201) {
+                // Guardar el PIN en el perfil del usuario
+                const userUpdateResponse = await axios.put(
+                    `http://localhost:8082/api/users/update/${userId}`,
+                    { devicePin: pin },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                if (userUpdateResponse.status === 200) {
+                    setMessage('Dispositivo registrado y PIN configurado con éxito');
+                    // Limpiar los campos
+                    setMacAddress('');
+                    setName('');
+                    setPin('');
+                } else {
+                    setMessage('Dispositivo registrado pero hubo un problema al guardar el PIN');
+                }
             }
         } catch (error) {
             console.error('Error registrando dispositivo:', error);
@@ -82,13 +101,19 @@ export default function PantallaRegistroDispositivo() {
                         onChangeText={setName}
                     />
 
-                    <Text style={styles.label}>Ubicación</Text>
+                    <Text style={styles.label}>PIN de Seguridad</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Sala de servidores"
-                        value={location}
-                        onChangeText={setLocation}
+                        placeholder="Entre 4 y 6 dígitos"
+                        value={pin}
+                        onChangeText={setPin}
+                        keyboardType="numeric"
+                        secureTextEntry={true}
+                        maxLength={6}
                     />
+                    <Text style={styles.helperText}>
+                        Este PIN se usará para autenticar acciones con su dispositivo
+                    </Text>
 
                     <TouchableOpacity
                         style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -151,8 +176,14 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         borderWidth: 1,
         borderRadius: 5,
-        marginBottom: 15,
+        marginBottom: 5,
         paddingHorizontal: 15,
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 15,
+        fontStyle: 'italic',
     },
     button: {
         width: '100%',
