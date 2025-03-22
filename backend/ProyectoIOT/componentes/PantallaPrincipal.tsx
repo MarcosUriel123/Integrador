@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -7,14 +7,60 @@ import {
     Image,
     TouchableOpacity,
     StyleSheet,
-    Modal
+    Modal,
+    ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Entypo } from '@expo/vector-icons';
+import axios from 'axios';
+
+// Interfaz para las FAQs
+interface FAQ {
+    _id: string;
+    pregunta: string;
+    respuesta: string;
+}
 
 export default function PantallaPrincipal() {
     const router = useRouter();
     const [menuVisible, setMenuVisible] = useState(false);
+    const [faqs, setFaqs] = useState<FAQ[]>([]);
+    const [loadingFaqs, setLoadingFaqs] = useState(true);
+    const [error, setError] = useState('');
+    const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+
+    // Cargar preguntas frecuentes al montar el componente
+    useEffect(() => {
+        const fetchFAQs = async () => {
+            try {
+                setLoadingFaqs(true);
+                const response = await axios.get<FAQ[]>('http://localhost:8082/api/preguntasFrecuentes');
+                setFaqs(response.data);
+                setError('');
+            } catch (err) {
+                console.error('Error al cargar preguntas frecuentes:', err);
+                setError('No se pudieron cargar las preguntas frecuentes');
+                // Usar algunos datos de respaldo en caso de error
+                setFaqs([
+                    { _id: '1', pregunta: '¿Para qué sirve Segurix?', respuesta: 'Segurix es una plataforma para gestionar y controlar dispositivos IoT de seguridad.' },
+                    { _id: '2', pregunta: '¿Cómo conectar mi dispositivo IoT?', respuesta: 'Ve a la sección de dispositivos y sigue las instrucciones de configuración.' }
+                ]);
+            } finally {
+                setLoadingFaqs(false);
+            }
+        };
+
+        fetchFAQs();
+    }, []);
+
+    // Función para alternar la visibilidad de la respuesta
+    const toggleFaqExpansion = (id: string) => {
+        if (expandedFaq === id) {
+            setExpandedFaq(null);
+        } else {
+            setExpandedFaq(id);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -95,15 +141,40 @@ export default function PantallaPrincipal() {
 
                     {/* Sección de Preguntas Frecuentes */}
                     <View style={styles.faqSection}>
-                        <View style={styles.faqItem}>
-                            <Text style={[styles.faqText, { fontSize: 20, fontWeight: 'bold' }]}>
-                                Preguntas Frecuentes
-                            </Text>
-                            <Text style={styles.faqText}>¿Para qué sirve Segurix?</Text>
-                        </View>
-                        <View style={styles.faqItem}>
-                            <Text style={styles.faqText}>¿Cómo conectar mi dispositivo IoT?</Text>
-                        </View>
+                        <Text style={styles.sectionTitle}>Preguntas Frecuentes</Text>
+
+                        {loadingFaqs ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="small" color="#007bff" />
+                                <Text style={styles.loadingText}>Cargando preguntas...</Text>
+                            </View>
+                        ) : error ? (
+                            <View style={styles.errorContainer}>
+                                <Text style={styles.errorText}>{error}</Text>
+                            </View>
+                        ) : (
+                            faqs.map((faq) => (
+                                <View key={faq._id} style={styles.faqItem}>
+                                    <TouchableOpacity
+                                        style={styles.faqQuestion}
+                                        onPress={() => toggleFaqExpansion(faq._id)}
+                                    >
+                                        <Text style={styles.faqQuestionText}>{faq.pregunta}</Text>
+                                        <Entypo
+                                            name={expandedFaq === faq._id ? "chevron-up" : "chevron-down"}
+                                            size={20}
+                                            color="#1E1E1E"
+                                        />
+                                    </TouchableOpacity>
+
+                                    {expandedFaq === faq._id && (
+                                        <View style={styles.faqAnswer}>
+                                            <Text style={styles.faqAnswerText}>{faq.respuesta}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            ))
+                        )}
                     </View>
 
                     {/* Footer */}
@@ -219,19 +290,61 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     /* Sección Preguntas Frecuentes */
+    sectionTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 16,
+        color: '#1E1E1E',
+    },
     faqSection: {
         marginTop: 30,
     },
     faqItem: {
         backgroundColor: '#F9F9F9',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
         borderRadius: 8,
-        marginBottom: 6,
+        marginBottom: 10,
+        overflow: 'hidden',
     },
-    faqText: {
+    faqQuestion: {
+        padding: 15,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    faqQuestionText: {
         fontSize: 16,
+        fontWeight: '500',
         color: '#1E1E1E',
+        flex: 1,
+    },
+    faqAnswer: {
+        backgroundColor: '#F0F0F0',
+        padding: 15,
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+    },
+    faqAnswerText: {
+        fontSize: 15,
+        color: '#333',
+        lineHeight: 22,
+    },
+    loadingContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#555',
+    },
+    errorContainer: {
+        padding: 20,
+        backgroundColor: '#ffebee',
+        borderRadius: 8,
+    },
+    errorText: {
+        color: '#c62828',
+        textAlign: 'center',
     },
 
     /* Footer */

@@ -18,6 +18,7 @@ import registroRoutes from './routes/registroRoutes';
 import loginRoutes from './routes/loginRoutes'
 import subUserRoutes from './routes/subUserRoutes'; // Importamos las rutas de subusuarios
 import secretQuestionRoutes from './routes/secretQuestionRoutes';
+import preguntasFrecuentesRoutes from './routes/preguntasFrecuentesRoutes';
 
 
 // import './ProyectoIOT/src/express/index.d.ts'; // Asegúrate de que la ruta sea correcta
@@ -65,7 +66,7 @@ app.use('/api/registros', registroRoutes);
 app.use('/api/users', loginRoutes);
 app.use('/api/secretQuestions', secretQuestionRoutes);
 app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
-
+app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Usando el router
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
