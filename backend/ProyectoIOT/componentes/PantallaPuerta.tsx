@@ -12,7 +12,7 @@ export default function PantallaPuerta() {
     const handleTogglePuerta = async () => {
         try {
             // Realizamos la solicitud al backend para abrir o cerrar la puerta
-            const url = puertaAbierta 
+            const url = puertaAbierta
                 ? 'http://localhost:8082/api/door/cerrar' //ip de IPCONFIG
                 : 'http://localhost:8082/api/door/abrir';
             const response = await axios.get(url);  // Llamada al backend
@@ -34,7 +34,10 @@ export default function PantallaPuerta() {
 
                     {/* Barra Superior */}
                     <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
+                        {/* Texto "Segurix" como enlace */}
+                        <TouchableOpacity onPress={() => router.push('/Principal')}>
+                            <Text style={styles.logo}>Segurix</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Contenido principal */}
@@ -64,7 +67,7 @@ export default function PantallaPuerta() {
                             </TouchableOpacity>
 
                             {/* Botón Registros */}
-                            <TouchableOpacity style={styles.configButton}onPress={() => router.push('/registros')}>
+                            <TouchableOpacity style={styles.configButton} onPress={() => router.push('/registros')}>
                                 <FontAwesome5 name="file-alt" size={20} color="#1E1E1E" style={styles.buttonIcon} />
                                 <Text style={styles.configButtonText}>Registros</Text>
                             </TouchableOpacity>

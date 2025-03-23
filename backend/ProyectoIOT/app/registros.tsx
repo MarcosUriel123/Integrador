@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { Entypo } from '@expo/vector-icons';
+import { Entypo, Feather } from '@expo/vector-icons'; // Añadí Feather para el ícono de flecha
 
 interface Registro {
     _id: string;
@@ -47,47 +47,54 @@ export default function PantallaRegistros() {
     }, []);
 
     const renderRegistroItem = ({ item }: { item: Registro }) => (
-        <View style= { styles.registroCard } >
-        <Text style={ styles.registroMensaje }> { item.mensaje } </Text>
-            < Text style = { styles.registroDescripcion } > { item.descripcion } </Text>
-                < Text style = { styles.registroFecha } >
-                    { new Date(item.fecha).toLocaleString() }
-                    </Text>
-                    </View>
+        <View style={styles.registroCard}>
+            <Text style={styles.registroMensaje}>{item.mensaje}</Text>
+            <Text style={styles.registroDescripcion}>{item.descripcion}</Text>
+            <Text style={styles.registroFecha}>
+                {new Date(item.fecha).toLocaleString()}
+            </Text>
+        </View>
     );
 
     if (loading) {
         return (
-            <View style= { styles.loadingContainer } >
-            <ActivityIndicator size="large" color = "#007bff" />
-                </View>
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007bff" />
+            </View>
         );
     }
 
     if (error) {
         return (
-            <View style= { styles.errorContainer } >
-            <Text style={ styles.errorText }> { error } </Text>
-                </View>
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style= { styles.screen } >
-        <ScrollView style={ { flex: 1 } }>
-            <View style={ styles.cardContainer }>
+        <SafeAreaView style={styles.screen}>
+            {/* Botón para volver */}
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+            >
+                <Feather name="arrow-left" size={24} color="#007bff" />
+            </TouchableOpacity>
 
-                        < Text style = { styles.title } > Registros de Alertas </Text>
-                            < FlatList
-data = { registros }
-renderItem = { renderRegistroItem }
-keyExtractor = {(item) => item._id}
-scrollEnabled = { false}
-contentContainerStyle = { styles.listContent }
-    />
-    </View>
-    </ScrollView>
-    </SafeAreaView>
+            <ScrollView style={{ flex: 1 }}>
+                <View style={styles.cardContainer}>
+                    <Text style={styles.title}>Registros de Alertas</Text>
+                    <FlatList
+                        data={registros}
+                        renderItem={renderRegistroItem}
+                        keyExtractor={(item) => item._id}
+                        scrollEnabled={false}
+                        contentContainerStyle={styles.listContent}
+                    />
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 
@@ -174,5 +181,14 @@ const styles = StyleSheet.create({
     },
     listContent: {
         width: '100%',
-    }
+    },
+    backButton: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        zIndex: 10,
+    },
 });

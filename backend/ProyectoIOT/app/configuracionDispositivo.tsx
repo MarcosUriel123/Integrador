@@ -24,19 +24,20 @@ export default function ConfiguracionDispositivo() {
     const toggleAlarma = () => setAlarmaActiva(!alarmaActiva);
 
     return (
+
         <SafeAreaView style={styles.screen}>
             {/* Botón para volver */}
             <TouchableOpacity
                 style={styles.backButton}
-                onPress={() => router.push('/puerta')}
+                onPress={() => router.back()}
             >
                 <Feather name="arrow-left" size={24} color="#007bff" />
-                <Text style={styles.backButtonText}>Volver</Text>
             </TouchableOpacity>
 
             <ScrollView style={{ flex: 1 }}>
                 {/* Tarjeta principal */}
                 <View style={styles.cardContainer}>
+
                     {/* NOTA: BARRA SUPERIOR ELIMINADA */}
 
                     {/* Contenido principal */}
@@ -173,17 +174,9 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 40,
         left: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
         padding: 8,
-        zIndex: 999, // Aumentado para garantizar que esté por encima de todo
-        backgroundColor: 'rgba(255,255,255,0.8)', // Semi-transparente para mayor visibilidad
         borderRadius: 20,
-    },
-    backButtonText: {
-        marginLeft: 5,
-        fontSize: 16,
-        color: '#007bff',
-        fontWeight: 'bold', // Hacerlo más visible
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        zIndex: 10,
     },
 });
