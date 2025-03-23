@@ -37,7 +37,7 @@ export default function PantallaPrincipal() {
                 const response = await axios.get<FAQ[]>('http://localhost:8082/api/preguntasFrecuentes');
                 setFaqs(response.data);
                 setError('');
-            } catch (err) {
+            } catch (err) { 
                 console.error('Error al cargar preguntas frecuentes:', err);
                 setError('No se pudieron cargar las preguntas frecuentes');
                 // Usar algunos datos de respaldo en caso de error
