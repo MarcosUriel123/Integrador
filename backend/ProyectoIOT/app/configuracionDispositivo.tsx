@@ -10,14 +10,14 @@ import {
     StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function ConfiguracionDispositivo() {
     const router = useRouter();
 
     // Estado para los switches
-    const [seguroActivo, setSeguroActivo] = useState(false);  // Switch de seguros
-    const [alarmaActiva, setAlarmaActiva] = useState(false);  // Switch de alarma
+    const [seguroActivo, setSeguroActivo] = useState(false);
+    const [alarmaActiva, setAlarmaActiva] = useState(false);
 
     // Funciones para manejar el cambio de estado
     const toggleSeguro = () => setSeguroActivo(!seguroActivo);
@@ -25,26 +25,19 @@ export default function ConfiguracionDispositivo() {
 
     return (
         <SafeAreaView style={styles.screen}>
+            {/* Botón para volver */}
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.push('/puerta')}
+            >
+                <Feather name="arrow-left" size={24} color="#007bff" />
+                <Text style={styles.backButtonText}>Volver</Text>
+            </TouchableOpacity>
+
             <ScrollView style={{ flex: 1 }}>
-                
                 {/* Tarjeta principal */}
                 <View style={styles.cardContainer}>
-                
-                    {/* Barra Superior */}
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
-                        <View style={styles.nav}>
-                            <TouchableOpacity onPress={() => router.push('/empresa')}>
-                                <Text style={styles.navText}>Empresa</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => console.log('Ver productos')}>
-                                <Text style={styles.navText}>Productos</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/puerta')}>
-                                <Text style={styles.navText}>Dispositivo IOT</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    {/* NOTA: BARRA SUPERIOR ELIMINADA */}
 
                     {/* Contenido principal */}
                     <View style={styles.mainContent}>
@@ -108,6 +101,7 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: '#CFE2FF',
+        paddingTop: 50, // Dar espacio para el botón de volver
     },
     cardContainer: {
         margin: 20,
@@ -121,29 +115,6 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         // Sombra en Android
         elevation: 6,
-    },
-    /* Barra Superior */
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    nav: {
-        flexDirection: 'row',
-    },
-    navText: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginLeft: 20,
     },
     /* Contenido principal */
     mainContent: {
@@ -197,5 +168,22 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 16,
         color: '#1E1E1E',
+    },
+    backButton: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        zIndex: 999, // Aumentado para garantizar que esté por encima de todo
+        backgroundColor: 'rgba(255,255,255,0.8)', // Semi-transparente para mayor visibilidad
+        borderRadius: 20,
+    },
+    backButtonText: {
+        marginLeft: 5,
+        fontSize: 16,
+        color: '#007bff',
+        fontWeight: 'bold', // Hacerlo más visible
     },
 });

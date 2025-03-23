@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { Entypo } from '@expo/vector-icons';
+import { Entypo, Feather } from '@expo/vector-icons';
 
 interface Registro {
     _id: string;
@@ -47,72 +47,63 @@ export default function PantallaRegistros() {
     }, []);
 
     const renderRegistroItem = ({ item }: { item: Registro }) => (
-        <View style= { styles.registroCard } >
-        <Text style={ styles.registroMensaje }> { item.mensaje } </Text>
-            < Text style = { styles.registroDescripcion } > { item.descripcion } </Text>
-                < Text style = { styles.registroFecha } >
-                    { new Date(item.fecha).toLocaleString() }
-                    </Text>
-                    </View>
+        <View style={styles.registroCard}>
+            <Text style={styles.registroMensaje}>{item.mensaje}</Text>
+            <Text style={styles.registroDescripcion}>{item.descripcion}</Text>
+            <Text style={styles.registroFecha}>
+                {new Date(item.fecha).toLocaleString()}
+            </Text>
+        </View>
     );
 
     if (loading) {
         return (
-            <View style= { styles.loadingContainer } >
-            <ActivityIndicator size="large" color = "#007bff" />
-                </View>
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007bff" />
+            </View>
         );
     }
 
     if (error) {
         return (
-            <View style= { styles.errorContainer } >
-            <Text style={ styles.errorText }> { error } </Text>
-                </View>
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style= { styles.screen } >
-        <ScrollView style={ { flex: 1 } }>
-            <View style={ styles.cardContainer }>
-                <View style={ styles.topBar }>
-                    <Text style={ styles.logo }> Segurix </Text>
-                        < View style = { styles.nav } >
-                            <TouchableOpacity onPress={ () => router.push('/empresa') }>
-                                <Text style={ styles.navText }> Empresa </Text>
-                                    </TouchableOpacity>
-                                    < TouchableOpacity onPress = {() => router.push('/CatalogoProductosScreen')
-}>
-    <Text style={ styles.navText }> Productos </Text>
-        </TouchableOpacity>
-        < TouchableOpacity onPress = {() => router.push('/registros')}>
-            <Text style={ styles.navText }> Registros </Text>
-                </TouchableOpacity>
-                < TouchableOpacity onPress = {() => router.push('/puerta')}>
-                    <Text style={ styles.navText }> Dispositivo IOT </Text>
-                        </TouchableOpacity>
-                        </View>
-                        </View>
+        <SafeAreaView style={styles.screen}>
+            {/* Botón para volver */}
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.push('/puerta')}
+            >
+                <Feather name="arrow-left" size={24} color="#007bff" />
+                <Text style={styles.backButtonText}>Volver</Text>
+            </TouchableOpacity>
 
-                        < Text style = { styles.title } > Registros de Alertas </Text>
-                            < FlatList
-data = { registros }
-renderItem = { renderRegistroItem }
-keyExtractor = {(item) => item._id}
-scrollEnabled = { false}
-contentContainerStyle = { styles.listContent }
-    />
-    </View>
-    </ScrollView>
-    </SafeAreaView>
+            {/* Contenido principal - elimina cualquier referencia al Header */}
+            <View style={styles.contentContainer}>
+                <Text style={styles.title}>Registros de Acceso</Text>
+
+                <FlatList
+                    data={registros}
+                    renderItem={renderRegistroItem}
+                    keyExtractor={(item) => item._id}
+                    scrollEnabled={false}
+                    contentContainerStyle={styles.listContent}
+                />
+            </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: '#CFE2FF',
+        backgroundColor: '#f5f5f5',
+        paddingTop: 50, // Dar espacio para el botón de volver
     },
     cardContainer: {
         margin: 20,
@@ -148,10 +139,9 @@ const styles = StyleSheet.create({
         marginLeft: 20,
     },
     title: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
-        color: '#1E1E1E',
-        marginVertical: 15,
+        marginBottom: 20,
         textAlign: 'center',
     },
     registroCard: {
@@ -192,5 +182,23 @@ const styles = StyleSheet.create({
     },
     listContent: {
         width: '100%',
-    }
+    },
+    backButton: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        zIndex: 10,
+    },
+    backButtonText: {
+        marginLeft: 5,
+        fontSize: 16,
+        color: '#007bff',
+    },
+    contentContainer: {
+        flex: 1,
+        padding: 20,
+    },
 });

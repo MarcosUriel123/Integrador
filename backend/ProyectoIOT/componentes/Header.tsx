@@ -1,22 +1,31 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { Entypo, Feather } from '@expo/vector-icons';
+import { Entypo, Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCart } from './CartContext';
 
 type HeaderProps = {
-    title?: string; // Permite personalizar el título
-    showMenu?: boolean; // Opcional: permite ocultar el menú si es necesario
-    showProfileIcon?: boolean; // Opcional: permite ocultar el icono de perfil
+    title?: string; // Este prop ya no afectará el título mostrado
+    showMenu?: boolean;
+    showProfileIcon?: boolean;
+    showCartIcon?: boolean;
 };
 
 const Header = ({
-    title = 'Segurix',
+    title = 'Segurix', // Seguimos aceptando el prop por compatibilidad
     showMenu = true,
-    showProfileIcon = true
+    showProfileIcon = true,
+    showCartIcon = true
 }: HeaderProps) => {
     const router = useRouter();
+    const { totalItems } = useCart();
     const [menuVisible, setMenuVisible] = useState(false);
+
+    // Función para navegar a inicio al hacer clic en el logo
+    const handleLogoPress = () => {
+        router.push('/');
+    };
 
     // Helper para verificar autenticación antes de navegar
     const navigateWithAuthCheck = async (path: string) => {
@@ -76,20 +85,34 @@ const Header = ({
         }
     };
 
+    // Nueva función para manejar el botón de carrito
+    const handleCartPress = () => {
+        router.push('/carrito');
+    };
+
     return (
         <>
             {/* Barra Superior */}
             <View style={styles.topBar}>
-                <Text style={styles.logo}>{title}</Text>
+                {/* Logo convertido en botón */}
+                <TouchableOpacity onPress={handleLogoPress}>
+                    <Text style={styles.logo}>Segurix</Text>
+                </TouchableOpacity>
 
                 <View style={styles.iconsContainer}>
-                    {/* INVERTIDO: Primero el botón de menú */}
-                    {showMenu && (
+
+                    {/* Icono de carrito */}
+                    {showCartIcon && (
                         <TouchableOpacity
-                            onPress={() => setMenuVisible(true)}
+                            onPress={handleCartPress}
                             style={styles.iconButton}
                         >
-                            <Entypo name="menu" size={28} color="#1E1E1E" />
+                            <Ionicons name="cart-outline" size={24} color="#1E1E1E" />
+                            {totalItems > 0 && (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>{totalItems}</Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                     )}
 
@@ -100,6 +123,15 @@ const Header = ({
                             style={styles.iconButton}
                         >
                             <Feather name="user" size={24} color="#1E1E1E" />
+                        </TouchableOpacity>
+                    )}
+                    {/* INVERTIDO: Primero el botón de menú */}
+                    {showMenu && (
+                        <TouchableOpacity
+                            onPress={() => setMenuVisible(true)}
+                            style={styles.iconButton}
+                        >
+                            <Entypo name="menu" size={28} color="#1E1E1E" />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -117,7 +149,12 @@ const Header = ({
                         <View style={styles.modalContent}>
                             <Text style={styles.modalTitle}>Opciones</Text>
 
-                            {/* Opciones del menú */}
+                            {/* Opciones del menú - ¡Añadir opción del carrito!
+                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/carrito')}>
+                                <Text style={styles.modalText}>Carrito de Compras</Text>
+                            </TouchableOpacity> */}
+
+                            {/* Resto de opciones existentes */}
                             <TouchableOpacity onPress={() => navigateWithAuthCheck('/empresa')}>
                                 <Text style={styles.modalText}>Empresa</Text>
                             </TouchableOpacity>
@@ -126,21 +163,17 @@ const Header = ({
                                 <Text style={styles.modalText}>Productos</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/huella')}>
-                                <Text style={styles.modalText}>Huella</Text>
-                            </TouchableOpacity>
-
                             <TouchableOpacity onPress={() => navigateWithAuthCheck('/puerta')}>
                                 <Text style={styles.modalText}>Dispositivo IoT</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/rfidControl')}>
+                            {/* <TouchableOpacity onPress={() => navigateWithAuthCheck('/rfidControl')}>
                                 <Text style={styles.modalText}>RFID</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
 
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/Datosperfil')}>
+                            {/* <TouchableOpacity onPress={() => navigateWithAuthCheck('/Datosperfil')}>
                                 <Text style={styles.modalText}>Perfil</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
 
                             <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroUsuarios')}>
                                 <Text style={styles.modalText}>Gestión de Usuarios</Text>
@@ -171,6 +204,27 @@ const Header = ({
 };
 
 const styles = StyleSheet.create({
+    // Estilos existentes...
+
+    // Nuevos estilos para el badge del carrito
+    badge: {
+        position: 'absolute',
+        right: -6,
+        top: -3,
+        backgroundColor: '#dc3545', // Color rojo para el badge
+        borderRadius: 10,
+        width: 18,
+        height: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    badgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+
+    // Resto de estilos existentes...
     topBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -184,6 +238,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#1E1E1E',
+        paddingVertical: 5,  // Añadir un poco de padding para hacer el área táctil más grande
     },
     iconsContainer: {
         flexDirection: 'row',
@@ -192,6 +247,7 @@ const styles = StyleSheet.create({
     iconButton: {
         padding: 6,
         marginLeft: 15,
+        position: 'relative', // Importante para posicionar el badge
     },
     modalContainer: {
         flex: 1,

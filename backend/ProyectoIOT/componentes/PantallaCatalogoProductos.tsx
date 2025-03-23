@@ -8,14 +8,30 @@ import {
     FlatList,
     ActivityIndicator,
     TouchableOpacity,
-    Image
+    Image,
+    Alert
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import Header from './Header';
 import Footer from './Footer';
+// Importación corregida - asumiendo que CartContext está en la raíz del proyecto
+import { useCart } from './CartContext';
+// Importación faltante de ProductCard
+import ProductCard from './ProductCard ';
 
+// Tipo actualizado para que coincida con lo que espera ProductCard
 type Product = {
+    id: string; // Cambiado de _id a id
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+    image: string;
+};
+
+// Tipo para la respuesta de la API
+type ProductResponse = {
     _id: string;
     name: string;
     description: string;
@@ -29,15 +45,26 @@ export default function PantallaCatalogoProductos() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { addToCart } = useCart();
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await axios.get('http://localhost:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://localhost:8082/api/products/get');
                 if (response.status === 200) {
-                    setProducts(response.data as Product[]);
+                    // Mapear la respuesta para convertir _id a id
+                    const formattedProducts = response.data.map(product => ({
+                        id: product._id, // Convertir _id a id
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        category: product.category,
+                        image: product.image
+                    }));
+                    setProducts(formattedProducts);
                 }
             } catch (err) {
+                console.error('Error fetching products:', err);
                 setError('Error al cargar los productos');
             } finally {
                 setLoading(false);
@@ -56,27 +83,22 @@ export default function PantallaCatalogoProductos() {
     };
 
     const renderProductItem = ({ item }: { item: Product }) => (
-        <TouchableOpacity onPress={() => handleProductPress(item)}>
-            <View style={styles.productCard}>
-                <Image source={{ uri: item.image }} style={styles.productImage} />
-                <Text style={styles.productName}>{item.name}</Text>
-                <Text style={styles.productDescription}>{item.description}</Text>
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
-                    <Text style={styles.categoryText}>{item.category}</Text>
-                </View>
-            </View>
-        </TouchableOpacity>
+        <ProductCard
+            product={item}
+            onPress={() => handleProductPress(item)}
+            onAddToCart={(product) => {
+                addToCart(product);
+                Alert.alert('Producto añadido', `${product.name} se añadió al carrito`);
+            }}
+        />
     );
 
     return (
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    {/* Reemplazando la barra superior con nuestro componente Header */}
                     <Header title="Catálogo de Productos" />
 
-                    {/* Contenido condicional basado en estados de carga/error */}
                     {loading ? (
                         <View style={styles.contentContainer}>
                             <ActivityIndicator size="large" color="#007bff" />
@@ -92,14 +114,13 @@ export default function PantallaCatalogoProductos() {
                             <FlatList
                                 data={products}
                                 renderItem={renderProductItem}
-                                keyExtractor={(item) => item._id}
+                                keyExtractor={(item) => item.id}
                                 scrollEnabled={false}
                                 contentContainerStyle={styles.listContent}
                             />
                         </View>
                     )}
 
-                    {/* Reemplazando el footer con nuestro componente Footer */}
                     <Footer showContactInfo={true} showTerms={true} />
                 </View>
             </ScrollView>
@@ -107,7 +128,7 @@ export default function PantallaCatalogoProductos() {
     );
 }
 
-// Estilos actualizados (eliminados los estilos que ya no se necesitan)
+// Los estilos se mantienen iguales...
 const styles = StyleSheet.create({
     screen: {
         flex: 1,

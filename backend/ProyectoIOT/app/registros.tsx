@@ -76,24 +76,6 @@ export default function PantallaRegistros() {
         <SafeAreaView style= { styles.screen } >
         <ScrollView style={ { flex: 1 } }>
             <View style={ styles.cardContainer }>
-                <View style={ styles.topBar }>
-                    <Text style={ styles.logo }> Segurix </Text>
-                        < View style = { styles.nav } >
-                            <TouchableOpacity onPress={ () => router.push('/empresa') }>
-                                <Text style={ styles.navText }> Empresa </Text>
-                                    </TouchableOpacity>
-                                    < TouchableOpacity onPress = {() => router.push('/CatalogoProductosScreen')
-}>
-    <Text style={ styles.navText }> Productos </Text>
-        </TouchableOpacity>
-        < TouchableOpacity onPress = {() => router.push('/registros')}>
-            <Text style={ styles.navText }> Registros </Text>
-                </TouchableOpacity>
-                < TouchableOpacity onPress = {() => router.push('/puerta')}>
-                    <Text style={ styles.navText }> Dispositivo IOT </Text>
-                        </TouchableOpacity>
-                        </View>
-                        </View>
 
                         < Text style = { styles.title } > Registros de Alertas </Text>
                             < FlatList

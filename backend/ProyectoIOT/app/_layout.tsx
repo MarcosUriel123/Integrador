@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { CartProvider } from '../componentes/CartContext';
 
 // Función para verificar la validez del token
 const verifyToken = async (): Promise<boolean> => {
@@ -73,30 +74,33 @@ export default function Layout() {
 
   // Una vez verificado, renderizar el stack de navegación
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {/* La pantalla index ahora redirigirá a principal */}
-      <Stack.Screen name="index" />
+    <CartProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* La pantalla index ahora redirigirá a principal */}
+        <Stack.Screen name="index" />
 
-      {/* Pantalla principal como destino inicial */}
-      <Stack.Screen name="principal" />
+        {/* Pantalla principal como destino inicial */}
+        <Stack.Screen name="principal" />
 
-      {/* Pantallas de autenticación */}
-      <Stack.Screen name="login" options={{
-        // Podemos usar el estado de token para configurar opciones específicas
-        animation: isTokenValid ? 'slide_from_right' : 'fade'
-      }} />
-      <Stack.Screen name="registro" />
+        {/* Pantallas de autenticación */}
+        <Stack.Screen name="login" options={{
+          // Podemos usar el estado de token para configurar opciones específicas
+          animation: isTokenValid ? 'slide_from_right' : 'fade'
+        }} />
+        <Stack.Screen name="registro" />
 
-      {/* Pantallas de perfil */}
-      <Stack.Screen name="Datosperfil" />
-      <Stack.Screen name="ActualizarPerfil" />
+        {/* Pantallas de perfil */}
+        <Stack.Screen name="Datosperfil" />
+        <Stack.Screen name="ActualizarPerfil" />
 
-      {/* Pantallas existentes */}
-      <Stack.Screen name="puerta" />
-      <Stack.Screen name="empresa" />
+        {/* Pantallas existentes */}
+        <Stack.Screen name="puerta" />
+        <Stack.Screen name="empresa" />
 
-      {/* Otras pantallas de tu aplicación */}
-      <Stack.Screen name="registroDispositivo" />
-    </Stack>
+        {/* Otras pantallas de tu aplicación */}
+        <Stack.Screen name="registroDispositivo" />
+        <Stack.Screen name="carrito" />
+      </Stack>
+    </CartProvider>
   );
 }

@@ -22,7 +22,7 @@ interface LoginResponse {
     [key: string]: any; // Para cualquier otra propiedad que pueda tener
 }
 
-export default function PantallaLogin() {
+export default function PantallaLogin1() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -107,6 +107,12 @@ export default function PantallaLogin() {
                     </View>
                 </View>
             </ScrollView>
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+            >
+                <Feather name="arrow-left" size={24} color="#007bff" />
+            </TouchableOpacity>
         </SafeAreaView>
     );
 }
@@ -181,5 +187,14 @@ const styles = StyleSheet.create({
     error: {
         color: 'red',
         marginBottom: 10,
+    },
+    backButton: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        zIndex: 10,
     },
 });

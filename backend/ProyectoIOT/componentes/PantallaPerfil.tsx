@@ -152,7 +152,18 @@ export default function PantallaPerfil({ userId }: Props) {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
                     <View style={styles.topBar}>
+                        {/* Añadimos el botón de volver */}
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => router.back()}
+                        >
+                            <Feather name="arrow-left" size={24} color="#007bff" />
+                        </TouchableOpacity>
+
                         <Text style={styles.logo}>Mi Perfil</Text>
+
+                        {/* Espacio vacío para mantener el título centrado */}
+                        <View style={styles.backButtonPlaceholder} />
                     </View>
 
                     <View style={styles.contentContainer}>
@@ -243,10 +254,19 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     topBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // Cambiado de alignItems: 'center'
         alignItems: 'center',
         padding: 15,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
+    },
+    backButton: {
+        padding: 5,
+    },
+    backButtonPlaceholder: {
+        width: 24, // Mismo tamaño que el icono
+        padding: 5,
     },
     logo: {
         fontSize: 24,
