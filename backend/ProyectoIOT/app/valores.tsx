@@ -13,7 +13,7 @@ import { Entypo } from '@expo/vector-icons';
 
 export default function ValoresScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.8.6:8082/api'; // Ajusta tu URL según sea necesario(IPCONFIG)
+    const API_BASE = 'http://localhost:8082/api'; // Ajusta tu URL según sea necesario(IPCONFIG)
     const [valor, setValor] = useState(''); // Usamos una variable para almacenar solo el último valor
 
     // useEffect para cargar el último valor desde el backend

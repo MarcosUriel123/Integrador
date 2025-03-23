@@ -28,21 +28,6 @@ const DeviceSchema: Schema = new Schema({
         required: true,
         trim: true
     },
-    location: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    isOnline: {
-        type: Boolean,
-        default: false
-    },
-    lastConnection: {
-        type: Date,
-        default: null
-    }
-}, {
-    timestamps: true
-});
+}, {timestamps: true});
 
 export default mongoose.model<IDevice>('Device', DeviceSchema);

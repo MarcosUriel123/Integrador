@@ -11,7 +11,7 @@ export default function PantallaAgregarProducto() {
 
     const handleAddProduct = async () => {
         try {
-            const response = await axios.post('http://192.168.8.6:8082/api/products/add', {
+            const response = await axios.post('http://localhost:8082/api/products/add', {
                 name,
                 description,
                 price,

@@ -6,7 +6,7 @@ import axios from 'axios';
 export default function PantallaHuella() {
     const handleRegistrarHuella = async () => {
         try {
-            const response = await axios.get('http://192.168.8.6:8082/api/huella/registrar'); //(IPCONFIG)
+            const response = await axios.get('http://localhost:8082/api/huella/registrar'); //(IPCONFIG)
             alert(response.data);
         } catch (error) {
             console.error("Error al registrar huella:", error);

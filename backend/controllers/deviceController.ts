@@ -3,16 +3,17 @@
 import { Request, Response } from 'express';
 import Device from '../models/Device';
 
+
 /**
  * Registrar un nuevo dispositivo IoT asociado al usuario autenticado
  */
 export const registerDevice = async (req: Request, res: Response) => {
     try {
-        const { macAddress, name, location } = req.body;
+        const { macAddress, name } = req.body;
 
-        // Validación más explícita
-        if (!macAddress || !name || !location) {
-            return res.status(400).json({ message: 'Todos los campos son requeridos' });
+        // Validación actualizada - ya no requiere location
+        if (!macAddress || !name) {
+            return res.status(400).json({ message: 'La dirección MAC y el nombre son requeridos' });
         }
 
         // Verificar si el dispositivo ya existe
@@ -31,16 +32,14 @@ export const registerDevice = async (req: Request, res: Response) => {
         console.log('Datos para crear dispositivo:', {
             userId: req.user._id,
             macAddress,
-            name,
-            location
+            name
         });
 
-        // Crear el nuevo dispositivo con manejo explícito de errores
+        // Crear el nuevo dispositivo sin el campo location
         const device = await Device.create({
             userId: req.user._id,
             macAddress,
-            name,
-            location
+            name
         });
 
         console.log('Dispositivo creado:', device);
