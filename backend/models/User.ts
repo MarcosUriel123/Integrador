@@ -9,6 +9,16 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     secretQuestion: { type: Number, required: true, ref: 'PreguntasSecretas' },
     secretAnswer: { type: String, required: true },
+    devicePin: {
+        type: String,
+        maxlength: 4,
+        validate: {
+            validator: function (v: string) {
+                return /^\d{4}$/.test(v);
+            },
+            message: 'El PIN debe ser de exactamente 4 dígitos'
+        }
+    },
 });
 
 const User = mongoose.model('User', userSchema);

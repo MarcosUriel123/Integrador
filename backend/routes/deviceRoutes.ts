@@ -1,16 +1,15 @@
 import express from 'express';
-import { registerDevice, getDevices } from '../controllers/deviceController';
+import { registerDevice, getDevices, getDevicePin } from '../controllers/deviceController';
 import { protect } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
-// Protege todas las rutas con el middleware de autenticación
-router.use(protect);
+// Rutas que requieren autenticación
+router.post('/register', protect, registerDevice as express.RequestHandler);
+router.get('/', protect, getDevices as express.RequestHandler);
 
-// Ruta para registrar un dispositivo
-router.post('/register', registerDevice as express.RequestHandler);
-
-// Ruta para obtener los dispositivos del usuario
-router.get('/', getDevices as express.RequestHandler);
+// Ruta pública para que el ESP32 pueda obtener el PIN
+// No usamos el middleware protect aquí para permitir el acceso al ESP32
+router.post('/get-pin', getDevicePin as express.RequestHandler);
 
 export default router;

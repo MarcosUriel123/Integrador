@@ -15,14 +15,28 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function PantallaRegistroDispositivo() {
     const [macAddress, setMacAddress] = useState('');
     const [name, setName] = useState('');
-    const [location, setLocation] = useState('');
+    const [pin, setPin] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Validar que el PIN solo contiene números
+    const validatePin = (text: string) => {
+        // Solo permitir dígitos y limitar a 4 caracteres
+        if (/^\d*$/.test(text) && text.length <= 4) {
+            setPin(text);
+        }
+    };
+
     const handleRegisterDevice = async () => {
         // Validaciones básicas
-        if (!macAddress || !name || !location) {
-            setMessage('Todos los campos son requeridos');
+        if (!macAddress || !name) {
+            setMessage('La dirección MAC y el nombre son requeridos');
+            return;
+        }
+
+        // Validación específica para el PIN
+        if (!pin || pin.length !== 4) {
+            setMessage('El PIN debe tener exactamente 4 dígitos');
             return;
         }
 
@@ -40,7 +54,7 @@ export default function PantallaRegistroDispositivo() {
             // Realizar la solicitud al backend
             const response = await axios.post(
                 'http://localhost:8082/api/devices/register',
-                { macAddress, name, location },
+                { macAddress, name, devicePin: pin }, // Cambiado de location a devicePin
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -49,7 +63,7 @@ export default function PantallaRegistroDispositivo() {
                 // Limpiar los campos
                 setMacAddress('');
                 setName('');
-                setLocation('');
+                setPin('');
             }
         } catch (error) {
             console.error('Error registrando dispositivo:', error);
@@ -82,13 +96,19 @@ export default function PantallaRegistroDispositivo() {
                         onChangeText={setName}
                     />
 
-                    <Text style={styles.label}>Ubicación</Text>
+                    <Text style={styles.label}>PIN de Acceso (4 dígitos)</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Sala de servidores"
-                        value={location}
-                        onChangeText={setLocation}
+                        placeholder="1234"
+                        value={pin}
+                        onChangeText={validatePin}
+                        keyboardType="numeric"
+                        maxLength={4}
+                        secureTextEntry={true}
                     />
+                    <Text style={styles.pinInfo}>
+                        Este PIN se usará para acceder al dispositivo desde la cerradura física.
+                    </Text>
 
                     <TouchableOpacity
                         style={[styles.button, isLoading && styles.buttonDisabled]}
@@ -153,6 +173,13 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 15,
         paddingHorizontal: 15,
+    },
+    pinInfo: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: -10,
+        marginBottom: 15,
+        fontStyle: 'italic',
     },
     button: {
         width: '100%',
