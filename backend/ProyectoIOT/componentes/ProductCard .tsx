@@ -2,12 +2,10 @@ import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet, Image } from 'react-native';
 
 type Product = {
-    _id: string;
+    id: string;
     name: string;
-    description: string;
-    price: number;
-    category: string;
     image: string;
+    price: number;
 };
 
 type Props = {
@@ -26,8 +24,6 @@ export default function ProductCard({ product, onPress }: Props) {
         </TouchableOpacity>
     );
 }
-
-// Estilos (igual que antes)
 
 const styles = StyleSheet.create({
     card: {
