@@ -46,13 +46,25 @@ export default function PantallaLogin() {
                 }
 
                 // Redirige a la pantalla principal usando expo-router
-                router.push('/Principal');
+                handleSuccessfulLogin();
             }
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
             setErrorMessage("Credenciales inválidas");
         }
 
+    };
+
+    const handleSuccessfulLogin = async () => {
+        // Después de guardar token y datos de usuario:
+        const redirectPath = await AsyncStorage.getItem('redirectAfterLogin');
+
+        if (redirectPath) {
+            await AsyncStorage.removeItem('redirectAfterLogin');
+            router.replace(redirectPath as any);
+        } else {
+            router.replace('/Principal');
+        }
     };
 
     return (

@@ -11,8 +11,9 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Entypo } from '@expo/vector-icons';
+import { Entypo, Feather } from '@expo/vector-icons'; // Añadir Feather
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Añadir AsyncStorage
 
 // Interfaz para las FAQs
 interface FAQ {
@@ -37,7 +38,7 @@ export default function PantallaPrincipal() {
                 const response = await axios.get<FAQ[]>('http://localhost:8082/api/preguntasFrecuentes');
                 setFaqs(response.data);
                 setError('');
-            } catch (err) { 
+            } catch (err) {
                 console.error('Error al cargar preguntas frecuentes:', err);
                 setError('No se pudieron cargar las preguntas frecuentes');
                 // Usar algunos datos de respaldo en caso de error
@@ -62,19 +63,93 @@ export default function PantallaPrincipal() {
         }
     };
 
+    // Helper para verificar autenticación antes de navegar
+    const navigateWithAuthCheck = async (path: string) => {
+        try {
+            // Lista de rutas públicas que no requieren autenticación
+            const publicRoutes = [
+                '/CatalogoProductosScreen',
+                '/empresa',
+                // Agregar otras rutas públicas aquí si es necesario
+            ];
+
+            // Si es una ruta pública, navegar directamente sin verificar autenticación
+            if (publicRoutes.includes(path)) {
+                router.push(path as any);
+                setMenuVisible(false);
+                return;
+            }
+
+            // Para rutas protegidas, verificar autenticación
+            const token = await AsyncStorage.getItem('userToken');
+
+            if (token) {
+                // Usuario autenticado, navegar a la ruta solicitada
+                router.push(path as any);
+            } else {
+                // Usuario no autenticado, guardar la ruta deseada y redirigir al login
+                await AsyncStorage.setItem('redirectAfterLogin', path);
+                router.push('/Login1');
+            }
+        } catch (error) {
+            console.error('Error al verificar autenticación:', error);
+            router.push('/Login1');
+        } finally {
+            // Cerrar el menú
+            setMenuVisible(false);
+        }
+    };
+
+    // Función para manejar el botón de perfil - modificada
+    const handleProfilePress = async () => {
+        try {
+            // Verificar si hay una sesión activa
+            const token = await AsyncStorage.getItem('userToken');
+
+            if (token) {
+                // Si hay sesión activa, navegar al perfil
+                router.push('/Datosperfil');
+            } else {
+                // Si no hay sesión activa, redirigir al login
+                // Cambiamos replace por push para mantener la navegación hacia atrás
+                router.push('/Login1');
+
+                // Opcional: guardar la ruta de retorno para después del login
+                await AsyncStorage.setItem('redirectAfterLogin', '/Datosperfil');
+            }
+        } catch (error) {
+            console.error('Error al verificar sesión:', error);
+            router.push('/Login1');
+        }
+    };
+
     return (
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
 
-                    {/* Barra Superior */}
+                    {/* Barra Superior - Modificada */}
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
 
-                        {/* Menú Desplegable */}
-                        <TouchableOpacity onPress={() => setMenuVisible(true)}>
-                            <Entypo name="menu" size={28} color="#1E1E1E" />
-                        </TouchableOpacity>
+                        {/* Contenedor para los iconos */}
+                        <View style={styles.iconsContainer}>
+                            {/* Botón de Perfil */}
+                            <TouchableOpacity
+                                onPress={handleProfilePress}
+                                style={styles.iconButton}
+                            >
+                                <Feather name="user" size={24} color="#1E1E1E" />
+                            </TouchableOpacity>
+
+                            {/* Menú Desplegable */}
+                            <TouchableOpacity
+                                onPress={() => setMenuVisible(true)}
+                                style={styles.iconButton}
+                            >
+                                <Entypo name="menu" size={28} color="#1E1E1E" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Modal para el Menú */}
@@ -87,41 +162,52 @@ export default function PantallaPrincipal() {
                         <View style={styles.modalContainer}>
                             <View style={styles.modalContent}>
                                 <Text style={styles.modalTitle}>Opciones</Text>
-                                <TouchableOpacity onPress={() => { router.push('/empresa'); setMenuVisible(false); }}>
+
+                                {/* Opciones del menú modificadas para usar navigateWithAuthCheck */}
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/empresa')}>
                                     <Text style={styles.modalText}>Empresa</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/CatalogoProductosScreen'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/CatalogoProductosScreen')}>
                                     <Text style={styles.modalText}>Productos</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/huella'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/huella')}>
                                     <Text style={styles.modalText}>Huella</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/puerta'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/puerta')}>
                                     <Text style={styles.modalText}>Dispositivo IoT</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/rfidControl'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/rfidControl')}>
                                     <Text style={styles.modalText}>RFID</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/Datosperfil'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/Datosperfil')}>
                                     <Text style={styles.modalText}>Perfil</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/registroUsuarios'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroUsuarios')}>
                                     <Text style={styles.modalText}>Gestión de Usuarios</Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity onPress={() => { router.push('/Aggprod'); setMenuVisible(false); }}>
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/Aggprod')}>
                                     <Text style={styles.modalText}>Admin (agg prod)</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/AggDatosEmp'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/AggDatosEmp')}>
                                     <Text style={styles.modalText}>Admin (datos empresa)</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => { router.push('/registroDispositivo'); setMenuVisible(false); }}>
+
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroDispositivo')}>
                                     <Text style={styles.modalText}>Alta del dispositivo</Text>
                                 </TouchableOpacity>
+
+                                {/* Botón de cerrar - no necesita verificación */}
                                 <TouchableOpacity style={styles.closeButton} onPress={() => setMenuVisible(false)}>
                                     <Text style={styles.closeButtonText}>Cerrar</Text>
                                 </TouchableOpacity>
-
                             </View>
                         </View>
                     </Modal>
@@ -231,6 +317,14 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#1E1E1E',
+    },
+    iconsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconButton: {
+        padding: 6,
+        marginLeft: 15, // Espacio entre los iconos
     },
     /* Sección Hero */
     heroSection: {

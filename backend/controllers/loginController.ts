@@ -2,10 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { blacklistToken } from '../ProyectoIOT/utils/tokenBlacklist';
 
 const generateToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || 'your_default_secret', {
-        expiresIn: '30d',
+        expiresIn: '1h',
     });
 };
 
@@ -34,5 +35,23 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
         });
     } catch (error) {
         next(error);
+    }
+};
+
+export const logoutUser = async (req: Request, res: Response) => {
+    try {
+        // Obtener el token del encabezado
+        const token = req.headers.authorization?.split(' ')[1];
+
+        if (token) {
+            // Añadir token a la lista negra
+            blacklistToken(token);
+            res.status(200).json({ message: 'Sesión cerrada correctamente' });
+        } else {
+            res.status(400).json({ message: 'No se proporcionó token' });
+        }
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        res.status(500).json({ message: 'Error al cerrar sesión' });
     }
 };

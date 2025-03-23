@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logout } from '../utils/authUtils';
 
 // Define la interfaz para el objeto Usuario
 interface User {
@@ -86,6 +87,37 @@ export default function PantallaPerfil({ userId }: Props) {
         });
     };
 
+
+
+    // Reemplazar tu función handleLogout existente
+    const handleLogout = () => {
+        Alert.alert(
+            "Cerrar sesión",
+            "¿Estás seguro que deseas cerrar sesión?",
+            [
+                {
+                    text: "Cancelar",
+                    style: "cancel"
+                },
+                {
+                    text: "Sí, cerrar sesión",
+                    onPress: async () => {
+                        try {
+                            await logout();
+                            // Redirigir al login o pantalla principal
+                            router.replace('/');
+                            Alert.alert('Sesión cerrada', 'Has cerrado sesión correctamente');
+                        } catch (error) {
+                            console.error('Error al cerrar sesión:', error);
+                            Alert.alert('Error', 'No se pudo cerrar sesión correctamente');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+
     if (loading) {
         return (
             <View style={[styles.screen, styles.centeredContainer]}>
@@ -164,6 +196,18 @@ export default function PantallaPerfil({ userId }: Props) {
                         <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
                             <Feather name="edit" size={18} color="#fff" style={styles.buttonIcon} />
                             <Text style={styles.buttonText}>Actualizar Perfil</Text>
+                        </TouchableOpacity>
+
+                        {/* Botón adicional para forzar cierre de sesión */}
+                        <TouchableOpacity
+                            style={[styles.logoutButton]}
+                            onPress={async () => {
+                                await AsyncStorage.clear();
+                                console.log('⚠️ Sesión forzosamente eliminada');
+                                router.replace('/');
+                            }}
+                        >
+                            <Text style={styles.buttonText}>Cerrar sesión</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -299,5 +343,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 25,
         backgroundColor: '#007bff',
         borderRadius: 8,
+    },
+    // Nuevo estilo para el botón de cerrar sesión
+    logoutButton: {
+        backgroundColor: '#dc3545', // Color rojo para indicar acción destructiva
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 10,
+        paddingVertical: 14,
+        width: '100%',
+        marginTop: 15, // Espacio adicional desde el botón anterior
     },
 });

@@ -1,32 +1,36 @@
 // app/index.tsx
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import PantallaLogin from '@/componentes/PantallaLogin1';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import PantallaPrincipal from '@/componentes/PantallaPrincipal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const router = useRouter();
+    const [isCheckingAuth, setIsCheckingAuth] = useState(false);
 
-    const handleLoginSuccess = () => {
-        setIsLoggedIn(true);
-    };
+    useEffect(() => {
+        // Verificar si hay un token guardado (solo para referencia)
+        const checkToken = async () => {
+            setIsCheckingAuth(true);
+            try {
+                const token = await AsyncStorage.getItem('userToken');
+                console.log('Token encontrado:', token ? 'Sí' : 'No');
+                // No redirigimos a ningún lado, solo registramos si hay un token
+            } catch (error) {
+                console.error('Error al verificar token:', error);
+            } finally {
+                setIsCheckingAuth(false);
+            }
+        };
 
-    const handleLogout = () => {
-        setIsLoggedIn(false);
-    };
+        checkToken();
+    }, []);
 
+    // Siempre mostraremos la pantalla principal, sin importar si hay sesión
     return (
         <View style={styles.container}>
-            {isLoggedIn ? (
-                <View style={styles.container}>
-                    <PantallaPrincipal />
-                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                        <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <PantallaLogin />
-            )}
+            <PantallaPrincipal />
         </View>
     );
 }
@@ -34,15 +38,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFF', // O #CFE2FF, si lo prefieres
-    },
-    logoutButton: {
-        backgroundColor: '#007BFF',
-        padding: 10,
-        alignItems: 'center',
-    },
-    logoutButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-    },
+        backgroundColor: '#FFF',
+    }
 });

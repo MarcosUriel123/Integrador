@@ -7,6 +7,7 @@ declare module 'express-serve-static-core' {
 }
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import { isTokenBlacklisted } from '../ProyectoIOT/utils/tokenBlacklist';
 
 interface JwtPayload {
     id: string;
@@ -20,6 +21,12 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
         try {
             // Obtener el token del header
             token = req.headers.authorization.split(' ')[1];
+
+            // Verificar si el token está en la lista negra
+            if (isTokenBlacklisted(token)) {
+                res.status(401).json({ message: 'No autorizado, sesión cerrada' });
+                return;
+            }
 
             // IMPORTANTE: Usar exactamente el mismo secreto que en loginController.ts
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_secret') as JwtPayload;
