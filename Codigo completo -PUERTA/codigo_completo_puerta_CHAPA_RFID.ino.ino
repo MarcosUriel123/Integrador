@@ -11,8 +11,8 @@
 #include <HTTPClient.h>
 
 // Configuración del WiFi
-const char* ssid = "INFINITUM26F6_2.4"; // Cambia esto por tu SSID
-const char* password = "25XM2pGRPU"; // Cambia esto por tu contraseña
+const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
+const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
 
 // Configuración del servidor web
 WebServer server(80);
@@ -331,7 +331,7 @@ void verificarSensorPIR() {
           HTTPClient http;
           
           // URL correcta
-          String serverUrl = "http://192.168.0.81:8082/api/registros/add"; //IP DE IPCONFIG
+          String serverUrl = "http://192.168.8.6:8082/api/registros/add"; //IP DE IPCONFIG
           Serial.println("Intentando conectar a: " + serverUrl);
           
           http.begin(serverUrl);
