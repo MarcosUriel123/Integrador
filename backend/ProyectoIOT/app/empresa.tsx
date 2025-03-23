@@ -6,11 +6,11 @@ import {
     Text,
     Image,
     TouchableOpacity,
-    Switch,
     StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Entypo } from '@expo/vector-icons';
+import Header from '../componentes/Header';
+import Footer from '../componentes/Footer';
 
 export default function EmpresaScreen() {
     const router = useRouter();
@@ -42,20 +42,13 @@ export default function EmpresaScreen() {
             <ScrollView style={{ flex: 1 }}>
                 {/* Tarjeta principal */}
                 <View style={styles.cardContainer}>
-                    {/* Barra Superior */}
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo} onPress={() => router.push('/')}>Segurix</Text>
-                        <View style={styles.nav}>
-                            <TouchableOpacity onPress={() => console.log('Ver productos')}>
-                                <Text style={styles.navText}>Ver productos</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    {/* Usar el componente Header */}
+                    <Header title="Empresa" showProfileIcon={true} />
 
                     {/* Sección Hero con imagen */}
                     <View style={styles.heroSection}>
                         <Image
-                            source={require('../assets/images/puertaIOT-empresa.png')} // Ajusta la ruta de tu imagen
+                            source={require('../assets/images/puertaIOT-empresa.png')}
                             style={styles.heroImage}
                             resizeMode="contain"
                         />
@@ -92,42 +85,8 @@ export default function EmpresaScreen() {
                         )}
                     </View>
 
-                    {/* Sección inferior: Preguntas Frecuentes y contacto */}
-                    <View style={styles.bottomSection}>
-                        <View style={styles.faq}>
-                            <Text style={styles.faqTitle}>Preguntas frecuentes</Text>
-                            <Text style={styles.faqItem}>¿Para qué sirve?</Text>
-                            <Text style={styles.faqItem}>¿Cómo conectar mi dispositivo IoT?</Text>
-                        </View>
-
-                        <View style={styles.contact}>
-                            <Text style={styles.contactTitle}>Contáctanos</Text>
-                            <Text style={styles.contactItem}>Col. Horacio Camargo</Text>
-                            <Text style={styles.contactItem}>segurix@mail.com</Text>
-                            <Text style={styles.contactItem}>+52 774 545 8510</Text>
-                        </View>
-                    </View>
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <View style={styles.footerLeft}>
-                            <TouchableOpacity onPress={() => console.log('Términos y condiciones')}>
-                                <Text style={styles.footerText}>Términos y condiciones</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => console.log('Privacidad')}>
-                                <Text style={styles.footerText}>Privacidad</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.footerRight}>
-                            <TouchableOpacity onPress={() => console.log('Instagram')}>
-                                <Entypo name="instagram-with-circle" size={24} color="#1E1E1E" style={styles.icon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => console.log('Facebook')}>
-                                <Entypo name="facebook-with-circle" size={24} color="#1E1E1E" style={styles.icon} />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
+                    {/* Usar el componente Footer */}
+                    <Footer showContactInfo={true} showTerms={true} />
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -149,28 +108,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 5,
         elevation: 6,
-    },
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    nav: {
-        flexDirection: 'row',
-    },
-    navText: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginLeft: 20,
     },
     heroSection: {
         marginTop: 10,
@@ -234,63 +171,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#1E1E1E',
         fontWeight: '600',
-    },
-    bottomSection: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 30,
-    },
-    faq: {
-        flex: 1,
-        marginRight: 10,
-    },
-    faqTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-        marginBottom: 10,
-    },
-    faqItem: {
-        fontSize: 16,
-        color: '#2C2C2C',
-        marginBottom: 4,
-    },
-    contact: {
-        flex: 1,
-        alignItems: 'flex-end',
-        marginLeft: 10,
-    },
-    contactTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-        marginBottom: 10,
-    },
-    contactItem: {
-        fontSize: 16,
-        color: '#2C2C2C',
-        marginBottom: 4,
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        paddingTop: 10,
-    },
-    footerLeft: {
-        flexDirection: 'row',
-    },
-    footerRight: {
-        flexDirection: 'row',
-    },
-    footerText: {
-        fontSize: 14,
-        color: '#1E1E1E',
-        marginRight: 20,
-    },
-    icon: {
-        marginRight: 15,
-    },
+    }
 });

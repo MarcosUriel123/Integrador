@@ -8,11 +8,16 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    Modal
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import Header from './Header';
+import Footer from './Footer';
+import RFIDControlModal from './RFIDControlModal';
+import FingerprintRegistrationModal from './FingerprintRegistrationModal';
 
 interface SubUser {
     _id: string;
@@ -46,6 +51,9 @@ export default function PantallaRegistroUsuarios() {
     const [isLoading, setIsLoading] = useState(false);
     const [subUsers, setSubUsers] = useState<SubUser[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+    // Estado para controlar el modal
+    const [isModalVisible, setModalVisible] = useState(false);
 
     useEffect(() => {
         loadSubUsers();
@@ -185,13 +193,80 @@ export default function PantallaRegistroUsuarios() {
         setAccessId(''); // Limpiar el ID al cambiar el método
     };
 
+    // Función para iniciar el proceso de registro
+    const startRegistration = () => {
+        // Validar que el nombre exista
+        if (!name.trim()) {
+            setMessage('El nombre es requerido');
+            setMessageType('error');
+            return;
+        }
+
+        // Mostrar modal según el método seleccionado
+        setModalVisible(true);
+    };
+
+    // Función que se llamará cuando se complete el registro en el modal
+    const handleAccessIdCapture = (capturedId: string) => {
+        setAccessId(capturedId);
+        setModalVisible(false); // Cerrar el modal
+
+        // Proceder con el registro usando el ID capturado
+        registerUserWithAccessId(capturedId);
+    };
+
+    // Función modificada para registrar usuario con el ID capturado
+    const registerUserWithAccessId = async (capturedId: string) => {
+        setIsLoading(true);
+        setMessage('');
+
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+
+            if (!token) {
+                setMessage('No se encontró el token de autenticación');
+                setMessageType('error');
+                setIsLoading(false);
+                return;
+            }
+
+            // Usar tipo genérico para la respuesta
+            const response = await axios.post<SubUserResponse>(
+                'http://localhost:8082/api/subusers/register',
+                {
+                    name,
+                    accessMethod,
+                    accessId: capturedId
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.status === 201) {
+                setMessage('Usuario registrado exitosamente');
+                setMessageType('success');
+                setName('');
+                setAccessId('');
+                loadSubUsers(); // Recargar la lista
+            }
+        } catch (error: any) {
+            console.error('Error al registrar usuario:', error);
+            if (error.response && error.response.data && error.response.data.message) {
+                setMessage(error.response.data.message);
+            } else {
+                setMessage('Error al registrar el usuario');
+            }
+            setMessageType('error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
-                    </View>
+                    {/* Usar el componente Header */}
+                    <Header title="Registro de Usuarios" />
 
                     <Text style={styles.title}>Registro de Usuarios</Text>
                     <Text style={styles.subtitle}>Agregue usuarios que pueden acceder a su puerta</Text>
@@ -222,24 +297,14 @@ export default function PantallaRegistroUsuarios() {
                             </View>
                         </TouchableOpacity>
 
-                        <Text style={styles.label}>
-                            ID de {accessMethod === 'fingerprint' ? 'huella' : 'tarjeta RFID'}
-                        </Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder={`Ingrese el ID único de ${accessMethod === 'fingerprint' ? 'la huella' : 'la tarjeta'}`}
-                            value={accessId}
-                            onChangeText={setAccessId}
-                            keyboardType="numeric"
-                        />
-
+                        {/* Botón para iniciar el registro */}
                         <TouchableOpacity
                             style={[styles.button, isLoading && styles.buttonDisabled]}
-                            onPress={handleRegisterUser}
+                            onPress={startRegistration}
                             disabled={isLoading}
                         >
                             <Text style={styles.buttonText}>
-                                {isLoading ? 'Registrando...' : 'Registrar Usuario'}
+                                {isLoading ? 'Procesando...' : accessMethod === 'fingerprint' ? 'Registrar Huella' : 'Registrar Tarjeta RFID'}
                             </Text>
                         </TouchableOpacity>
 
@@ -252,6 +317,31 @@ export default function PantallaRegistroUsuarios() {
                             </Text>
                         ) : null}
                     </View>
+
+                    {/* Modal para registro de RFID o Huella */}
+                    <Modal
+                        animationType="slide"
+                        transparent={true}
+                        visible={isModalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+                        <View style={styles.modalContainer}>
+                            <View style={styles.modalContent}>
+                                {accessMethod === 'rfid' ? (
+                                    <RFIDControlModal
+                                        onCaptureComplete={handleAccessIdCapture}
+                                        onCancel={() => setModalVisible(false)}
+                                    />
+                                ) : (
+                                    <FingerprintRegistrationModal
+                                        onCaptureComplete={handleAccessIdCapture}
+                                        onCancel={() => setModalVisible(false)}
+                                        userName={name}
+                                    />
+                                )}
+                            </View>
+                        </View>
+                    </Modal>
 
                     <View style={styles.usersListContainer}>
                         <Text style={styles.listTitle}>Usuarios Registrados</Text>
@@ -291,12 +381,16 @@ export default function PantallaRegistroUsuarios() {
                             <Text style={styles.refreshButtonText}>Actualizar Lista</Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Usar el componente Footer */}
+                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
+// Extender los estilos existentes con los nuevos necesarios para el modal
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
@@ -470,5 +564,27 @@ const styles = StyleSheet.create({
     refreshButtonText: {
         color: 'white',
         fontWeight: 'bold',
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 20,
+        width: '90%',
+        maxHeight: '80%',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
 });

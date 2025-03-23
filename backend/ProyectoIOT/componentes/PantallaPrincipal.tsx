@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { Entypo, Feather } from '@expo/vector-icons'; // Añadir Feather
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Añadir AsyncStorage
+import Header from './Header';
+import Footer from './Footer';
 
 // Interfaz para las FAQs
 interface FAQ {
@@ -127,90 +129,8 @@ export default function PantallaPrincipal() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-
-                    {/* Barra Superior - Modificada */}
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
-
-                        {/* Contenedor para los iconos */}
-                        <View style={styles.iconsContainer}>
-                            {/* Botón de Perfil */}
-                            <TouchableOpacity
-                                onPress={handleProfilePress}
-                                style={styles.iconButton}
-                            >
-                                <Feather name="user" size={24} color="#1E1E1E" />
-                            </TouchableOpacity>
-
-                            {/* Menú Desplegable */}
-                            <TouchableOpacity
-                                onPress={() => setMenuVisible(true)}
-                                style={styles.iconButton}
-                            >
-                                <Entypo name="menu" size={28} color="#1E1E1E" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Modal para el Menú */}
-                    <Modal
-                        visible={menuVisible}
-                        transparent={true}
-                        animationType="slide"
-                        onRequestClose={() => setMenuVisible(false)}
-                    >
-                        <View style={styles.modalContainer}>
-                            <View style={styles.modalContent}>
-                                <Text style={styles.modalTitle}>Opciones</Text>
-
-                                {/* Opciones del menú modificadas para usar navigateWithAuthCheck */}
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/empresa')}>
-                                    <Text style={styles.modalText}>Empresa</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/CatalogoProductosScreen')}>
-                                    <Text style={styles.modalText}>Productos</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/huella')}>
-                                    <Text style={styles.modalText}>Huella</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/puerta')}>
-                                    <Text style={styles.modalText}>Dispositivo IoT</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/rfidControl')}>
-                                    <Text style={styles.modalText}>RFID</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/Datosperfil')}>
-                                    <Text style={styles.modalText}>Perfil</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroUsuarios')}>
-                                    <Text style={styles.modalText}>Gestión de Usuarios</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/Aggprod')}>
-                                    <Text style={styles.modalText}>Admin (agg prod)</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/AggDatosEmp')}>
-                                    <Text style={styles.modalText}>Admin (datos empresa)</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroDispositivo')}>
-                                    <Text style={styles.modalText}>Alta del dispositivo</Text>
-                                </TouchableOpacity>
-
-                                {/* Botón de cerrar - no necesita verificación */}
-                                <TouchableOpacity style={styles.closeButton} onPress={() => setMenuVisible(false)}>
-                                    <Text style={styles.closeButtonText}>Cerrar</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </Modal>
+                    {/* Usar el componente Header */}
+                    <Header />
 
                     {/* Sección Hero */}
                     <View style={styles.heroSection}>
@@ -263,24 +183,8 @@ export default function PantallaPrincipal() {
                         )}
                     </View>
 
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <View style={styles.footerLeft}>
-                            <TouchableOpacity onPress={() => console.log('Términos y condiciones')}>
-                                <Text style={styles.footerText}>Términos y condiciones</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => console.log('Privacidad')}>
-                                <Text style={styles.footerText}>Privacidad</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.footerRight}>
-                            <Text style={[styles.footerText, styles.footerTitle]}>Contáctanos</Text>
-                            <Text style={styles.footerText}>Col. Horacio Camargo</Text>
-                            <Text style={styles.footerText}>segurix@mail.com</Text>
-                            <Text style={styles.footerText}>+52 774 545 8510</Text>
-                        </View>
-                    </View>
-
+                    {/* Usar el componente Footer */}
+                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -302,29 +206,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 5,
         elevation: 6,
-    },
-    /* Barra Superior */
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    iconsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    iconButton: {
-        padding: 6,
-        marginLeft: 15, // Espacio entre los iconos
     },
     /* Sección Hero */
     heroSection: {
@@ -349,39 +230,6 @@ const styles = StyleSheet.create({
         marginTop: 8,
         textAlign: 'center',
         marginBottom: 10,
-    },
-    /* Menú Modal */
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        width: '80%',
-        backgroundColor: '#FFF',
-        padding: 20,
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    modalTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    modalText: {
-        fontSize: 18,
-        paddingVertical: 10,
-    },
-    closeButton: {
-        marginTop: 15,
-        backgroundColor: '#007bff',
-        padding: 10,
-        borderRadius: 5,
-    },
-    closeButtonText: {
-        color: '#FFF',
-        fontSize: 16,
     },
     /* Sección Preguntas Frecuentes */
     sectionTitle: {
@@ -439,32 +287,5 @@ const styles = StyleSheet.create({
     errorText: {
         color: '#c62828',
         textAlign: 'center',
-    },
-
-    /* Footer */
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        paddingTop: 10,
-    },
-    footerLeft: {
-        flex: 1,
-    },
-    footerRight: {
-        flex: 1,
-        alignItems: 'flex-end',
-    },
-    footerText: {
-        fontSize: 14,
-        color: '#1E1E1E',
-        marginBottom: 4,
-    },
-    footerTitle: {
-        fontWeight: 'bold',
-        fontSize: 16,
-        marginTop: 8,
-    },
+    }
 });

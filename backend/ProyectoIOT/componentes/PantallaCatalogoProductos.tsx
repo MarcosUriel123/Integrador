@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { Entypo } from '@expo/vector-icons';
+import Header from './Header';
+import Footer from './Footer';
 
 type Product = {
     _id: string;
@@ -50,7 +51,7 @@ export default function PantallaCatalogoProductos() {
         // Navegar a la pantalla de detalles y pasar los datos del producto
         router.push({
             pathname: '/productoDetail',
-            params: { product: JSON.stringify(product) }, // Pasar el producto como string
+            params: { product: JSON.stringify(product) },
         });
     };
 
@@ -68,104 +69,45 @@ export default function PantallaCatalogoProductos() {
         </TouchableOpacity>
     );
 
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007bff" />
-            </View>
-        );
-    }
-
-    if (error) {
-        return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-            </View>
-        );
-    }
-
     return (
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
-                        <View style={styles.nav}>
-                            <TouchableOpacity onPress={() => router.push('/empresa')}>
-                                <Text style={styles.navText}>Empresa</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/CatalogoProductosScreen')}>
-                                <Text style={styles.navText}>Productos</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/huella')}>
-                                <Text style={styles.navText}>Huella</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/puerta')}>
-                                <Text style={styles.navText}>Dispositivo IOT</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/rfidControl' as any)}>
-                                <Text style={styles.navText}>RFID</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/perfil')}>
-                                <Text style={styles.navText}>Perfil</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => router.push('/Aggprod' as any)}>
-                                <Text style={styles.navText}>Admin(agg prod)</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                    {/* Reemplazando la barra superior con nuestro componente Header */}
+                    <Header title="Catálogo de Productos" />
 
-                    <Text style={styles.title}>Catálogo de Productos</Text>
-                    <FlatList
-                        data={products}
-                        renderItem={renderProductItem}
-                        keyExtractor={(item) => item._id}
-                        scrollEnabled={false}
-                        contentContainerStyle={styles.listContent}
-                    />
+                    {/* Contenido condicional basado en estados de carga/error */}
+                    {loading ? (
+                        <View style={styles.contentContainer}>
+                            <ActivityIndicator size="large" color="#007bff" />
+                            <Text style={styles.loadingText}>Cargando productos...</Text>
+                        </View>
+                    ) : error ? (
+                        <View style={styles.contentContainer}>
+                            <Text style={styles.errorText}>{error}</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.contentContainer}>
+                            <Text style={styles.title}>Catálogo de Productos</Text>
+                            <FlatList
+                                data={products}
+                                renderItem={renderProductItem}
+                                keyExtractor={(item) => item._id}
+                                scrollEnabled={false}
+                                contentContainerStyle={styles.listContent}
+                            />
+                        </View>
+                    )}
 
-                    <View style={styles.footer}>
-                        <View style={styles.footerLeft}>
-                            <TouchableOpacity onPress={() => console.log('Términos y condiciones')}>
-                                <Text style={styles.footerText}>Términos y condiciones</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => console.log('Privacidad')}>
-                                <Text style={styles.footerText}>Privacidad</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.footerRight}>
-                            <Text style={[styles.footerText, styles.footerTitle]}>Contáctanos</Text>
-                            <Text style={styles.footerText}>Col. Horacio Camargo</Text>
-                            <Text style={styles.footerText}>segurix@mail.com</Text>
-                            <Text style={styles.footerText}>+52 774 545 8510</Text>
-                            <Text style={[styles.footerText, styles.footerTitle]}>Redes sociales</Text>
-                            <View style={styles.socialIcons}>
-                                <TouchableOpacity onPress={() => console.log('Instagram')}>
-                                    <Entypo
-                                        name="instagram-with-circle"
-                                        size={28}
-                                        color="#1E1E1E"
-                                        style={styles.socialIcon}
-                                    />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => console.log('Facebook')}>
-                                    <Entypo
-                                        name="facebook-with-circle"
-                                        size={28}
-                                        color="#1E1E1E"
-                                        style={styles.socialIcon}
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
+                    {/* Reemplazando el footer con nuestro componente Footer */}
+                    <Footer showContactInfo={true} showTerms={true} />
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-// Estilos combinados y actualizados
+// Estilos actualizados (eliminados los estilos que ya no se necesitan)
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
@@ -182,27 +124,12 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 6,
     },
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    contentContainer: {
+        flex: 1,
         alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    nav: {
-        flexDirection: 'row',
-    },
-    navText: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginLeft: 20,
+        justifyContent: 'center',
+        paddingVertical: 20,
+        minHeight: 300, // Asegura espacio suficiente para mostrar carga/error
     },
     title: {
         fontSize: 22,
@@ -251,52 +178,17 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         paddingHorizontal: 8,
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    loadingText: {
+        marginTop: 15,
+        fontSize: 16,
+        color: '#6c757d',
     },
     errorText: {
         color: '#dc3545',
-        fontSize: 16,
+        fontSize: 18,
+        textAlign: 'center',
     },
     listContent: {
         width: '100%',
     },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        paddingTop: 10,
-    },
-    footerLeft: {
-        flex: 1,
-    },
-    footerRight: {
-        flex: 1,
-        alignItems: 'flex-end',
-    },
-    footerText: {
-        fontSize: 14,
-        color: '#1E1E1E',
-        marginBottom: 4,
-    },
-    footerTitle: {
-        fontWeight: 'bold',
-        marginTop: 8,
-    },
-    socialIcons: {
-        flexDirection: 'row',
-        marginTop: 8,
-    },
-    socialIcon: {
-        marginRight: 15,
-    },
 });

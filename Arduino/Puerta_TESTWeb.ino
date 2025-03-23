@@ -9,6 +9,7 @@
 #include <WiFi.h> // Biblioteca para WiFi
 #include <WebServer.h> // Biblioteca para el servidor web
 #include <HTTPClient.h>
+#include <ArduinoJson.h>  // Añadir esta biblioteca
 
 // Configuración del WiFi
 const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
@@ -64,6 +65,20 @@ bool alarmaActivada = false;
 // Configuración del sensor de huella
 HardwareSerial mySerial(2);
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+
+// Variables para el estado de los procesos
+String rfidStatus = "idle"; // Variable global para el estado
+String fingerprintStatus = "idle";
+String lastCardId = "";
+int lastFingerprintId = -1;
+String lastErrorMessage = "";
+bool isRegistrationActive = false;
+int registrationStep = 0;
+
+bool isRFIDOperationActive = false;
+
+unsigned long rfidOperationStartTime = 0;
+const unsigned long RFID_TIMEOUT = 30000; // 30 segundos
 
 void pitidoCorto() {
   digitalWrite(pinBuzzer, HIGH);
@@ -125,6 +140,15 @@ void setup() {
   // Configurar rutas del servidor web
   server.on("/leerRFID", handleLeerRFID); // Ruta para leer el RFID
   server.on("/controlPuerta", handleControlPuerta); // Ruta para controlar la puerta
+  server.on("/api/arduino/status", HTTP_GET, handleStatus);
+  server.on("/api/arduino/rfid/read", HTTP_POST, handleStartRFIDRead);
+  server.on("/api/arduino/rfid/status", HTTP_GET, handleRFIDStatus);
+  server.on("/api/arduino/fingerprint/register", HTTP_POST, handleFingerprintRegister);
+  server.on("/api/arduino/fingerprint/status", HTTP_GET, handleFingerprintStatus);
+  server.on("/api/arduino/ping", HTTP_GET, []() {
+    sendCORSHeaders();
+    server.send(200, "application/json", "{\"status\":\"ok\"}");
+  });
 
   // Iniciar servidor
   server.begin();
@@ -133,11 +157,15 @@ void setup() {
   mostrarMenuPrincipal();
 }
 
+void sendCORSHeaders() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
 void handleLeerRFID() {
   // Agregar encabezados CORS
-  server.sendHeader("Access-Control-Allow-Origin", "*"); // Permite cualquier origen
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Métodos permitidos
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type"); // Encabezados permitidos
+  sendCORSHeaders();
 
   // Verifica si hay una tarjeta cerca
   if (!mfrc522.PICC_IsNewCardPresent()) {
@@ -157,6 +185,8 @@ void handleLeerRFID() {
     tagID += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
     tagID += String(mfrc522.uid.uidByte[i], HEX);
   }
+  // Convertir a mayúsculas para consistencia
+  tagID.toUpperCase();
 
   // Enviar el UID como respuesta
   server.send(200, "text/plain", tagID);
@@ -168,9 +198,7 @@ void handleLeerRFID() {
 
 void handleControlPuerta() {
   // Agregar encabezados CORS
-  server.sendHeader("Access-Control-Allow-Origin", "*"); // Permite cualquier origen
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Métodos permitidos
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type"); // Encabezados permitidos
+  sendCORSHeaders();
 
   // Verificar si se recibió un parámetro 'action'
   if (server.hasArg("action")) {
@@ -190,6 +218,115 @@ void handleControlPuerta() {
   } else {
     server.send(400, "text/plain", "Falta el parámetro 'action'");
   }
+}
+
+void handleStatus() {
+  sendCORSHeaders();
+  
+  DynamicJsonDocument doc(200);
+  doc["connected"] = true;
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleStartRFIDRead() {
+  if (isRFIDOperationActive) {
+    // Retornar error de operación en progreso
+    DynamicJsonDocument errorDoc(128);
+    errorDoc["success"] = false;
+    errorDoc["message"] = "Operación RFID en progreso";
+    
+    String errorResponse;
+    serializeJson(errorDoc, errorResponse);
+    sendCORSHeaders();
+    server.send(409, "application/json", errorResponse);
+    return;
+  }
+  
+  isRFIDOperationActive = true;
+  rfidStatus = "reading";
+  lastCardId = "";
+  rfidOperationStartTime = millis();
+  
+  DynamicJsonDocument doc(200);
+  doc["success"] = true;
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleRFIDStatus() {
+  sendCORSHeaders();
+  
+  // Si está en estado "reading", intentar leer tarjeta
+  if (rfidStatus == "reading") {
+    if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
+      String tagID = "";
+      for (byte i = 0; i < mfrc522.uid.size; i++) {
+        tagID += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
+        tagID += String(mfrc522.uid.uidByte[i], HEX);
+      }
+      
+      lastCardId = tagID;
+      rfidStatus = "completed";
+      
+      mfrc522.PICC_HaltA();
+      mfrc522.PCD_StopCrypto1();
+    }
+  }
+  
+  DynamicJsonDocument doc(200);
+  doc["status"] = rfidStatus;
+  
+  if (rfidStatus == "completed") {
+    doc["cardId"] = lastCardId;
+  }
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleFingerprintRegister() {
+  sendCORSHeaders();
+  
+  DynamicJsonDocument doc(512);
+  deserializeJson(doc, server.arg("plain"));
+  
+  String userName = doc["userName"].as<String>();
+  
+  // Obtener un ID disponible para la huella (esto es simplificado)
+  lastFingerprintId = random(1, 128);  // En producción, usar una lógica para IDs únicos
+  
+  fingerprintStatus = "step1";
+  registrationStep = 1;
+  isRegistrationActive = true;
+  
+  DynamicJsonDocument responseDoc(200);
+  responseDoc["fingerprintId"] = String(lastFingerprintId);
+  
+  String response;
+  serializeJson(responseDoc, response);
+  server.send(200, "application/json", response);
+  responseDoc.clear(); // Liberar memoria
+}
+
+void handleFingerprintStatus() {
+  sendCORSHeaders();
+  
+  DynamicJsonDocument doc(200);
+  doc["status"] = fingerprintStatus;
+  
+  if (fingerprintStatus == "error") {
+    doc["message"] = lastErrorMessage;
+  }
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
 }
 
 void mostrarMenuPrincipal() {
@@ -238,6 +375,9 @@ void verificarRFID() {
     tagID += String(mfrc522.uid.uidByte[i], HEX);
   }
   Serial.println();
+
+  // Convertir a mayúsculas para consistencia
+  tagID.toUpperCase();
 
   // Conceder acceso si se detecta una tarjeta válida
   lcd.clear();
@@ -543,11 +683,81 @@ void verificarHuella() {
   }
 }
 
+// Añadir esta función a tu código Arduino
+void processFingerprintRegistration() {
+  if (!isRegistrationActive) return;
+  
+  switch (registrationStep) {
+    case 1: // Esperando primera captura
+      {
+        int p = finger.getImage();
+        if (p == FINGERPRINT_OK) {
+          p = finger.image2Tz(1);
+          if (p == FINGERPRINT_OK) {
+            fingerprintStatus = "step2";
+            registrationStep = 2;
+          } else {
+            fingerprintStatus = "error";
+            lastErrorMessage = "Error al procesar primera imagen";
+            isRegistrationActive = false;
+          }
+        }
+      }
+      break;
+      
+    case 2: // Esperando que retire el dedo
+      {
+        if (finger.getImage() == FINGERPRINT_NOFINGER) {
+          registrationStep = 3;
+        }
+      }
+      break;
+      
+    case 3: // Esperando segunda captura
+      {
+        int p = finger.getImage();
+        if (p == FINGERPRINT_OK) {
+          p = finger.image2Tz(2);
+          if (p == FINGERPRINT_OK) {
+            p = finger.createModel();
+            if (p == FINGERPRINT_OK) {
+              p = finger.storeModel(lastFingerprintId);
+              if (p == FINGERPRINT_OK) {
+                fingerprintStatus = "completed";
+                isRegistrationActive = false;
+              } else {
+                fingerprintStatus = "error";
+                lastErrorMessage = "Error al almacenar modelo";
+                isRegistrationActive = false;
+              }
+            } else {
+              fingerprintStatus = "error";
+              lastErrorMessage = "Error al crear modelo";
+              isRegistrationActive = false;
+            }
+          } else {
+            fingerprintStatus = "error";
+            lastErrorMessage = "Error al procesar segunda imagen";
+            isRegistrationActive = false;
+          }
+        }
+      }
+      break;
+  }
+}
+
 void loop() {
+  // En cada ciclo, verificar timeout
+  if (rfidStatus == "reading" && millis() - rfidOperationStartTime > RFID_TIMEOUT) {
+    rfidStatus = "error";
+    lastErrorMessage = "Tiempo de espera agotado";
+    isRFIDOperationActive = false;
+  }
   char tecla = teclado.getKey();
   verificarSensorPIR();
   verificarRFID();
   verificarHuella();
+  processFingerprintRegistration();
   
   if (tecla) {
     Serial.println(tecla);
