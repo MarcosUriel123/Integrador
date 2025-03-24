@@ -14,6 +14,7 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { FontAwesome5 } from '@expo/vector-icons'; // Importamos FontAwesome5 para el ícono de volver
 import Header from './Header';
 import Footer from './Footer';
 import RFIDControlModal from './RFIDControlModal';
@@ -58,6 +59,11 @@ export default function PantallaRegistroUsuarios() {
     useEffect(() => {
         loadSubUsers();
     }, []);
+
+    // Función para manejar el botón volver
+    const handleVolver = () => {
+        router.back(); // Navega hacia atrás en el historial
+    };
 
     const loadSubUsers = async () => {
         try {
@@ -265,8 +271,14 @@ export default function PantallaRegistroUsuarios() {
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
-                    {/* Usar el componente Header */}
-                    <Header title="Registro de Usuarios" />
+                    {/* Botón Volver - similar al de PantallaLogin1 */}
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={handleVolver}
+                    >
+                        <FontAwesome5 name="arrow-left" size={20} color="#007BFF" />
+                        <Text style={styles.backButtonText}>Volver</Text>
+                    </TouchableOpacity>
 
                     <Text style={styles.title}>Registro de Usuarios</Text>
                     <Text style={styles.subtitle}>Agregue usuarios que pueden acceder a su puerta</Text>
@@ -382,8 +394,6 @@ export default function PantallaRegistroUsuarios() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Usar el componente Footer */}
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -586,5 +596,18 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
+    },
+    // Estilos para el botón Volver
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        alignSelf: 'flex-start',
+    },
+    backButtonText: {
+        color: '#007BFF',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8,
     },
 });
