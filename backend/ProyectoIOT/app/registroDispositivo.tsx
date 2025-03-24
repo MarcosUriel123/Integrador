@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'expo-router'; // Añadir esta importación
 import {
     SafeAreaView,
     ScrollView,
@@ -13,6 +14,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PantallaRegistroDispositivo() {
+    const router = useRouter(); // Añadir esto para la navegación
     const [macAddress, setMacAddress] = useState('');
     const [name, setName] = useState('');
     const [pin, setPin] = useState('');
@@ -51,23 +53,61 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
+            // Usar IP de tu PC en la red local en lugar de localhost
+            // Ejemplo: '192.168.1.100:8082' - debes ajustar esto a tu IP
+            const baseUrl = 'http://localhost:8082'; // Cambia esto a tu IP local
+
             // Realizar la solicitud al backend
             const response = await axios.post(
-                'http://localhost:8082/api/devices/register',
-                { macAddress, name, devicePin: pin }, // Cambiado de location a devicePin
+                `${baseUrl}/api/devices/register`,
+                { macAddress, name, devicePin: pin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (response.status === 201) {
+                // Guardar el estado para indicar que el usuario ya tiene un dispositivo
+                await AsyncStorage.setItem('userHasDevice', 'true');
+
                 setMessage('Dispositivo registrado con éxito');
                 // Limpiar los campos
                 setMacAddress('');
                 setName('');
                 setPin('');
+
+                // Mostrar mensaje de éxito y luego navegar a la pantalla puerta
+                Alert.alert(
+                    "Registro Exitoso",
+                    "El dispositivo ha sido registrado correctamente.",
+                    [
+                        {
+                            text: "Continuar",
+                            onPress: () => {
+                                console.log("Navegando a pantalla puerta");
+                                router.push('/puerta');
+                            }
+                        }
+                    ]
+                );
             }
-        } catch (error) {
+        } catch (error: any) { // Usar any para evitar problemas de tipado
             console.error('Error registrando dispositivo:', error);
-            setMessage('Error al registrar el dispositivo');
+
+            // Manejar el error de manera más robusta
+            let errorMessage = 'Error al registrar el dispositivo';
+
+            if (error.response && error.response.data) {
+                // Si hay una respuesta con datos del error
+                errorMessage = error.response.data.message || errorMessage;
+            } else if (error.message) {
+                // Si hay un mensaje general de error
+                if (error.message.includes('Network Error')) {
+                    errorMessage = 'Error de conexión al servidor. Verifica tu conexión a internet.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+
+            setMessage(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -121,8 +161,9 @@ export default function PantallaRegistroDispositivo() {
                     </TouchableOpacity>
 
                     {message ? (
-                        <Text style={[styles.message,
-                        message.includes('éxito') ? styles.successMessage : styles.errorMessage
+                        <Text style={[
+                            styles.message,
+                            message.includes('éxito') ? styles.successMessage : styles.errorMessage
                         ]}>
                             {message}
                         </Text>

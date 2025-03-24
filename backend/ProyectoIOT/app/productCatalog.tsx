@@ -6,6 +6,15 @@ import Feather from '@expo/vector-icons/Feather';
 // Suponiendo que tienes un ProductCard en ../components/ProductCard
 import ProductCard from '@/componentes/ProductCard ';
 
+interface Product {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+    image: string;
+}
+
 // Datos de ejemplo (puedes reemplazarlos con los datos de tu API)
 const products = [
     {
@@ -29,9 +38,18 @@ const products = [
 export default function ProductCatalogScreen() {
     const router = useRouter();
 
+    // Mapear los productos para convertir _id a id
+    const formattedProducts = products.map(product => ({
+        id: product._id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: product.category,
+        image: product.image,
+    }));
+
     // Función para manejar el clic en un producto
-    const handleProductPress = (product: any) => {
-        // Navegamos a la ruta de detalle del producto y pasamos los datos del producto
+    const handleProductPress = (product: Product) => {
         router.push({
             pathname: '/productoDetail',
             params: { product: JSON.stringify(product) },
@@ -55,13 +73,14 @@ export default function ProductCatalogScreen() {
 
                         {/* Lista de productos */}
                         <FlatList
-                            data={products}
-                            keyExtractor={(item) => item._id}
+                            data={formattedProducts}
+                            keyExtractor={(item) => item.id}
                             style={styles.list}
                             renderItem={({ item }) => (
                                 <ProductCard
                                     product={item}
                                     onPress={() => handleProductPress(item)}
+                                    onAddToCart={() => console.log('Add to cart', item)}
                                 />
                             )}
                         />

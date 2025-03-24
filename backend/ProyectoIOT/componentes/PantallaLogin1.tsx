@@ -6,64 +6,154 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet
+    StyleSheet,
+    ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-// Define la interfaz para la respuesta del login
+// Actualizar la interfaz:
 interface LoginResponse {
-    _id: string;
-    name?: string;
-    email: string;
+    id?: string;
+    userId?: string;
+    user?: {
+        id: string;
+        name?: string;
+        email: string;
+    };
     token: string;
-    [key: string]: any; // Para cualquier otra propiedad que pueda tener
+    hasDevice: boolean;
+    message: string;
 }
 
 export default function PantallaLogin1() {
     const router = useRouter();
+    const params = useLocalSearchParams(); // Para recibir parámetros de navegación
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async () => {
+        if (!email || !password) {
+            setErrorMessage("Por favor completa todos los campos");
+            return;
+        }
+
+        setIsLoading(true);
+        setErrorMessage('');
+
         try {
+            console.log(`[Login] Intentando iniciar sesión con email: ${email}`);
+
             const response = await axios.post<LoginResponse>('http://localhost:8082/api/users/login', {
                 email,
                 password,
+            });
+
+            console.log(`[Login] Respuesta del servidor:`, {
+                status: response.status,
+                statusText: response.statusText,
+                data: {
+                    ...response.data,
+                    token: response.data.token ? 'TOKEN_PRESENT' : 'NO_TOKEN',
+                    hasDevice: response.data.hasDevice
+                }
             });
 
             if (response.status === 200) {
                 // Guardar el token en AsyncStorage
                 if (response.data && response.data.token) {
                     await AsyncStorage.setItem('userToken', response.data.token);
-                    await AsyncStorage.setItem('userId', response.data._id);
-                    console.log('Token guardado:', response.data.token);
+                    console.log('[Login] Token guardado en AsyncStorage');
+
+                    const userId = response.data.id || response.data.userId;
+                    if (userId) {
+                        await AsyncStorage.setItem('userId', userId);
+                        console.log(`[Login] ID de usuario guardado: ${userId}`);
+                    } else {
+                        console.error('[Login] Error: No se recibió un ID de usuario válido');
+                    }
+
+                    // Guardar si el usuario tiene un dispositivo IoT
+                    const hasDeviceValue = String(response.data.hasDevice);
+                    await AsyncStorage.setItem('userHasDevice', hasDeviceValue);
+                    console.log(`[Login] Estado de dispositivo guardado: ${hasDeviceValue}`);
+
+                    // Verificar que los valores se guardaron correctamente
+                    const storedToken = await AsyncStorage.getItem('userToken');
+                    const storedUserId = await AsyncStorage.getItem('userId');
+                    const storedHasDevice = await AsyncStorage.getItem('userHasDevice');
+
+                    console.log('[Login] Verificación de almacenamiento:');
+                    console.log(`- Token guardado: ${storedToken ? 'Sí' : 'No'}`);
+                    console.log(`- UserID guardado: ${storedUserId}`);
+                    console.log(`- HasDevice guardado: ${storedHasDevice}`);
+
+                    if (hasDeviceValue !== storedHasDevice) {
+                        console.warn('[Login] ¡Advertencia! El valor de hasDevice no se guardó correctamente');
+                        console.warn(`  Esperado: ${hasDeviceValue}, Almacenado: ${storedHasDevice}`);
+                    }
                 } else {
-                    console.error('No se recibió un token del servidor');
+                    console.error('[Login] Error: No se recibió un token del servidor');
                 }
 
                 // Redirige a la pantalla principal usando expo-router
+                console.log('[Login] Iniciando proceso de redirección después del login exitoso');
                 handleSuccessfulLogin();
             }
         } catch (error) {
-            console.error("Error al iniciar sesión:", error);
-            setErrorMessage("Credenciales inválidas");
-        }
+            console.error("[Login] Error al iniciar sesión:", error);
 
+            // if (axios.isAxiosError(error)) {
+            //     console.error('[Login] Detalles del error:');
+            //     console.error(`- Status: ${error.response?.status}`);
+            //     console.error(`- Mensaje: ${error.response?.data?.message || error.message}`);
+            //     console.error(`- Data:`, error.response?.data);
+            // }
+
+            setErrorMessage("Credenciales inválidas");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSuccessfulLogin = async () => {
         // Después de guardar token y datos de usuario:
-        const redirectPath = await AsyncStorage.getItem('redirectAfterLogin');
+        console.log('[Login] Ejecutando handleSuccessfulLogin');
 
-        if (redirectPath) {
-            await AsyncStorage.removeItem('redirectAfterLogin');
-            router.replace(redirectPath as any);
+        const returnTo = params.returnTo as string;
+        const productParam = params.productParam as string;
+
+        console.log(`[Login] Parámetros de navegación: returnTo=${returnTo}, productParam=${productParam ? 'presente' : 'ausente'}`);
+
+        if (returnTo) {
+            console.log(`[Login] Navegando de vuelta a la ruta anterior: ${returnTo}`);
+            // Si hay una ruta de retorno (por ejemplo, volver a la página de detalles del producto)
+            if (productParam) {
+                console.log(`[Login] Incluyendo parámetro de producto en la navegación`);
+                router.replace({
+                    pathname: returnTo as any,
+                    params: { product: productParam }
+                });
+            } else {
+                router.replace(returnTo as any);
+            }
         } else {
-            router.replace('/Principal');
+            // Si no hay ruta de retorno específica
+            const redirectPath = await AsyncStorage.getItem('redirectAfterLogin');
+            console.log(`[Login] No hay returnTo, verificando redirectPath: ${redirectPath || 'no hay'}`);
+
+            if (redirectPath) {
+                await AsyncStorage.removeItem('redirectAfterLogin');
+                console.log(`[Login] Navegando a ruta almacenada: ${redirectPath}`);
+                router.replace(redirectPath as any);
+            } else {
+                console.log(`[Login] Navegando a la ruta principal por defecto`);
+                router.replace('/Principal');
+            }
         }
     };
 
@@ -85,6 +175,7 @@ export default function PantallaLogin1() {
                             onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            editable={!isLoading}
                         />
                         <Text style={styles.label}>Contraseña</Text>
                         <TextInput
@@ -93,16 +184,29 @@ export default function PantallaLogin1() {
                             secureTextEntry
                             value={password}
                             onChangeText={setPassword}
+                            editable={!isLoading}
                         />
                         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                            <Text style={styles.buttonText}>Iniciar Sesión</Text>
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleLogin}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#ffffff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Iniciar Sesión</Text>
+                            )}
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/registro1')}>
-                            <Text>¿No tienes cuenta? Regístrate aquí</Text>
+                        <TouchableOpacity onPress={() => router.push('/registro1')} disabled={isLoading}>
+                            <Text style={[styles.linkText, isLoading && styles.linkTextDisabled]}>
+                                ¿No tienes cuenta? Regístrate aquí
+                            </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/recovery')}>
-                            <Text>¿Olvidaste tu contraseña?</Text>
+                        <TouchableOpacity onPress={() => router.push('/recovery')} disabled={isLoading}>
+                            <Text style={[styles.linkText, isLoading && styles.linkTextDisabled]}>
+                                ¿Olvidaste tu contraseña?
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -110,6 +214,7 @@ export default function PantallaLogin1() {
             <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
+                disabled={isLoading}
             >
                 <Feather name="arrow-left" size={24} color="#007bff" />
             </TouchableOpacity>
@@ -178,6 +283,10 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 15,
+    },
+    buttonDisabled: {
+        backgroundColor: '#b3d7ff', // Color más claro para mostrar estado deshabilitado
     },
     buttonText: {
         color: '#fff',
@@ -197,4 +306,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.8)',
         zIndex: 10,
     },
+    linkText: {
+        marginTop: 10,
+        color: '#007bff',
+    },
+    linkTextDisabled: {
+        color: '#b3d7ff', // Color más claro para mostrar estado deshabilitado
+    }
 });

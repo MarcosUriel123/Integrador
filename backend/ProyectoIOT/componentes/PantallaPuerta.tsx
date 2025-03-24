@@ -62,7 +62,7 @@ export default function PantallaPuerta() {
                         {/* Botones de Configuración y Registros */}
                         <View style={styles.bottomButtons}>
                             <TouchableOpacity style={styles.configButton} onPress={() => router.push('/configuracionDispositivo')}>
-                                <FontAwesome5 name="file-alt" size={20} color="#1E1E1E" style={styles.buttonIcon} />
+                                <FontAwesome5 name="cog" size={20} color="#1E1E1E" style={styles.buttonIcon} />
                                 <Text style={styles.configButtonText}>Configuración</Text>
                             </TouchableOpacity>
 
@@ -72,6 +72,15 @@ export default function PantallaPuerta() {
                                 <Text style={styles.configButtonText}>Registros</Text>
                             </TouchableOpacity>
                         </View>
+
+                        {/* Botón Gestionar Usuarios - Nuevo */}
+                        <TouchableOpacity
+                            style={styles.usersButton}
+                            onPress={() => router.push('/registroUsuarios')}
+                        >
+                            <FontAwesome5 name="users" size={20} color="#FFFFFF" style={styles.buttonIcon} />
+                            <Text style={styles.usersButtonText}>Gestionar Usuarios</Text>
+                        </TouchableOpacity>
                     </View>
 
                 </View>
@@ -136,6 +145,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-evenly',
         width: '100%',
+        marginBottom: 20, // Añadido margen para separar del nuevo botón
     },
     configButton: {
         backgroundColor: '#E0E0E0',
@@ -154,5 +164,27 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#1E1E1E',
         fontWeight: '500',
+    },
+    // Estilos para el nuevo botón Gestionar Usuarios
+    usersButton: {
+        backgroundColor: '#007BFF', // Color azul distintivo
+        borderRadius: 15,
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '90%', // Más ancho que los otros botones
+        justifyContent: 'center',
+        marginTop: 10, // Espacio desde los botones superiores
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    usersButtonText: {
+        fontSize: 16,
+        color: '#FFFFFF', // Texto blanco para contraste
+        fontWeight: '600',
     },
 });
