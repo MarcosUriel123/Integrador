@@ -34,5 +34,6 @@ router.post('/verify-token', protect as RequestHandler, (req, res) => {
 });
 
 // Añadir esta ruta junto con las demás rutas existentes
-// router.post('/logout', protect, logoutUser as express.RequestHandler);
-export default router; 
+router.post('/logout', protect, logoutUser);
+
+export default router;

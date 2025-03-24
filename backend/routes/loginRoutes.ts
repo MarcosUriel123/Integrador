@@ -1,17 +1,9 @@
-import express, { Router } from 'express';
-import { loginUser, logoutUser, checkUserDevice } from '../controllers/loginController';
-import { authMiddleware } from '../middlewares/authMiddleware';
+import express, { Router, RequestHandler } from 'express';
+import { loginUser } from '../controllers/loginController';
 
-const router = Router();
+const router: Router = express.Router();
 
-// Rutas de autenticación
-router.post('/login', (req, res, next) => loginUser(req, res, next));
-router.post('/logout', (req, res) => logoutUser(req, res));
-
-// Ruta para verificar dispositivo (protegida con middleware de autenticación)
-// Envolvemos el controlador en una función anónima que no retorna nada
-router.get('/check-device', authMiddleware, (req, res) => {
-    checkUserDevice(req, res);
-});
+// Ruta para iniciar sesión
+router.post('/login', loginUser as RequestHandler);
 
 export default router;

@@ -1,60 +1,56 @@
 import { Request, Response, NextFunction } from 'express';
+
+declare module 'express-serve-static-core' {
+    interface Request {
+        user?: any;
+    }
+}
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { isTokenBlacklisted } from '../ProyectoIOT/utils/tokenBlacklist';
-
-// Modificamos la interfaz para hacerla más flexible
-declare global {
-    namespace Express {
-        // Hacemos la interfaz más general para evitar problemas de tipo
-        interface Request {
-            user?: any;
-        }
-    }
-}
 
 interface JwtPayload {
     id: string;
 }
 
-// Añadimos void como tipo de retorno explícito para satisfacer a TypeScript
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-        // Verificar si hay token en los headers
-        const authHeader = req.headers.authorization;
+// Middleware para proteger rutas
+export const protect = async (req: Request, res: Response, next: NextFunction) => {
+    let token;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            res.status(401).json({ message: 'No autorizado, token no proporcionado' });
-            return; // En lugar de return res...
-        }
-
-        const token = authHeader.split(' ')[1];
-
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
-            // Verificar el token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'defaultsecret');
+            // Obtener el token del header
+            token = req.headers.authorization.split(' ')[1];
 
-            // Añadir información del usuario a la request
-            req.user = await User.findById((decoded as any).id).select('-password');
-
-            if (!req.user) {
-                res.status(404).json({ message: 'Usuario no encontrado' });
-                return; // En lugar de return res...
+            // Verificar si el token está en la lista negra
+            if (isTokenBlacklisted(token)) {
+                res.status(401).json({ message: 'No autorizado, sesión cerrada' });
+                return;
             }
 
-            // Todo está bien, continuar
-            next();
+            // IMPORTANTE: Usar exactamente el mismo secreto que en loginController.ts
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_secret') as JwtPayload;
 
+            // Buscar el usuario y añadirlo a la request
+            const user = await User.findById(decoded.id).select('-password');
+
+            if (!user) {
+                res.status(401).json({ message: 'No autorizado, usuario no encontrado' });
+                return;
+            }
+
+            // Añadir el usuario a la request para uso posterior
+            req.user = user;
+            next();
         } catch (error) {
+            console.error(error);
             res.status(401).json({ message: 'No autorizado, token inválido' });
-            return; // En lugar de return res...
+            return;
         }
-    } catch (error) {
-        console.error('Error en el middleware de autenticación:', error);
-        res.status(500).json({ message: 'Error del servidor' });
-        return; // En lugar de return res...
+    }
+
+    if (!token) {
+        res.status(401).json({ message: 'No autorizado, no hay token' });
+        return;
     }
 };
-
-// Exportar también como protect para mantener compatibilidad
-export const protect = authMiddleware;
