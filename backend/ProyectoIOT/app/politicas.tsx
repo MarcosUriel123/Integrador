@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import { Entypo } from '@expo/vector-icons';
+import Header from '../componentes/Header'; // Import Header component
+import Footer from '../componentes/Footer'; // Import Footer component
 
 export default function PoliticasScreen() {
     const router = useRouter();
-    const API_BASE = 'http://localhost:8082/api'; // Ajusta tu URL según sea necesario(IPCONFIG)
+    const API_BASE = 'http://192.168.0.1:8082/api'; // Update with your actual IP address (use ipconfig)
     const [politica, setPolitica] = useState('');
 
     // useEffect para cargar la última política desde el backend
@@ -37,18 +38,13 @@ export default function PoliticasScreen() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    {/* Barra Superior */}
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
-                        <View style={styles.nav}>
-                            <Text style={styles.navText} onPress={() => router.push('/CatalogoProductosScreen')}>Ver productos</Text>
-                        </View>
-                    </View>
+                    {/* Replace static topBar with Header component */}
+                    <Header />
 
                     {/* Sección Hero (Imagen) */}
                     <View style={styles.heroSection}>
                         <Image
-                            source={require('../assets/images/puertaIOT-politicas.png')} // Ajusta la ruta o usa otra imagen
+                            source={require('../assets/images/puertaIOT-politicas.png')}
                             style={styles.heroImage}
                             resizeMode="contain"
                         />
@@ -60,17 +56,8 @@ export default function PoliticasScreen() {
                         <Text style={styles.parrafo}>{politica}</Text>
                     </View>
 
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <View style={styles.footerLeft}>
-                            <Text style={styles.footerText}>Términos y condiciones</Text>
-                            <Text style={styles.footerText}>Privacidad</Text>
-                        </View>
-                        <View style={styles.footerRight}>
-                            <Entypo name="instagram-with-circle" size={24} color="#1E1E1E" style={styles.icon} />
-                            <Entypo name="facebook-with-circle" size={24} color="#1E1E1E" style={styles.icon} />
-                        </View>
-                    </View>
+                    {/* Replace static footer with Footer component */}
+                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -93,28 +80,7 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 6,
     },
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    nav: {
-        flexDirection: 'row',
-    },
-    navText: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginLeft: 20,
-    },
+    // Removed topBar styles
     heroSection: {
         marginTop: 10,
         alignItems: 'center',
@@ -141,26 +107,5 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 20,
     },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-        paddingTop: 10,
-    },
-    footerLeft: {
-        flexDirection: 'row',
-    },
-    footerRight: {
-        flexDirection: 'row',
-    },
-    footerText: {
-        fontSize: 14,
-        color: '#1E1E1E',
-        marginRight: 20,
-    },
-    icon: {
-        marginRight: 15,
-    },
+    // Removed footer styles
 });
