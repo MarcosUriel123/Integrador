@@ -249,27 +249,26 @@ const Header = ({
                             {isLoggedIn && hasDevice && (
                                 <TouchableOpacity onPress={() => navigateWithAuthCheck('/puerta')}>
                                     <Text style={styles.modalText}>
-                                        Dispositivo IoT
-                                        <Text style={styles.statusIndicator}>✓</Text>
+                                        Control de mi dispositivo IoT
                                     </Text>
                                 </TouchableOpacity>
                             )}
 
-                            {/* Mostrar opción para Registrar Dispositivo si está logueado pero no tiene dispositivo */}
+                            {/* Mostrar opción para Registrar Dispositivo si está logueado pero no tiene dispositivo
                             {isLoggedIn && !hasDevice && (
                                 <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroDispositivo')}>
                                     <Text style={styles.modalText}>Registrar Dispositivo</Text>
                                 </TouchableOpacity>
-                            )}
+                            )} */}
 
-                            {/* Admin options */}
+                            {/* Admin options
                             <TouchableOpacity onPress={() => navigateWithAuthCheck('/Aggprod')}>
                                 <Text style={styles.modalText}>Admin (agg prod)</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity onPress={() => navigateWithAuthCheck('/AggDatosEmp')}>
                                 <Text style={styles.modalText}>Admin (datos empresa)</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
 
                             {/* Opción para depuración - Solo visible en desarrollo
                             {__DEV__ && (
