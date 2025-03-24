@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config(); // Agregar esto al principio
- 
+
 import express from 'express';
 import cors from 'cors';
 
@@ -9,8 +9,8 @@ import connectDB from './config/db';
 import fingerprintRoutes from './routes/fingerprintRoutes';
 import passwordRoutes from './routes/passwordRoutes';
 import userRoutes from './routes/userRoutes';
-import huellaRoutes from './routes/huellaRoutes'; 
-import doorRoutes from './routes/doorRoutes';  
+import huellaRoutes from './routes/huellaRoutes';
+import doorRoutes from './routes/doorRoutes';
 import productRoutes from './routes/productRoutes'; // Import product routes
 import empresaRoutes from './routes/empresaRoutes';
 import deviceRoutes from './routes/deviceRoutes';  // Importamos las rutas del dispositivo
@@ -69,5 +69,5 @@ app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
 app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Usando el router
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en http://192.168.8.3:${PORT}`);
 });

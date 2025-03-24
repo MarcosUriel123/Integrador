@@ -77,7 +77,7 @@ export default function PantallaRegistroUsuarios() {
             }
 
             // Usar tipo genérico para la respuesta
-            const response = await axios.get<SubUsersResponse>('http://localhost:8082/api/subusers', {
+            const response = await axios.get<SubUsersResponse>('http://192.168.8.3:8082/api/subusers', {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -122,7 +122,7 @@ export default function PantallaRegistroUsuarios() {
 
             // Usar tipo genérico para la respuesta
             const response = await axios.post<SubUserResponse>(
-                'http://localhost:8082/api/subusers/register',
+                'http://192.168.8.3:8082/api/subusers/register',
                 {
                     name,
                     accessMethod,
@@ -174,7 +174,7 @@ export default function PantallaRegistroUsuarios() {
                             }
 
                             // Usar tipo genérico para la respuesta
-                            const response = await axios.delete<MessageResponse>(`http://localhost:8082/api/subusers/${id}`, {
+                            const response = await axios.delete<MessageResponse>(`http://192.168.8.3:8082/api/subusers/${id}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
 
@@ -238,7 +238,7 @@ export default function PantallaRegistroUsuarios() {
 
             // Usar tipo genérico para la respuesta
             const response = await axios.post<SubUserResponse>(
-                'http://localhost:8082/api/subusers/register',
+                'http://192.168.8.3:8082/api/subusers/register',
                 {
                     name,
                     accessMethod,

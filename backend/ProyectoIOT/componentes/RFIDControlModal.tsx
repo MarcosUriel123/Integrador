@@ -7,7 +7,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuración del Arduino - Reemplaza con la IP real de tu Arduino
-const arduinoIP = '192.168.8.8'; // Cambia esto por la IP de tu Arduino ESP32
+const arduinoIP = '192.168.8.2'; // Cambia esto por la IP de tu Arduino ESP32
 
 // Interfaces para las respuestas de la API
 interface DeviceStatusResponse {

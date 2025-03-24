@@ -53,9 +53,9 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
-            // Usar IP de tu PC en la red local en lugar de localhost
+            // Usar IP de tu PC en la red local en lugar de 192.168.8.3
             // Ejemplo: '192.168.1.100:8082' - debes ajustar esto a tu IP
-            const baseUrl = 'http://localhost:8082'; // Cambia esto a tu IP local
+            const baseUrl = 'http://192.168.8.3:8082'; // Cambia esto a tu IP local
 
             // Realizar la solicitud al backend
             const response = await axios.post(

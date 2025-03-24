@@ -150,6 +150,44 @@ void setup() {
     server.send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
+  // Agregar este código antes de server.begin():
+
+  // Manejador para solicitudes OPTIONS preflight
+  server.on("/api/arduino/fingerprint/register", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  server.on("/api/arduino/rfid/read", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  server.on("/api/arduino/status", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  server.on("/api/arduino/fingerprint/status", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  server.on("/api/arduino/rfid/status", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  // También puedes añadir un manejador genérico para cualquier ruta OPTIONS
+  server.onNotFound([]() {
+    if (server.method() == HTTP_OPTIONS) {
+      sendCORSHeaders();
+      server.send(200, "text/plain", "");
+    } else {
+      server.send(404, "text/plain", "Not found");
+    }
+  });
+
   // Iniciar servidor
   server.begin();
   Serial.println("Servidor web iniciado");
