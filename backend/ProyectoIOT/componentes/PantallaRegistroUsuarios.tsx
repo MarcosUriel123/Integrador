@@ -174,30 +174,41 @@ export default function PantallaRegistroUsuarios() {
                                 return;
                             }
 
-                            // 1. Primero eliminar de la base de datos
+                            // Si es RFID, eliminar de la colección rfids primero
+                            if (accessMethod === 'rfid') {
+                                try {
+                                    await axios.delete(
+                                        `http://192.168.8.3:8082/api/rfids/${accessId}`,
+                                        { headers: { Authorization: `Bearer ${token}` } }
+                                    );
+                                    console.log('RFID eliminado de la colección');
+                                } catch (rfidError) {
+                                    console.warn('Error al eliminar RFID de colección:', rfidError);
+                                    // Continuamos aunque falle
+                                }
+                            }
+
+                            // 1. Eliminar de la base de datos
                             const deleteResponse = await axios.delete(
                                 `http://192.168.8.3:8082/api/subusers/${id}`,
                                 { headers: { Authorization: `Bearer ${token}` } }
                             );
 
-                            // 2. Si se elimina correctamente de la base de datos, eliminar del dispositivo físico
+                            // 2. Si se elimina correctamente, eliminar del dispositivo físico
                             if (deleteResponse.status === 200) {
-                                // Eliminar según el método de acceso
+                                // El resto del código se mantiene igual
                                 if (accessMethod === 'fingerprint') {
                                     try {
-                                        // Eliminación de huella en Arduino
                                         await axios.delete(
                                             `http://192.168.8.2/api/arduino/fingerprint/${accessId}`,
-                                            { timeout: 5000 } // Timeout para evitar esperas infinitas
+                                            { timeout: 5000 }
                                         );
                                         console.log('Huella eliminada del sensor');
                                     } catch (error) {
                                         console.warn('No se pudo eliminar la huella del sensor:', error);
-                                        // Continuar aunque falle la eliminación en el sensor
                                     }
                                 } else if (accessMethod === 'rfid') {
                                     try {
-                                        // Eliminación de RFID en Arduino
                                         await axios.delete(
                                             `http://192.168.8.2/api/arduino/rfid/${accessId}`,
                                             { timeout: 5000 }
@@ -205,11 +216,9 @@ export default function PantallaRegistroUsuarios() {
                                         console.log('RFID eliminado del sistema');
                                     } catch (error) {
                                         console.warn('No se pudo eliminar el RFID del sistema:', error);
-                                        // Continuar aunque falle la eliminación en el sistema
                                     }
                                 }
 
-                                // Actualizar la lista de usuarios
                                 await loadSubUsers();
                                 setMessage(`${userName} ha sido eliminado correctamente`);
                                 setMessageType('success');
@@ -261,6 +270,7 @@ export default function PantallaRegistroUsuarios() {
 
         try {
             const token = await AsyncStorage.getItem('userToken');
+            const userId = await AsyncStorage.getItem('userId'); // Asegurarse de tener esto almacenado
 
             if (!token) {
                 setMessage('No se encontró el token de autenticación');
@@ -269,7 +279,45 @@ export default function PantallaRegistroUsuarios() {
                 return;
             }
 
-            // Usar tipo genérico para la respuesta
+            // Si es RFID, guardarlo en la colección rfids
+            if (accessMethod === 'rfid') {
+                try {
+                    // Verificar si el RFID ya existe
+                    const checkResponse = await axios.post(
+                        'http://192.168.8.3:8082/api/rfids/check',
+                        { rfid: capturedId },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+
+                    if ((checkResponse.data as { exists: boolean }).exists) {
+                        setMessage('Este RFID ya está registrado');
+                        setMessageType('error');
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    // Registrar el RFID
+                    await axios.post(
+                        'http://192.168.8.3:8082/api/rfids/register',
+                        {
+                            rfidValue: capturedId, // Usar el nombre de campo esperado por el backend
+                            userId, // Incluir el ID del usuario
+                            userName: name
+                        },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                } catch (rfidError: any) {
+                    if (rfidError.response?.status === 400) {
+                        setMessage('Este RFID ya está registrado');
+                        setMessageType('error');
+                        setIsLoading(false);
+                        return;
+                    }
+                    console.warn('Error al registrar RFID en colección:', rfidError);
+                }
+            }
+
+            // Crear el subusuario con el método de acceso
             const response = await axios.post<SubUserResponse>(
                 'http://192.168.8.3:8082/api/subusers/register',
                 {
@@ -285,15 +333,11 @@ export default function PantallaRegistroUsuarios() {
                 setMessageType('success');
                 setName('');
                 setAccessId('');
-                loadSubUsers(); // Recargar la lista
+                loadSubUsers();
             }
         } catch (error: any) {
             console.error('Error al registrar usuario:', error);
-            if (error.response && error.response.data && error.response.data.message) {
-                setMessage(error.response.data.message);
-            } else {
-                setMessage('Error al registrar el usuario');
-            }
+            setMessage(error.response?.data?.message || 'Error al registrar el usuario');
             setMessageType('error');
         } finally {
             setIsLoading(false);
