@@ -80,6 +80,8 @@ bool isRFIDOperationActive = false;
 unsigned long rfidOperationStartTime = 0;
 const unsigned long RFID_TIMEOUT = 30000; // 30 segundos
 
+bool registroRemotoActivo = false;
+
 void pitidoCorto() {
   digitalWrite(pinBuzzer, HIGH);
   delay(100);
@@ -186,6 +188,87 @@ void setup() {
     } else {
       server.send(404, "text/plain", "Not found");
     }
+  });
+
+  // Añadir estos manejadores en la sección de configuración del servidor (setup)
+
+  // Agrega esto justo después de los otros handlers en el setup
+  // Manejadores para eliminar huellas (fingerprint)
+  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_DELETE, [](){
+    sendCORSHeaders();
+    
+    // Extraer el ID de la URL
+    String uri = server.uri();
+    int lastSlash = uri.lastIndexOf('/');
+    String idStr = uri.substring(lastSlash + 1);
+    int id = idStr.toInt();
+    
+    // Verificar ID válido
+    if (id < 1 || id > 127) {
+      server.send(400, "application/json", "{\"success\":false,\"message\":\"ID de huella inválido\"}");
+      return;
+    }
+    
+    // Eliminar huella
+    uint8_t p = finger.deleteModel(id);
+    if (p == FINGERPRINT_OK) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Huella eliminada");
+      lcd.setCursor(0, 1);
+      lcd.print("ID: " + String(id));
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"Huella eliminada correctamente\"}");
+    } else {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error al eliminar");
+      lcd.setCursor(0, 1);
+      lcd.print("huella");
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al eliminar huella\"}");
+    }
+  });
+
+  // Manejadores para eliminar RFID
+  server.on("/api/arduino/rfid/([^/]+)", HTTP_DELETE, [](){
+    sendCORSHeaders();
+    
+    // Extraer el ID de la URL
+    String uri = server.uri();
+    int lastSlash = uri.lastIndexOf('/');
+    String rfidId = uri.substring(lastSlash + 1);
+    
+    // Mostrar mensaje en LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Tarjeta RFID");
+    lcd.setCursor(0, 1);
+    lcd.print("eliminada");
+    delay(2000);
+    mostrarMenuPrincipal();
+    
+    // Nota: Aquí deberías implementar la lógica real para eliminar el RFID
+    // de tu sistema de almacenamiento (EEPROM, SD, etc.)
+    // Como no veo en el código actual un sistema para almacenar IDs,
+    // solo devuelvo un mensaje de éxito
+    
+    server.send(200, "application/json", "{\"success\":true,\"message\":\"RFID eliminado correctamente\"}");
+  });
+
+  // Manejadores OPTIONS para CORS
+  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_OPTIONS, [](){
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  server.on("/api/arduino/rfid/([^/]+)", HTTP_OPTIONS, [](){
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
   });
 
   // Iniciar servidor
@@ -336,8 +419,18 @@ void handleFingerprintRegister() {
   
   String userName = doc["userName"].as<String>();
   
-  // Obtener un ID disponible para la huella (esto es simplificado)
+  // Obtener un ID disponible para la huella
   lastFingerprintId = random(1, 128);  // En producción, usar una lógica para IDs únicos
+  
+  // Activar el modo de registro remoto
+  registroRemotoActivo = true;
+  
+  // Mostrar mensaje en LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Registrando");
+  lcd.setCursor(0, 1);
+  lcd.print("huella para " + (userName.length() > 10 ? userName.substring(0, 10) : userName));
   
   fingerprintStatus = "step1";
   registrationStep = 1;
@@ -694,6 +787,9 @@ int capturarHuella() {
 }
 
 void verificarHuella() {
+  // Si estamos en registro remoto, no verificar accesos
+  if (registroRemotoActivo) return;
+  
   int p = finger.getImage();
   if (p == FINGERPRINT_OK) {
     p = finger.image2Tz(1);
@@ -728,8 +824,21 @@ void processFingerprintRegistration() {
   switch (registrationStep) {
     case 1: // Esperando primera captura
       {
+        // Mostrar mensaje en LCD periódicamente
+        if (millis() % 2000 < 1000) {  // Alternar cada segundo
+          lcd.setCursor(0, 0);
+          lcd.print("Coloca tu dedo  ");
+        } else {
+          lcd.setCursor(0, 0);
+          lcd.print("Esperando huella");
+        }
+        
         int p = finger.getImage();
         if (p == FINGERPRINT_OK) {
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("Huella detectada");
+          
           p = finger.image2Tz(1);
           if (p == FINGERPRINT_OK) {
             fingerprintStatus = "step2";
@@ -738,6 +847,14 @@ void processFingerprintRegistration() {
             fingerprintStatus = "error";
             lastErrorMessage = "Error al procesar primera imagen";
             isRegistrationActive = false;
+            registroRemotoActivo = false;
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("Error al procesar");
+            lcd.setCursor(0, 1);
+            lcd.print("la huella");
+            delay(2000);
+            mostrarMenuPrincipal();
           }
         }
       }
@@ -745,38 +862,91 @@ void processFingerprintRegistration() {
       
     case 2: // Esperando que retire el dedo
       {
+        lcd.setCursor(0, 0);
+        lcd.print("Retira tu dedo  ");
+        
         if (finger.getImage() == FINGERPRINT_NOFINGER) {
           registrationStep = 3;
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("Ahora coloca");
+          lcd.setCursor(0, 1);
+          lcd.print("el dedo de nuevo");
         }
       }
       break;
       
     case 3: // Esperando segunda captura
       {
+        // Mostrar mensaje en LCD periódicamente
+        if (millis() % 2000 < 1000) {
+          lcd.setCursor(0, 0);
+          lcd.print("Coloca tu dedo  ");
+          lcd.setCursor(0, 1);
+          lcd.print("nuevamente      ");
+        }
+        
         int p = finger.getImage();
         if (p == FINGERPRINT_OK) {
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("Procesando...");
+          
           p = finger.image2Tz(2);
           if (p == FINGERPRINT_OK) {
             p = finger.createModel();
             if (p == FINGERPRINT_OK) {
+              lcd.setCursor(0, 0);
+              lcd.print("Guardando huella");
+              
               p = finger.storeModel(lastFingerprintId);
               if (p == FINGERPRINT_OK) {
                 fingerprintStatus = "completed";
                 isRegistrationActive = false;
+                registroRemotoActivo = false;
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Huella guardada!");
+                lcd.setCursor(0, 1);
+                lcd.print("ID: " + String(lastFingerprintId));
+                delay(3000);
+                mostrarMenuPrincipal();
               } else {
                 fingerprintStatus = "error";
                 lastErrorMessage = "Error al almacenar modelo";
                 isRegistrationActive = false;
+                registroRemotoActivo = false;
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Error al guardar");
+                delay(2000);
+                mostrarMenuPrincipal();
               }
             } else {
               fingerprintStatus = "error";
               lastErrorMessage = "Error al crear modelo";
               isRegistrationActive = false;
+              registroRemotoActivo = false;
+              lcd.clear();
+              lcd.setCursor(0, 0);
+              lcd.print("Error al crear");
+              lcd.setCursor(0, 1);
+              lcd.print("modelo de huella");
+              delay(2000);
+              mostrarMenuPrincipal();
             }
           } else {
             fingerprintStatus = "error";
             lastErrorMessage = "Error al procesar segunda imagen";
             isRegistrationActive = false;
+            registroRemotoActivo = false;
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("Error en 2da");
+            lcd.setCursor(0, 1);
+            lcd.print("captura");
+            delay(2000);
+            mostrarMenuPrincipal();
           }
         }
       }

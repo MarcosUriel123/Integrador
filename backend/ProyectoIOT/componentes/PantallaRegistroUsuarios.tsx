@@ -151,7 +151,7 @@ export default function PantallaRegistroUsuarios() {
         }
     };
 
-    const handleDeleteUser = (id: string, userName: string) => {
+    const handleDeleteUser = (id: string, userName: string, accessMethod: 'fingerprint' | 'rfid', accessId: string) => {
         Alert.alert(
             "Eliminar usuario",
             `¿Estás seguro que deseas eliminar a ${userName}?`,
@@ -165,6 +165,7 @@ export default function PantallaRegistroUsuarios() {
                     style: "destructive",
                     onPress: async () => {
                         try {
+                            setIsLoading(true);
                             const token = await AsyncStorage.getItem('userToken');
 
                             if (!token) {
@@ -173,20 +174,52 @@ export default function PantallaRegistroUsuarios() {
                                 return;
                             }
 
-                            // Usar tipo genérico para la respuesta
-                            const response = await axios.delete<MessageResponse>(`http://192.168.8.3:8082/api/subusers/${id}`, {
-                                headers: { Authorization: `Bearer ${token}` }
-                            });
+                            // 1. Primero eliminar de la base de datos
+                            const deleteResponse = await axios.delete(
+                                `http://192.168.8.3:8082/api/subusers/${id}`,
+                                { headers: { Authorization: `Bearer ${token}` } }
+                            );
 
-                            if (response.status === 200) {
-                                setMessage('Usuario eliminado exitosamente');
+                            // 2. Si se elimina correctamente de la base de datos, eliminar del dispositivo físico
+                            if (deleteResponse.status === 200) {
+                                // Eliminar según el método de acceso
+                                if (accessMethod === 'fingerprint') {
+                                    try {
+                                        // Eliminación de huella en Arduino
+                                        await axios.delete(
+                                            `http://192.168.8.2/api/arduino/fingerprint/${accessId}`,
+                                            { timeout: 5000 } // Timeout para evitar esperas infinitas
+                                        );
+                                        console.log('Huella eliminada del sensor');
+                                    } catch (error) {
+                                        console.warn('No se pudo eliminar la huella del sensor:', error);
+                                        // Continuar aunque falle la eliminación en el sensor
+                                    }
+                                } else if (accessMethod === 'rfid') {
+                                    try {
+                                        // Eliminación de RFID en Arduino
+                                        await axios.delete(
+                                            `http://192.168.8.2/api/arduino/rfid/${accessId}`,
+                                            { timeout: 5000 }
+                                        );
+                                        console.log('RFID eliminado del sistema');
+                                    } catch (error) {
+                                        console.warn('No se pudo eliminar el RFID del sistema:', error);
+                                        // Continuar aunque falle la eliminación en el sistema
+                                    }
+                                }
+
+                                // Actualizar la lista de usuarios
+                                await loadSubUsers();
+                                setMessage(`${userName} ha sido eliminado correctamente`);
                                 setMessageType('success');
-                                loadSubUsers();
                             }
                         } catch (error) {
                             console.error('Error al eliminar usuario:', error);
                             setMessage('Error al eliminar el usuario');
                             setMessageType('error');
+                        } finally {
+                            setIsLoading(false);
                         }
                     }
                 }
@@ -362,18 +395,13 @@ export default function PantallaRegistroUsuarios() {
                             <ActivityIndicator size="large" color="#007bff" style={styles.loader} />
                         ) : (
                             subUsers.length > 0 ? (
-                                subUsers.map(user => (
-                                    <View style={styles.userCard} key={user._id}>
-                                        <View style={styles.userInfo}>
-                                            <Text style={styles.userName}>{user.name}</Text>
-                                            <Text style={styles.userDetail}>
-                                                {user.accessMethod === 'fingerprint' ? '👆 Huella' : '🔖 RFID'}
-                                                • ID: {user.accessId}
-                                            </Text>
-                                        </View>
+                                subUsers.map((user) => (
+                                    <View key={user._id} style={styles.userItem}>
+                                        <Text style={styles.userName}>{user.name}</Text>
+                                        <Text>Método: {user.accessMethod === 'fingerprint' ? 'Huella' : 'RFID'}</Text>
                                         <TouchableOpacity
                                             style={styles.deleteButton}
-                                            onPress={() => handleDeleteUser(user._id, user.name)}
+                                            onPress={() => handleDeleteUser(user._id, user.name, user.accessMethod, user.accessId)}
                                         >
                                             <Text style={styles.deleteButtonText}>Eliminar</Text>
                                         </TouchableOpacity>
@@ -609,5 +637,14 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8,
+    },
+    userItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: '#f9f9f9',
+        borderRadius: 8,
+        marginBottom: 12,
     },
 });
