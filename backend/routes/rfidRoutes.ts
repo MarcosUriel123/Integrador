@@ -39,13 +39,6 @@ router.post('/register', auth, async (req: AuthRequest, res: Response) => {
         // Usar el ID del usuario del token si no se proporciona
         const userIdToUse = userId || req.user?.id;
 
-        // Añadir logging para depuración
-        console.log('Registrando RFID:', {
-            rfidValue: rfidToSave,
-            userId: userIdToUse,
-            userName
-        });
-
         // Crear nuevo registro de RFID
         const rfidRecord = new Rfid({
             rfidValue: rfidToSave,
@@ -54,7 +47,6 @@ router.post('/register', auth, async (req: AuthRequest, res: Response) => {
         });
 
         await rfidRecord.save();
-        console.log('RFID guardado exitosamente:', rfidRecord);
 
         res.status(201).json({
             success: true,
@@ -65,8 +57,7 @@ router.post('/register', auth, async (req: AuthRequest, res: Response) => {
         console.error('Error al registrar RFID:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al registrar RFID',
-            error: (error as Error).message // Añadir detalles del error
+            message: 'Error al registrar RFID'
         });
     }
 });

@@ -285,11 +285,11 @@ export default function PantallaRegistroUsuarios() {
                     // Verificar si el RFID ya existe
                     const checkResponse = await axios.post(
                         'http://192.168.8.3:8082/api/rfids/check',
-                        { rfid: capturedId },
+                        { rfidValue: capturedId },  // Usar rfidValue consistentemente
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
 
-                    if ((checkResponse.data as { exists: boolean }).exists) {
+                    if (checkResponse.data.exists) {
                         setMessage('Este RFID ya está registrado');
                         setMessageType('error');
                         setIsLoading(false);
@@ -338,6 +338,117 @@ export default function PantallaRegistroUsuarios() {
         } catch (error: any) {
             console.error('Error al registrar usuario:', error);
             setMessage(error.response?.data?.message || 'Error al registrar el usuario');
+            setMessageType('error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Función para iniciar el proceso de registro de RFID
+    const handleRegisterRFID = async () => {
+        try {
+            setIsLoading(true);
+
+            // 1. Validar que haya un nombre
+            if (!name.trim()) {
+                setMessage('El nombre es requerido');
+                setMessageType('error');
+                return;
+            }
+
+            // 2. Iniciar la lectura de RFID en el Arduino
+            const arduinoResponse = await axios.post(
+                'http://192.168.8.2/api/arduino/rfid/read',
+                { mode: 'register', userName: name },
+                { timeout: 5000 }
+            );
+
+            if (arduinoResponse.status === 200) {
+                setMessage('Acerca la tarjeta RFID al lector...');
+                setMessageType('info');
+
+                // 3. Iniciar polling para verificar cuando se complete la lectura
+                const intervalId = setInterval(async () => {
+                    try {
+                        const statusResponse = await axios.get(
+                            'http://192.168.8.2/api/arduino/rfid/status',
+                            { timeout: 3000 }
+                        );
+
+                        if (statusResponse.data.status === 'completed' && statusResponse.data.cardId) {
+                            clearInterval(intervalId);
+
+                            // 4. RFID leído exitosamente, guardar en la base de datos
+                            const rfidValue = statusResponse.data.cardId;
+
+                            // Primero verificar que no exista ya
+                            const token = await AsyncStorage.getItem('userToken');
+                            const checkResponse = await axios.post(
+                                'http://192.168.8.3:8082/api/rfids/check',
+                                { rfid: rfidValue },
+                                { headers: { Authorization: `Bearer ${token}` } }
+                            );
+
+                            if (checkResponse.data.exists) {
+                                setMessage('Esta tarjeta RFID ya está registrada');
+                                setMessageType('error');
+                                setIsLoading(false);
+                                return;
+                            }
+
+                            // 5. Guardar RFID en la colección rfids
+                            const saveRfidResponse = await axios.post(
+                                'http://192.168.8.3:8082/api/rfids/register',
+                                { rfidValue: rfidValue },  // Usar rfidValue consistentemente
+                                { headers: { Authorization: `Bearer ${token}` } }
+                            );
+
+                            // 6. Crear el subusuario con el RFID como método de acceso
+                            const registerResponse = await axios.post(
+                                'http://192.168.8.3:8082/api/subusers/register',
+                                {
+                                    name: name,
+                                    accessMethod: 'rfid',
+                                    accessId: rfidValue
+                                },
+                                { headers: { Authorization: `Bearer ${token}` } }
+                            );
+
+                            setMessage(`Usuario ${name} registrado con RFID exitosamente`);
+                            setMessageType('success');
+                            setName('');
+                            loadSubUsers(); // Recargar la lista
+                        } else if (statusResponse.data.status === 'error') {
+                            clearInterval(intervalId);
+                            setMessage('Error al leer tarjeta: ' + statusResponse.data.message);
+                            setMessageType('error');
+                        } else if (statusResponse.data.status === 'timeout') {
+                            clearInterval(intervalId);
+                            setMessage('Tiempo de espera agotado');
+                            setMessageType('error');
+                        }
+                        // Si sigue en 'reading', continuamos el polling
+                    } catch (error) {
+                        clearInterval(intervalId);
+                        console.error('Error al verificar estado:', error);
+                        setMessage('Error al comunicarse con el lector');
+                        setMessageType('error');
+                    }
+                }, 1000); // Consultar cada segundo
+
+                // Establecer un timeout general por si algo falla
+                setTimeout(() => {
+                    clearInterval(intervalId);
+                    if (isLoading) {
+                        setIsLoading(false);
+                        setMessage('Tiempo de espera agotado');
+                        setMessageType('error');
+                    }
+                }, 30000); // 30 segundos máximo
+            }
+        } catch (error) {
+            console.error('Error al registrar RFID:', error);
+            setMessage('Error al iniciar registro de RFID');
             setMessageType('error');
         } finally {
             setIsLoading(false);
