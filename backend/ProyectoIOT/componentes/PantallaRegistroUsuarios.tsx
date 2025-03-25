@@ -48,7 +48,7 @@ export default function PantallaRegistroUsuarios() {
     const [accessMethod, setAccessMethod] = useState<'fingerprint' | 'rfid'>('fingerprint');
     const [accessId, setAccessId] = useState('');
     const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+    const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('success');
     const [isLoading, setIsLoading] = useState(false);
     const [subUsers, setSubUsers] = useState<SubUser[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -289,7 +289,8 @@ export default function PantallaRegistroUsuarios() {
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
 
-                    if (checkResponse.data.exists) {
+                    const data = checkResponse.data as { exists: boolean };
+                    if (data.exists) {
                         setMessage('Este RFID ya está registrado');
                         setMessageType('error');
                         setIsLoading(false);
@@ -375,11 +376,12 @@ export default function PantallaRegistroUsuarios() {
                             { timeout: 3000 }
                         );
 
-                        if (statusResponse.data.status === 'completed' && statusResponse.data.cardId) {
+                        const data = statusResponse.data as { status: string; cardId?: string; message?: string };
+                        if (data.status === 'completed' && data.cardId) {
                             clearInterval(intervalId);
 
                             // 4. RFID leído exitosamente, guardar en la base de datos
-                            const rfidValue = statusResponse.data.cardId;
+                            const rfidValue = (statusResponse.data as { cardId: string }).cardId;
 
                             // Primero verificar que no exista ya
                             const token = await AsyncStorage.getItem('userToken');
@@ -389,7 +391,8 @@ export default function PantallaRegistroUsuarios() {
                                 { headers: { Authorization: `Bearer ${token}` } }
                             );
 
-                            if (checkResponse.data.exists) {
+                            const data = checkResponse.data as { exists: boolean };
+                            if (data.exists) {
                                 setMessage('Esta tarjeta RFID ya está registrada');
                                 setMessageType('error');
                                 setIsLoading(false);
@@ -418,11 +421,11 @@ export default function PantallaRegistroUsuarios() {
                             setMessageType('success');
                             setName('');
                             loadSubUsers(); // Recargar la lista
-                        } else if (statusResponse.data.status === 'error') {
+                        } else if (data.status === 'error') {
                             clearInterval(intervalId);
-                            setMessage('Error al leer tarjeta: ' + statusResponse.data.message);
+                            setMessage('Error al leer tarjeta: ' + data.message);
                             setMessageType('error');
-                        } else if (statusResponse.data.status === 'timeout') {
+                        } else if ((statusResponse.data as { status: string }).status === 'timeout') {
                             clearInterval(intervalId);
                             setMessage('Tiempo de espera agotado');
                             setMessageType('error');

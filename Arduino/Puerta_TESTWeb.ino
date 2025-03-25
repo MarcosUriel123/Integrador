@@ -8,7 +8,7 @@
 #include <MFRC522.h>
 #include <WiFi.h> // Biblioteca para WiFi
 #include <WebServer.h> // Biblioteca para el servidor web
-#include <HTTPClient.h>
+#include <HTTPClient.h> 
 #include <ArduinoJson.h>  // Añadir esta biblioteca
 
 // Configuración del WiFi
@@ -274,6 +274,30 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
+  // Añadir esta nueva ruta de API en el setup() del Arduino
+
+  server.on("/api/arduino/rfid/reset", HTTP_POST, []() {
+    sendCORSHeaders();
+    
+    // Reiniciar variables de estado RFID
+    isRFIDOperationActive = false;
+    registroRfidActivo = false;
+    rfidStatus = "idle";
+    lastCardId = "";
+    lastErrorMessage = "";
+    
+    Serial.println("Estado de RFID reiniciado");
+    
+    // Respuesta JSON
+    server.send(200, "application/json", "{\"success\":true,\"message\":\"Estado RFID reiniciado\"}");
+  });
+
+  // Asegurar que esta ruta también tenga CORS
+  server.on("/api/arduino/rfid/reset", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
   // Iniciar servidor
   server.begin();
   Serial.println("Servidor web iniciado");
@@ -355,53 +379,46 @@ void handleStatus() {
   server.send(200, "application/json", response);
 }
 
+// Reemplazar o modificar la función handleStartRFIDRead() existente
+
 void handleStartRFIDRead() {
   sendCORSHeaders();
   
+  // Verificar si ya hay una operación en curso
   if (isRFIDOperationActive) {
-    // Retornar error de operación en progreso
-    DynamicJsonDocument errorDoc(128);
-    errorDoc["success"] = false;
-    errorDoc["message"] = "Operación RFID en progreso";
-    
-    String errorResponse;
-    serializeJson(errorDoc, errorResponse);
-    server.send(409, "application/json", errorResponse);
-    return;
+    // Si la última operación empezó hace más de 30 segundos, reiniciamos el estado
+    // (esto evita operaciones bloqueadas permanentemente)
+    if (millis() - rfidOperationStartTime > RFID_TIMEOUT) {
+      isRFIDOperationActive = false;
+      rfidStatus = "idle";
+      lastCardId = "";
+      lastErrorMessage = "";
+    } else {
+      // Todavía está activa y dentro del tiempo límite
+      server.send(409, "application/json", "{\"error\":\"Ya hay una operación RFID en progreso\"}");
+      return;
+    }
   }
   
-  DynamicJsonDocument inputDoc(256);
-  deserializeJson(inputDoc, server.arg("plain"));
-  
-  // Modificar esta línea para aceptar "mode" en lugar de "registration"
-  bool isRegistration = inputDoc["mode"] == "register";
-  String userName = inputDoc["userName"].as<String>();
-  
+  // Iniciar nueva operación
   isRFIDOperationActive = true;
+  registroRfidActivo = true;
   rfidStatus = "reading";
-  lastCardId = "";
   rfidOperationStartTime = millis();
+  lastCardId = "";
+  lastErrorMessage = "";
   
-  // Si es para registro, activar el modo registro
-  if (isRegistration) {
-    registroRfidActivo = true;
-    
-    // Mostrar mensaje en LCD
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Registrando RFID");
-    lcd.setCursor(0, 1);
-    lcd.print("para " + (userName.length() > 10 ? userName.substring(0, 10) : userName));
-  } else {
-    registroRfidActivo = false;
-  }
+  // Mostrar mensaje en LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Acerque tarjeta");
+  lcd.setCursor(0, 1);
+  lcd.print("RFID al lector");
   
-  DynamicJsonDocument doc(200);
-  doc["success"] = true;
+  // Respuesta JSON
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Iniciando lectura RFID\"}");
   
-  String response;
-  serializeJson(doc, response);
-  server.send(200, "application/json", response);
+  Serial.println("Iniciando lectura RFID");
 }
 
 void handleRFIDStatus() {
@@ -530,6 +547,8 @@ void actualizarClave() {
   }
 }
 
+// Reemplazar la función verificarRFID() actual con esta implementación
+
 void verificarRFID() {
   // Si estamos en registro de RFID, no verificar accesos
   if (registroRfidActivo || isRFIDOperationActive) return;
@@ -565,9 +584,10 @@ void verificarRFID() {
   // Verificar el RFID contra el servidor
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    String serverUrl = "http://192.168.8.3:8082/api/rfids/verify";
+    String serverUrl = "http://192.168.8.3:8082/api/rfids/verify-device"; // Usar la nueva ruta específica
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025"); // Añadir clave API compartida
     
     String jsonData = "{\"rfid\":\"" + tagID + "\"}";
     int httpResponseCode = http.POST(jsonData);
@@ -702,7 +722,7 @@ void verificarSensorPIR() {
           HTTPClient http;
           
           // URL correcta
-          String serverUrl = "http://192.168.8.6:8082/api/registros/add"; //IP DE IPCONFIG
+          String serverUrl = "http://192.168.8.3:8082/api/registros/add"; //IP DE IPCONFIG
           Serial.println("Intentando conectar a: " + serverUrl);
           
           http.begin(serverUrl);

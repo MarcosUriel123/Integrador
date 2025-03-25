@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Rfid = require('../models/Rfid');
 const { protect: auth } = require('../middlewares/authMiddleware');
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 
 // Interfaz para request con autenticación
 interface AuthRequest extends Request {
@@ -11,6 +11,19 @@ interface AuthRequest extends Request {
         [key: string]: any; // Para cualquier otra propiedad que pueda tener user
     };
 }
+
+// Middleware para verificar clave API del ESP32
+const verifyApiKey = (req: Request, res: Response, next: NextFunction) => {
+    const apiKey = req.headers['x-api-key'];
+    if (apiKey === 'IntegradorIOTKey2025') {
+        next();
+    } else {
+        res.status(401).json({
+            authorized: false,
+            message: 'Acceso no autorizado'
+        });
+    }
+};
 
 // Registrar un nuevo RFID
 router.post('/register', auth, async (req: AuthRequest, res: Response) => {
@@ -62,8 +75,46 @@ router.post('/register', auth, async (req: AuthRequest, res: Response) => {
     }
 });
 
-// Verificar un RFID
-router.post('/verify', async (req: Request, res: Response) => {
+// Verificar un RFID (para aplicación web/móvil)
+router.post('/verify', auth, async (req: AuthRequest, res: Response) => {
+    try {
+        const { rfid } = req.body;
+        const userId = req.user?.id;
+
+        if (!userId) {
+            return res.status(401).json({
+                authorized: false,
+                message: 'Usuario no autenticado'
+            });
+        }
+
+        // Buscar el RFID y verificar que pertenezca al usuario actual
+        const rfidFound = await Rfid.findOne({
+            rfidValue: rfid,
+            userId: userId
+        });
+
+        if (rfidFound) {
+            res.json({
+                authorized: true,
+                userName: rfidFound.userName
+            });
+        } else {
+            res.json({
+                authorized: false,
+                message: 'RFID no autorizado para este usuario'
+            });
+        }
+    } catch (error) {
+        console.error('Error al verificar RFID:', error);
+        res.status(500).json({
+            error: 'Error al verificar RFID'
+        });
+    }
+});
+
+// Verificar un RFID (ruta específica para el ESP32)
+router.post('/verify-device', verifyApiKey, async (req: Request, res: Response) => {
     try {
         const { rfid } = req.body;
 
@@ -77,12 +128,14 @@ router.post('/verify', async (req: Request, res: Response) => {
             });
         } else {
             res.json({
-                authorized: false
+                authorized: false,
+                message: 'RFID no autorizado'
             });
         }
     } catch (error) {
-        console.error('Error al verificar RFID:', error);
+        console.error('Error al verificar RFID desde dispositivo:', error);
         res.status(500).json({
+            authorized: false,
             error: 'Error al verificar RFID'
         });
     }

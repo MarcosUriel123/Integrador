@@ -37,6 +37,7 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
     const [message, setMessage] = useState('');
     const [isReading, setIsReading] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [arduinoIPStatus, setArduinoIPStatus] = useState('Verificando...');
 
     // Referencias para manejar intervalos y timeouts
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -63,6 +64,7 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
     useEffect(() => {
         // Al montar el componente, verificar conexión con dispositivo
         checkDeviceConnection();
+        verifyArduinoIP();
     }, []);
 
     const checkDeviceConnection = async () => {
@@ -83,6 +85,24 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
         }
     };
 
+    const verifyArduinoIP = async () => {
+        try {
+            // Mostrar la IP actual que estamos usando
+            setArduinoIPStatus(`Usando IP: ${arduinoIP}`);
+
+            // Verificar si podemos acceder al ESP32
+            const response = await axios.get(`http://${arduinoIP}/api/arduino/ping`, { timeout: 3000 });
+            if (response.status === 200) {
+                setArduinoIPStatus(`Conectado a IP: ${arduinoIP}`);
+                setIsConnected(true);
+            }
+        } catch (error) {
+            console.error('Error verificando IP del Arduino:', error);
+            setArduinoIPStatus(`Error conectando a ${arduinoIP}. Verifique la IP correcta.`);
+            setIsConnected(false);
+        }
+    };
+
     const startRFIDReading = async () => {
         if (!isConnected) {
             setMessage('Dispositivo IoT no conectado');
@@ -99,58 +119,109 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
             timeoutRef.current = null;
         }
 
-        setIsReading(true);
-        setStatus('reading');
-        setMessage('Acerque la tarjeta RFID al lector...');
-
         try {
+            // Indicación visual inmediata para mejorar la experiencia
+            setIsReading(true);
+            setStatus('preparing');
+            setMessage('Preparando lector...');
+
             const token = await AsyncStorage.getItem('userToken');
 
-            // Actualización: Usar la IP del Arduino directamente
-            await axios.post<RFIDReadResponse>(
+            // 1. Agregar un timeout más largo para la operación de reset
+            await axios.post(
+                `http://${arduinoIP}/api/arduino/rfid/reset`,
+                {},
+                {
+                    timeout: 5000,
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                }
+            ).catch(error => {
+                console.warn("Error al reiniciar el estado, continuando de todos modos:", error.message);
+                // No detenemos el proceso si el reset falla
+            });
+
+            // 2. Esperar un poco más para que el reset se complete
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // 3. Hacer la solicitud de lectura con un timeout más generoso
+            const readResponse = await axios.post(
                 `http://${arduinoIP}/api/arduino/rfid/read`,
                 {},
-                token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+                {
+                    timeout: 8000,
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                }
             );
 
+            // Si llegamos aquí, la solicitud fue exitosa
+            setStatus('reading');
+            setMessage('Acerque la tarjeta RFID al lector...');
+
             // Iniciar polling para obtener el resultado
+            let errorCount = 0; // Para contar errores consecutivos
+
             pollIntervalRef.current = setInterval(async () => {
                 try {
-                    // Actualización: Usar la IP del Arduino directamente
-                    const pollResponse = await axios.get<RFIDStatusResponse>(
+                    // 4. Agregar timeout también en la solicitud de estado
+                    const pollResponse = await axios.get(
                         `http://${arduinoIP}/api/arduino/rfid/status`,
-                        token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+                        {
+                            timeout: 3000,
+                            headers: token ? { Authorization: `Bearer ${token}` } : {}
+                        }
                     );
 
-                    if (pollResponse.data.status === 'completed' && pollResponse.data.cardId) {
+                    // Reiniciar contador de errores al recibir respuesta
+                    errorCount = 0;
+
+                    const data = pollResponse.data as RFIDStatusResponse;
+                    if (data.status === 'completed' && data.cardId) {
                         if (pollIntervalRef.current) {
                             clearInterval(pollIntervalRef.current);
                             pollIntervalRef.current = null;
                         }
 
-                        const capturedCardId = pollResponse.data.cardId;
-                        setCardId(capturedCardId);
+                        const capturedCardId = (pollResponse.data as RFIDStatusResponse).cardId;
+                        if (capturedCardId) {
+                            setCardId(capturedCardId);
+                        }
                         setStatus('success');
                         setMessage(`Tarjeta leída correctamente: ${capturedCardId}`);
                         setIsReading(false);
 
                         // Esperar un momento antes de cerrar para mostrar el éxito
                         setTimeout(() => {
-                            onCaptureComplete(capturedCardId);
+                            if (capturedCardId) {
+                                onCaptureComplete(capturedCardId);
+                            } else {
+                                setMessage('Error: No se pudo capturar el ID de la tarjeta.');
+                            }
                         }, 1500);
-                    } else if (pollResponse.data.status === 'error') {
+                    } else if ((pollResponse.data as RFIDStatusResponse).status === 'error') {
                         if (pollIntervalRef.current) {
                             clearInterval(pollIntervalRef.current);
                             pollIntervalRef.current = null;
                         }
 
                         setStatus('error');
-                        setMessage(`Error en la lectura: ${pollResponse.data.message || 'Error desconocido'}`);
+                        const data = pollResponse.data as RFIDStatusResponse;
+                        setMessage(`Error en la lectura: ${data.message || 'Error desconocido'}`);
                         setIsReading(false);
                     }
                 } catch (pollError) {
                     console.error('Error al verificar estado de lectura:', pollError);
-                    // No detener el polling por un solo error
+
+                    // 5. Incrementar contador de errores y detener polling después de varios errores
+                    errorCount++;
+                    if (errorCount > 3) {
+                        if (pollIntervalRef.current) {
+                            clearInterval(pollIntervalRef.current);
+                            pollIntervalRef.current = null;
+                        }
+                        setStatus('error');
+                        setMessage('Error de conexión con el dispositivo. Verifique que la IP sea correcta.');
+                        setIsReading(false);
+                    }
                 }
             }, 1000); // Verificar cada segundo
 
@@ -165,17 +236,36 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
                     setStatus('timeout');
                     setMessage('Tiempo de espera agotado. Intente nuevamente.');
                     setIsReading(false);
+
+                    // 6. Intentar reiniciar el estado del dispositivo en timeout
+                    axios.post(`http://${arduinoIP}/api/arduino/rfid/reset`).catch(console.warn);
                 }
             }, 30000); // 30 segundos de timeout
 
         } catch (error: any) {
+            // 7. Mejor manejo de errores específicos
             console.error('Error al iniciar lectura RFID:', error);
 
             let errorMessage = 'Error al comunicarse con el dispositivo';
-            if (error.response?.data?.message) {
+
+            // Error de red (dispositivo no accesible)
+            if (error.message && error.message.includes('Network Error')) {
+                errorMessage = 'Error de red: No se puede conectar con el dispositivo Arduino. Verifique la IP correcta.';
+            }
+            // Error de conflicto (operación ya en progreso)
+            else if (error.response?.status === 409) {
+                errorMessage = 'Ya hay una operación RFID en progreso. Espere unos momentos e intente nuevamente.';
+
+                // Intentar reiniciar el estado
+                axios.post(`http://${arduinoIP}/api/arduino/rfid/reset`).catch(console.warn);
+            }
+            // Timeout
+            else if (error.code === 'ECONNABORTED') {
+                errorMessage = 'Tiempo de espera agotado al conectar con el dispositivo.';
+            }
+            // Otros errores con mensaje específico
+            else if (error.response?.data?.message) {
                 errorMessage = error.response.data.message;
-            } else if (error.message && error.message.includes('Network Error')) {
-                errorMessage = 'Error de red: No se puede conectar con el dispositivo Arduino';
             }
 
             setStatus('error');
@@ -234,6 +324,16 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
                         {message}
                     </Text>
                 )}
+
+                {/* Añadir esta sección para mostrar información de depuración */}
+                <View style={styles.debugContainer}>
+                    <Text style={styles.debugText}>
+                        {arduinoIPStatus}
+                    </Text>
+                    <Text style={styles.debugText}>
+                        Estado: {status}
+                    </Text>
+                </View>
             </View>
 
             <View style={styles.buttonContainer}>
@@ -341,7 +441,18 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         fontSize: 16,
-    }
+    },
+    debugContainer: {
+        marginTop: 10,
+        padding: 10,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 5,
+    },
+    debugText: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+    },
 });
 
 export default RFIDControlModal;
