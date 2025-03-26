@@ -13,7 +13,10 @@
 
 // Configuración del WiFi
 const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
-const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
+const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
+
+// Configuración del servidor
+const char* ipServer = "192.168.8.3:8082"; // IP y puerto del servidor backend
 
 // Configuración del servidor web
 WebServer server(80);
@@ -31,8 +34,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 const byte FILAS = 4;
 const byte COLUMNAS = 4;
 char teclas[FILAS][COLUMNAS] = {
-  {'1','5','2','A'},
-  {'3','4','6','B'},
+  {'1','2','3','A'},
+  {'4','5','6','B'},
   {'7','8','9','C'},
   {'*','0','#','D'}
 };
@@ -51,16 +54,16 @@ int intentosFallidos = 0;
 // Estado del menú
 int estadoMenu = 0;
 
-// Configuración del sensor PIR, LED y buzzer
+// Configuración del sensor PIR y buzzer
 const int pinPIR = 34;
-const int pinLED = 5;
 const int pinBuzzer = 2;
 int contadorDetecciones = 0;
 unsigned long tiempoUltimaDeteccion = 0;
 const unsigned long retrasoDeteccion = 1000;
-const unsigned long umbralAlarma = 60000;
-bool estadoLED = false;
 bool alarmaActivada = false;
+int contadorPitidos = 0;          // Nuevo: para contar los pitidos
+unsigned long tiempoUltimoPitido = 0; // Nuevo: para controlar el tiempo entre pitidos
+bool alarmaCicloCompletado = false;  // NUEVA: Indica si ya completó un ciclo de 6 pitidos
 
 // Configuración del sensor de huella
 HardwareSerial mySerial(2);
@@ -84,6 +87,11 @@ bool registroRemotoActivo = false;
 
 // Añade estas variables globales junto con las otras variables de estado
 bool registroRfidActivo = false;  // Para controlar cuando estamos registrando un RFID
+
+// Variables para controlar la visualización temporal de dígitos
+unsigned long tiempoUltimaTecla = 0;
+bool reemplazarCaracter = false;
+int posicionTeclaActual = -1;
 
 void pitidoCorto() {
   digitalWrite(pinBuzzer, HIGH);
@@ -111,9 +119,7 @@ void setup() {
   lcd.init();
   lcd.backlight();
   pinMode(pinPIR, INPUT);
-  pinMode(pinLED, OUTPUT);
   pinMode(pinBuzzer, OUTPUT);
-  digitalWrite(pinLED, LOW);
   digitalWrite(pinBuzzer, LOW);
 
   // Inicialización del RFID
@@ -125,13 +131,6 @@ void setup() {
   // Inicialización del sensor de huella
   mySerial.begin(57600, SERIAL_8N1, 16, 17);
   finger.begin(57600);
-
-  // if (finger.verifyPassword()) {
-  //   Serial.println("Sensor encontrado correctamente.");
-  // } else {
-  //   Serial.println("Error al encontrar el sensor de huellas.");
-  //   while (1);
-  // }
 
   // Conectar a WiFi
   WiFi.begin(ssid, password);
@@ -584,7 +583,7 @@ void verificarRFID() {
   // Verificar el RFID contra el servidor
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    String serverUrl = "http://192.168.8.3:8082/api/rfids/verify-device"; // Usar la nueva ruta específica
+    String serverUrl = "http://" + String(ipServer) + "/api/rfids/verify-device"; // Usar la nueva ruta específica
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
     http.addHeader("X-API-Key", "IntegradorIOTKey2025"); // Añadir clave API compartida
@@ -608,6 +607,12 @@ void verificarRFID() {
         lcd.print("RFID: " + tagID.substring(0, 8) + "...");
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
+        
+        // Reiniciar contador y estado de alarma
+        contadorDetecciones = 0;
+        alarmaActivada = false;
+        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         intentosFallidos = 0;
@@ -654,6 +659,7 @@ void verificarRFID() {
   mostrarMenuPrincipal();
 }
 
+// Modificar la función ingresarClave():
 void ingresarClave(char tecla) {
   pitidoCorto();
   
@@ -663,8 +669,19 @@ void ingresarClave(char tecla) {
   }
   else if (tecla >= '0' && tecla <= '9' && indiceClave < 4) {
     claveIngresada[indiceClave] = tecla;
+    
+    // Mostrar el número real en lugar de asterisco
+    lcd.setCursor(5 + indiceClave, 1);
+    lcd.print(tecla);  // Mostrar el dígito real
+    
+    // Guardar la posición para cambiarla después
+    posicionTeclaActual = indiceClave;
+    reemplazarCaracter = true;
+    tiempoUltimaTecla = millis();
+    
     indiceClave++;
-    actualizarClave();
+    
+    // Verificar si se completó la clave
     if (indiceClave == 4) {
       claveIngresada[4] = '\0';
       if (strcmp(claveIngresada, claveCorrecta) == 0) {
@@ -675,6 +692,12 @@ void ingresarClave(char tecla) {
         lcd.print("Concedido");
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
+        
+        // Reiniciar contador y estado de alarma
+        contadorDetecciones = 0;
+        alarmaActivada = false;
+        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         // Bloqueamos de nuevo lógicamente
@@ -697,32 +720,34 @@ void ingresarClave(char tecla) {
         mostrarMenuPrincipal();
       }
       indiceClave = 0;
+      reemplazarCaracter = false; // Reiniciar flag
     }
   }
 }
 
+// Modificar la función verificarSensorPIR()
+
 void verificarSensorPIR() {
+  unsigned long tiempoActual = millis();
+  
   if (digitalRead(pinPIR) == HIGH) {
-    if (millis() - tiempoUltimaDeteccion >= retrasoDeteccion) {
+    if (tiempoActual - tiempoUltimaDeteccion >= retrasoDeteccion) {
       contadorDetecciones++;
-      tiempoUltimaDeteccion = millis();
+      tiempoUltimaDeteccion = tiempoActual;
       Serial.println("Movimiento detectado");
       Serial.println("Contador " + String(contadorDetecciones));
 
-      if (contadorDetecciones >= 3 && !estadoLED) {
-        digitalWrite(pinLED, HIGH);
-        estadoLED = true;
-      }
-      if (contadorDetecciones >= 12 && !alarmaActivada) {
-        digitalWrite(pinBuzzer, HIGH);
+      // Solo activar alarma si no ha completado un ciclo de pitidos
+      if (contadorDetecciones >= 12 && !alarmaActivada && !alarmaCicloCompletado) {
         alarmaActivada = true;
+        contadorPitidos = 0;
+        tiempoUltimoPitido = tiempoActual;
         Serial.println("Alarma activada");
+        
         // Enviar datos al servidor
         if(WiFi.status() == WL_CONNECTED) {
           HTTPClient http;
-          
-          // URL correcta
-          String serverUrl = "http://192.168.8.3:8082/api/registros/add"; //IP DE IPCONFIG
+          String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
           Serial.println("Intentando conectar a: " + serverUrl);
           
           http.begin(serverUrl);
@@ -737,173 +762,48 @@ void verificarSensorPIR() {
             String response = http.getString();
             Serial.println("Código de respuesta HTTP: " + String(httpResponseCode));
             Serial.println("Respuesta del servidor: " + response);
-            Serial.println("Registro enviado exitosamente");
           } else {
             Serial.println("Error en la petición HTTP. Código: " + String(httpResponseCode));
-            Serial.println("Error: " + http.errorToString(httpResponseCode));
           }
           http.end();
-        } else {
-          Serial.println("Error: No hay conexión WiFi");
         }        
       }
     }
   } else {
-    if (alarmaActivada && (millis() - tiempoUltimaDeteccion > 30000)) {
-      digitalWrite(pinBuzzer, LOW);
-      alarmaActivada = false;
-      Serial.println("Alarma desactivada");
-    }
-    if (estadoLED && (millis() - tiempoUltimaDeteccion > 30000)) {
-      digitalWrite(pinLED, LOW);
-      estadoLED = false;
-    }
-    if (millis() - tiempoUltimaDeteccion > 30000) {
+    // Reinicio del contador por inactividad
+    if (tiempoActual - tiempoUltimaDeteccion > 30000) {
       contadorDetecciones = 0;
-      Serial.println("Contador reiniciado");
+      alarmaCicloCompletado = false;  // Reiniciar esta bandera cuando se reinicia el contador
+      Serial.println("Contador reiniciado por inactividad");
     }
   }
-}
-
-void mostrarDatosSensor() {
-  verificarSensorPIR();
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Detecciones ");
-  lcd.print(contadorDetecciones);
-  lcd.setCursor(0, 1);
-  lcd.print(estadoLED ? "Alerta" : "Normal");
-  lcd.print(" D Menu");
-  delay(500);
+  
+  // Control de alarma
+  if (alarmaActivada && contadorPitidos < 6) {
+    if (tiempoActual - tiempoUltimoPitido > 500) {
+      digitalWrite(pinBuzzer, HIGH);
+      delay(300);
+      digitalWrite(pinBuzzer, LOW);
+      
+      contadorPitidos++;
+      tiempoUltimoPitido = tiempoActual;
+      
+      if (contadorPitidos >= 6) {
+        alarmaActivada = false;
+        alarmaCicloCompletado = true;  // Marcar que ya completó un ciclo
+        Serial.println("Alarma desactivada después de 6 pitidos");
+      }
+    }
+  } else {
+    // Mantener el buzzer apagado
+    digitalWrite(pinBuzzer, LOW);
+  }
 }
 
 void mostrarMensajeHuella(const char* mensaje) {
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print(mensaje);
-}
-
-void manejarHuella() {
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("1 Registrar");
-  lcd.setCursor(0, 1);
-  lcd.print("2 Verificar D Menu");
-
-  char tecla = teclado.waitForKey();
-  if (tecla == '1') {
-    int id = capturarHuella();
-    if (id > 0) {
-      mostrarMensajeHuella("Huella almacenada");
-      delay(2000);
-    } else {
-      mostrarMensajeHuella("Error al registrar");
-      delay(2000);
-    }
-  } else if (tecla == '2') {
-    verificarHuella();
-  } else if (tecla == 'D') {
-    estadoMenu = 0;
-    mostrarMenuPrincipal();
-  }
-}
-
-int capturarHuella() {
-  int p = -1;
-  mostrarMensajeHuella("Esperando huella...");
-
-  while (p != FINGERPRINT_OK) {
-    p = finger.getImage();
-    if (p == FINGERPRINT_NOFINGER) {
-      delay(100);
-    } else if (p != FINGERPRINT_OK) {
-      mostrarMensajeHuella("Error al capturar");
-      delay(2000);
-      return -1;
-    }
-  }
-
-  mostrarMensajeHuella("Huella detectada");
-  delay(1000);
-
-  p = finger.image2Tz(1);
-  if (p != FINGERPRINT_OK) {
-    mostrarMensajeHuella("Error al convertir");
-    delay(2000);
-    return -1;
-  }
-
-  mostrarMensajeHuella("Retira tu dedo");
-  delay(2000);
-
-  while (finger.getImage() != FINGERPRINT_NOFINGER) {
-    delay(100);
-  }
-
-  mostrarMensajeHuella("Coloca de nuevo");
-  delay(1000);
-
-  p = -1;
-  while (p != FINGERPRINT_OK) {
-    p = finger.getImage();
-    delay(100);
-  }
-
-  mostrarMensajeHuella("Huella detectada");
-  delay(1000);
-
-  p = finger.image2Tz(2);
-  if (p != FINGERPRINT_OK) {
-    mostrarMensajeHuella("Error en 2da captura");
-    delay(2000);
-    return -1;
-  }
-
-  mostrarMensajeHuella("Creando modelo");
-  delay(1000);
-
-  p = finger.createModel();
-  if (p != FINGERPRINT_OK) {
-    mostrarMensajeHuella("Error al crear");
-    delay(2000);
-    return -1;
-  }
-
-  mostrarMensajeHuella("Ingresa ID (1-127)");
-  char idStr[4] = {0};
-  int i = 0;
-  while (i < 3) {
-    char tecla = teclado.waitForKey();
-    if (tecla >= '0' && tecla <= '9') {
-      idStr[i++] = tecla;
-      lcd.setCursor(i + 10, 1);
-      lcd.print(tecla);
-    } else if (tecla == 'D' && i > 0) {
-      idStr[--i] = 0;
-      lcd.setCursor(i + 10, 1);
-      lcd.print(" ");
-    } else if (tecla == '#') {
-      break;
-    }
-  }
-
-  int id = atoi(idStr);
-  if (id < 1 || id > 127) {
-    mostrarMensajeHuella("ID invalido");
-    delay(2000);
-    return -1;
-  }
-
-  p = finger.storeModel(id);
-  if (p == FINGERPRINT_OK) {
-    mostrarMensajeHuella("Huella almacenada");
-    delay(2000);
-    return id;
-  } else {
-    mostrarMensajeHuella("Error al almacenar");
-    delay(2000);
-    return -1;
-  }
 }
 
 void verificarHuella() {
@@ -920,6 +820,12 @@ void verificarHuella() {
         lcd.print("Acceso Concedido");
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
+        
+        // Reiniciar contador y estado de alarma
+        contadorDetecciones = 0;
+        alarmaActivada = false;
+        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         intentosFallidos = 0;
@@ -1074,21 +980,39 @@ void processFingerprintRegistration() {
   }
 }
 
+// Modificar la función loop() para manejar el cambio de carácter:
 void loop() {
-  // En cada ciclo, verificar timeout
-  if (rfidStatus == "reading" && millis() - rfidOperationStartTime > RFID_TIMEOUT) {
-    rfidStatus = "error";
-    lastErrorMessage = "Tiempo de espera agotado";
-    isRFIDOperationActive = false;
+  // Verificar si hay que reemplazar un carácter por asterisco
+  if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 1000) {
+    lcd.setCursor(5 + posicionTeclaActual, 1);
+    lcd.print("*");  // Reemplazar con asterisco después de 1 segundo
+    reemplazarCaracter = false;
   }
+  
+  // Capturar teclas del teclado
   char tecla = teclado.getKey();
+  if (tecla) {
+    Serial.println("Tecla presionada: " + String(tecla));
+    
+    // Manejar la tecla según el estado del sistema
+    if (estadoMenu == 0) {
+      ingresarClave(tecla);
+    } else {
+      // Mostrar la tecla para otros usos
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Tecla: " + String(tecla));
+      delay(1000);
+      mostrarMenuPrincipal();
+    }
+  }
+  
+  // Resto del código existente
   verificarSensorPIR();
   verificarRFID();
   verificarHuella();
   processFingerprintRegistration();
   
-  // resto del código del loop...
-
   // Manejar solicitudes del servidor web
   server.handleClient();
 }
