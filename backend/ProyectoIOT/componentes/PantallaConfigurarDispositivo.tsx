@@ -18,7 +18,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 export default function PantallaConfigurarDispositivo() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const [deviceInfo, setDeviceInfo] = useState(null);
+    const [deviceInfo, setDeviceInfo] = useState<{ name: string; macAddress: string; isOnline: boolean } | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [newPin, setNewPin] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -35,16 +35,16 @@ export default function PantallaConfigurarDispositivo() {
 
             if (!token) {
                 Alert.alert('Error', 'No se encontró sesión. Inicie sesión nuevamente.');
-                router.push('/login');
+                router.push('/login' as any);
                 return;
             }
 
             const response = await axios.get(
-                'http://192.168.8.3:8082/api/devices/info',
+                'http://192.168.8.4:8082/api/devices/info',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            setDeviceInfo(response.data);
+            setDeviceInfo(response.data as { name: string; macAddress: string; isOnline: boolean });
         } catch (error) {
             console.error('Error obteniendo información del dispositivo:', error);
             Alert.alert('Error', 'No se pudo obtener la información del dispositivo');
@@ -53,7 +53,7 @@ export default function PantallaConfigurarDispositivo() {
         }
     };
 
-    const validatePin = (text) => {
+    const validatePin = (text: string) => {
         // Solo permitir dígitos y limitar a 4 caracteres
         if (/^\d*$/.test(text) && text.length <= 4) {
             setNewPin(text);
@@ -75,12 +75,12 @@ export default function PantallaConfigurarDispositivo() {
 
             if (!token) {
                 Alert.alert('Error', 'No se encontró sesión. Inicie sesión nuevamente.');
-                router.push('/login');
+                router.push('/login' as any);
                 return;
             }
 
             const response = await axios.post(
-                'http://192.168.8.3:8082/api/devices/update-pin',
+                'http://192.168.8.4:8082/api/devices/update-pin',
                 { devicePin: newPin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -97,8 +97,8 @@ export default function PantallaConfigurarDispositivo() {
             console.error('Error actualizando PIN:', error);
             let message = 'Error al actualizar el PIN del dispositivo';
 
-            if (error.response?.data?.message) {
-                message = error.response.data.message;
+            if ((error as any).response?.data?.message) {
+                message = (error as any).response.data.message;
             }
 
             setErrorMsg(message);

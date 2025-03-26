@@ -13,8 +13,8 @@ export default function PantallaPuerta() {
         try {
             // Realizamos la solicitud al backend para abrir o cerrar la puerta
             const url = puertaAbierta
-                ? 'http://192.168.8.3:8082/api/door/cerrar' //ip de IPCONFIG
-                : 'http://192.168.8.3:8082/api/door/abrir';
+                ? 'http://192.168.8.4:8082/api/door/cerrar' //ip de IPCONFIG
+                : 'http://192.168.8.4:8082/api/door/abrir';
             const response = await axios.get(url);  // Llamada al backend
 
             // Si la respuesta es exitosa, actualizamos el estado de la puerta

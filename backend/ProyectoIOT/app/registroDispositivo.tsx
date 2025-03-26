@@ -99,7 +99,7 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
-            const baseUrl = 'http://192.168.8.3:8082';
+            const baseUrl = 'http://192.168.8.4:8082';
 
             // Realizar la solicitud al backend
             const response = await axios.post(
