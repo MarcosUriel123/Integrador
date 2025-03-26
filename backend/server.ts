@@ -19,6 +19,8 @@ import loginRoutes from './routes/loginRoutes'
 import subUserRoutes from './routes/subUserRoutes'; // Importamos las rutas de subusuarios
 import secretQuestionRoutes from './routes/secretQuestionRoutes';
 import preguntasFrecuentesRoutes from './routes/preguntasFrecuentesRoutes';
+import pinRoutes from './routes/pinRoutes';
+
 const rfidRoutes = require('./routes/rfidRoutes');
 import purchaseRoutes from './routes/purchaseRoutes';
 
@@ -69,8 +71,10 @@ app.use('/api/secretQuestions', secretQuestionRoutes);
 app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
 app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Usando el router
 app.use('/api/rfids', rfidRoutes); // Agregamos la ruta de RFID
+
 app.use('/api/purchase', purchaseRoutes); // Agregamos la ruta de purchase
 
+app.use('/api/pins', pinRoutes);
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://192.168.8.3:${PORT}`);
