@@ -19,8 +19,9 @@ import Footer from './Footer';
 import { useCart } from './CartContext';
 // Importación faltante de ProductCard
 import ProductCard from './ProductCard ';
+import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener esta dependencia
 
-// Tipo actualizado para que coincida con lo que espera ProductCard
+// Tipos existentes...
 type Product = {
     id: string; // Cambiado de _id a id
     name: string;
@@ -46,6 +47,11 @@ export default function PantallaCatalogoProductos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const { addToCart } = useCart();
+    
+    // Estados para paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const [productsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -62,6 +68,9 @@ export default function PantallaCatalogoProductos() {
                         image: product.image
                     }));
                     setProducts(formattedProducts);
+                    
+                    // Calcular el número total de páginas
+                    setTotalPages(Math.ceil(formattedProducts.length / productsPerPage));
                 }
             } catch (err) {
                 console.error('Error fetching products:', err);
@@ -72,7 +81,7 @@ export default function PantallaCatalogoProductos() {
         };
 
         fetchProducts();
-    }, []);
+    }, [productsPerPage]);
 
     const handleProductPress = (product: Product) => {
         // Navegar a la pantalla de detalles y pasar los datos del producto
@@ -80,6 +89,35 @@ export default function PantallaCatalogoProductos() {
             pathname: '/productoDetail',
             params: { product: JSON.stringify(product) },
         });
+    };
+
+    // Función para ir a la página anterior
+    const goToPreviousPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+            // Desplazar hacia arriba al cambiar de página
+            if (scrollViewRef.current) {
+                scrollViewRef.current.scrollTo({ y: 0, animated: true });
+            }
+        }
+    };
+
+    // Función para ir a la página siguiente
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+            // Desplazar hacia arriba al cambiar de página
+            if (scrollViewRef.current) {
+                scrollViewRef.current.scrollTo({ y: 0, animated: true });
+            }
+        }
+    };
+
+    // Obtener los productos para la página actual
+    const getCurrentPageProducts = () => {
+        const indexOfLastProduct = currentPage * productsPerPage;
+        const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+        return products.slice(indexOfFirstProduct, indexOfLastProduct);
     };
 
     const renderProductItem = ({ item }: { item: Product }) => (
@@ -93,9 +131,15 @@ export default function PantallaCatalogoProductos() {
         />
     );
 
+    // Referencia para el ScrollView
+    const scrollViewRef = React.useRef<ScrollView>(null);
+
     return (
         <SafeAreaView style={styles.screen}>
-            <ScrollView style={{ flex: 1 }}>
+            <ScrollView 
+                ref={scrollViewRef}
+                style={{ flex: 1 }}
+            >
                 <View style={styles.cardContainer}>
                     <Header title="Catálogo de Productos" />
 
@@ -111,13 +155,57 @@ export default function PantallaCatalogoProductos() {
                     ) : (
                         <View style={styles.contentContainer}>
                             <Text style={styles.title}>Catálogo de Productos</Text>
-                            <FlatList
-                                data={products}
-                                renderItem={renderProductItem}
-                                keyExtractor={(item) => item.id}
-                                scrollEnabled={false}
-                                contentContainerStyle={styles.listContent}
-                            />
+                            
+                            {products.length === 0 ? (
+                                <Text style={styles.emptyText}>No hay productos disponibles</Text>
+                            ) : (
+                                <>
+                                    <FlatList
+                                        data={getCurrentPageProducts()}
+                                        renderItem={renderProductItem}
+                                        keyExtractor={(item) => item.id}
+                                        scrollEnabled={false}
+                                        contentContainerStyle={styles.listContent}
+                                    />
+                                    
+                                    {/* Controles de paginación */}
+                                    <View style={styles.paginationContainer}>
+                                        <TouchableOpacity 
+                                            style={[
+                                                styles.paginationButton, 
+                                                currentPage === 1 && styles.paginationButtonDisabled
+                                            ]}
+                                            onPress={goToPreviousPage}
+                                            disabled={currentPage === 1}
+                                        >
+                                            <Ionicons name="chevron-back" size={22} color={currentPage === 1 ? "#999" : "#007bff"} />
+                                            <Text style={[
+                                                styles.paginationButtonText,
+                                                currentPage === 1 && styles.paginationButtonTextDisabled
+                                            ]}>Anterior</Text>
+                                        </TouchableOpacity>
+                                        
+                                        <Text style={styles.paginationInfo}>
+                                            Página {currentPage} de {totalPages}
+                                        </Text>
+                                        
+                                        <TouchableOpacity 
+                                            style={[
+                                                styles.paginationButton, 
+                                                currentPage === totalPages && styles.paginationButtonDisabled
+                                            ]}
+                                            onPress={goToNextPage}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            <Text style={[
+                                                styles.paginationButtonText,
+                                                currentPage === totalPages && styles.paginationButtonTextDisabled
+                                            ]}>Siguiente</Text>
+                                            <Ionicons name="chevron-forward" size={22} color={currentPage === totalPages ? "#999" : "#007bff"} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </>
+                            )}
                         </View>
                     )}
 
@@ -128,7 +216,7 @@ export default function PantallaCatalogoProductos() {
     );
 }
 
-// Los estilos se mantienen iguales...
+// Estilos existentes más los nuevos...
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
@@ -150,7 +238,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 20,
-        minHeight: 300, // Asegura espacio suficiente para mostrar carga/error
+        minHeight: 300,
     },
     title: {
         fontSize: 22,
@@ -159,6 +247,58 @@ const styles = StyleSheet.create({
         marginVertical: 15,
         textAlign: 'center',
     },
+    emptyText: {
+        fontSize: 16,
+        color: '#6c757d',
+        textAlign: 'center',
+        marginTop: 20,
+    },
+    // Estilos existentes...
+    loadingText: {
+        marginTop: 15,
+        fontSize: 16,
+        color: '#6c757d',
+    },
+    errorText: {
+        color: '#dc3545',
+        fontSize: 18,
+        textAlign: 'center',
+    },
+    listContent: {
+        width: '100%',
+    },
+    // Nuevos estilos para paginación
+    paginationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 20,
+        width: '100%',
+        paddingHorizontal: 10,
+    },
+    paginationButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 8,
+        backgroundColor: '#f0f8ff',
+    },
+    paginationButtonDisabled: {
+        backgroundColor: '#f5f5f5',
+    },
+    paginationButtonText: {
+        color: '#007bff',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    paginationButtonTextDisabled: {
+        color: '#999',
+    },
+    paginationInfo: {
+        fontSize: 14,
+        color: '#555',
+    },
+    // Mantén el resto de estilos aquí...
     productCard: {
         backgroundColor: '#f8f9fa',
         borderRadius: 8,
@@ -198,18 +338,5 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         paddingVertical: 4,
         paddingHorizontal: 8,
-    },
-    loadingText: {
-        marginTop: 15,
-        fontSize: 16,
-        color: '#6c757d',
-    },
-    errorText: {
-        color: '#dc3545',
-        fontSize: 18,
-        textAlign: 'center',
-    },
-    listContent: {
-        width: '100%',
     },
 });

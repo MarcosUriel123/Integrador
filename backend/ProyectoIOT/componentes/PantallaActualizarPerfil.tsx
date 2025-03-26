@@ -110,7 +110,7 @@ export default function PantallaPerfil({ userId }: Props) {
         }
 
         try {
-            const response = await axios.put(`http://192.168.8.6:8082/api/users/update/${localUserId}`, updateData);
+            const response = await axios.put(`http://192.168.8.4:8082/api/users/update/${localUserId}`, updateData);
             if (response.status === 200) {
                 // Modificado: Mostrar Alert con opción para ir al perfil
                 Alert.alert(
