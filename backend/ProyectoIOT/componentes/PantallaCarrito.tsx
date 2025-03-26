@@ -82,23 +82,29 @@ export default function PantallaCarrito() {
             return;
         }
 
-        // Aquí iría la lógica de procesamiento de pago
-        Alert.alert(
-            'Compra exitosa',
-            'Gracias por su compra. Su pedido ha sido procesado correctamente.',
-            [
-                {
-                    text: 'OK',
-                    onPress: async () => {
-                        // Limpiar el carrito
-                        await AsyncStorage.removeItem('userCart');
-                        setCartItems([]);
-                        // Redirigir al inicio
-                        router.push('/');
+        // Verificar si el usuario ha iniciado sesión
+        const token = await AsyncStorage.getItem('userToken');
+        
+        if (!token) {
+            Alert.alert(
+                'Iniciar sesión requerido',
+                'Para completar la compra, necesitas iniciar sesión primero.',
+                [
+                    {
+                        text: 'Cancelar',
+                        style: 'cancel'
+                    },
+                    {
+                        text: 'Iniciar sesión',
+                        onPress: () => router.push('/Login1')
                     }
-                }
-            ]
-        );
+                ]
+            );
+            return;
+        }
+        
+        // Navegar a la pantalla de checkout
+        router.push('/checkout' as any);
     };
 
     return (

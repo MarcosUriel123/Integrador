@@ -20,6 +20,7 @@ import subUserRoutes from './routes/subUserRoutes'; // Importamos las rutas de s
 import secretQuestionRoutes from './routes/secretQuestionRoutes';
 import preguntasFrecuentesRoutes from './routes/preguntasFrecuentesRoutes';
 const rfidRoutes = require('./routes/rfidRoutes');
+import purchaseRoutes from './routes/purchaseRoutes';
 
 // import './ProyectoIOT/src/express/index.d.ts'; // Asegúrate de que la ruta sea correcta
 
@@ -68,6 +69,7 @@ app.use('/api/secretQuestions', secretQuestionRoutes);
 app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
 app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Usando el router
 app.use('/api/rfids', rfidRoutes); // Agregamos la ruta de RFID
+app.use('/api/purchase', purchaseRoutes); // Agregamos la ruta de purchase
 
 // Iniciar servidor
 app.listen(PORT, () => {
