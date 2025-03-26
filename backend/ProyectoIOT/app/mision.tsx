@@ -15,7 +15,7 @@ import Footer from '../componentes/Footer'; // Import Footer component
 
 export default function MisionScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.0.1:8082/api'; // Update this with your actual IP instead of 192.168.8.4
+    const API_BASE = 'http://192.168.8.6:8082/api'; // Update this with your actual IP instead of 192.168.8.6
     const [mision, setMision] = useState('');
 
     // useEffect para cargar la última misión desde el backend

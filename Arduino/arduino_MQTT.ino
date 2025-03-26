@@ -631,7 +631,7 @@ void verificarRFID() {
 
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    String serverUrl = "http://192.168.8.3:8082/api/rfids/verify";
+    String serverUrl = "http://192.168.8.6:8082/api/rfids/verify";
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
     

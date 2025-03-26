@@ -21,7 +21,7 @@ export default function Registro1Screen() {
             // Paso 1: Registro exitoso (asumimos que ya se completó en PantallaRegistro1)
 
             // Paso 2: Iniciar sesión automáticamente
-            const loginResponse = await axios.post<LoginResponse>('http://192.168.8.4:8082/api/users/login', {
+            const loginResponse = await axios.post<LoginResponse>('http://192.168.8.6:8082/api/users/login', {
                 email,
                 password
             });

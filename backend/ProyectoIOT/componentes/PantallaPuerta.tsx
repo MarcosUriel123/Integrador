@@ -13,8 +13,9 @@ export default function PantallaPuerta() {
         try {
             // Realizamos la solicitud al backend para abrir o cerrar la puerta
             const url = puertaAbierta
-                ? 'http://192.168.8.4:8082/api/door/cerrar' //ip de IPCONFIG
-                : 'http://192.168.8.4:8082/api/door/abrir';
+                ? 'http://192.168.8.6:8082/api/door/cerrar' //ip de IPCONFIG
+                : 'http://192.168.8.6:8082/api/door/abrir';
+
             const response = await axios.get(url);  // Llamada al backend
 
             // Si la respuesta es exitosa, actualizamos el estado de la puerta
@@ -61,7 +62,7 @@ export default function PantallaPuerta() {
 
                         {/* Botones de Configuración y Registros */}
                         <View style={styles.bottomButtons}>
-                            <TouchableOpacity style={styles.configButton} onPress={() => router.push('/configuracionDispositivo')}>
+                            <TouchableOpacity style={styles.configButton} onPress={() => router.push('../configurarDispositivo')}>
                                 <FontAwesome5 name="cog" size={20} color="#1E1E1E" style={styles.buttonIcon} />
                                 <Text style={styles.configButtonText}>Configuración</Text>
                             </TouchableOpacity>
@@ -81,6 +82,7 @@ export default function PantallaPuerta() {
                             <FontAwesome5 name="users" size={20} color="#FFFFFF" style={styles.buttonIcon} />
                             <Text style={styles.usersButtonText}>Gestionar Usuarios</Text>
                         </TouchableOpacity>
+
                     </View>
 
                 </View>
@@ -185,6 +187,11 @@ const styles = StyleSheet.create({
     usersButtonText: {
         fontSize: 16,
         color: '#FFFFFF', // Texto blanco para contraste
+        fontWeight: '600',
+    },
+    buttonText: {
+        fontSize: 16,
+        color: '#FFFFFF',
         fontWeight: '600',
     },
 });

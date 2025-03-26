@@ -15,7 +15,7 @@ import Footer from '../componentes/Footer'; // Import Footer component
 
 export default function PoliticasScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.0.1:8082/api'; // Update with your actual IP address (use ipconfig)
+    const API_BASE = 'http://192.168.8.6:8082/api'; // Update with your actual IP address (use ipconfig)
     const [politica, setPolitica] = useState('');
 
     // useEffect para cargar la última política desde el backend
