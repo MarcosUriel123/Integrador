@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useRouter } from 'expo-router'; // Añadir esta importación
+import React, { useState, useEffect } from 'react'; // Añadir useEffect
+import { useRouter } from 'expo-router';
 import {
     SafeAreaView,
     ScrollView,
@@ -8,21 +8,67 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert
+    Alert,
+    ActivityIndicator // Añadir para indicador de carga
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PantallaRegistroDispositivo() {
-    const router = useRouter(); // Añadir esto para la navegación
+    const router = useRouter();
     const [macAddress, setMacAddress] = useState('');
     const [name, setName] = useState('');
     const [pin, setPin] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isFetchingMac, setIsFetchingMac] = useState(true); // Nuevo estado
+
+    // Nueva función para obtener MAC del dispositivo
+    const fetchDeviceInfo = async () => {
+        setIsFetchingMac(true);
+        interface DeviceInfo {
+            mac: string;
+            ip: string;
+        }
+
+        try {
+            // Intentar obtener la IP del Arduino de AsyncStorage
+            let arduinoIP = await AsyncStorage.getItem('arduinoIP');
+            if (!arduinoIP) {
+                arduinoIP = '192.168.8.2'; // IP por defecto
+            }
+
+            const response = await axios.get<DeviceInfo>(`http://${arduinoIP}/api/arduino/info`, {
+                timeout: 5000
+            });
+
+            if (response.data && response.data.mac) {
+                setMacAddress(response.data.mac);
+
+                // Opcionalmente guardar la IP si ha cambiado
+                if (response.data.ip) {
+                    await AsyncStorage.setItem('arduinoIP', response.data.ip);
+                }
+            }
+        } catch (error) {
+            console.error('Error obteniendo información del dispositivo:', error);
+            setMessage('No se pudo conectar con el dispositivo IoT. Verifica que esté encendido y conectado a la misma red.');
+        } finally {
+            setIsFetchingMac(false);
+        }
+    };
+
+    // Llamar a la función cuando se monte el componente
+    useEffect(() => {
+        fetchDeviceInfo();
+    }, []);
 
     // Validar que el PIN solo contiene números
-    const validatePin = (text: string) => {
+    interface ValidatePinProps {
+        text: string;
+    }
+
+    const validatePin = (text: ValidatePinProps['text']) => {
         // Solo permitir dígitos y limitar a 4 caracteres
         if (/^\d*$/.test(text) && text.length <= 4) {
             setPin(text);
@@ -53,9 +99,7 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
-            // Usar IP de tu PC en la red local en lugar de 192.168.8.3
-            // Ejemplo: '192.168.1.100:8082' - debes ajustar esto a tu IP
-            const baseUrl = 'http://192.168.8.3:8082'; // Cambia esto a tu IP local
+            const baseUrl = 'http://192.168.8.3:8082';
 
             // Realizar la solicitud al backend
             const response = await axios.post(
@@ -67,12 +111,20 @@ export default function PantallaRegistroDispositivo() {
             if (response.status === 201) {
                 // Guardar el estado para indicar que el usuario ya tiene un dispositivo
                 await AsyncStorage.setItem('userHasDevice', 'true');
-
                 setMessage('Dispositivo registrado con éxito');
-                // Limpiar los campos
-                setMacAddress('');
-                setName('');
-                setPin('');
+
+                // Notificar al Arduino que el registro se completó
+                try {
+                    let arduinoIP = await AsyncStorage.getItem('arduinoIP');
+                    if (!arduinoIP) {
+                        arduinoIP = '192.168.8.2'; // IP por defecto
+                    }
+
+                    await axios.post(`http://${arduinoIP}/api/arduino/register-complete`);
+                } catch (notifyError) {
+                    console.warn('Error notificando al dispositivo:', notifyError);
+                    // No bloquear la navegación si esto falla
+                }
 
                 // Mostrar mensaje de éxito y luego navegar a la pantalla puerta
                 Alert.alert(
@@ -88,20 +140,16 @@ export default function PantallaRegistroDispositivo() {
                         }
                     ]
                 );
-                router.push('/puerta');
-
             }
-        } catch (error: any) { // Usar any para evitar problemas de tipado
+        } catch (error: any) {
             console.error('Error registrando dispositivo:', error);
 
             // Manejar el error de manera más robusta
             let errorMessage = 'Error al registrar el dispositivo';
 
             if (error.response && error.response.data) {
-                // Si hay una respuesta con datos del error
                 errorMessage = error.response.data.message || errorMessage;
             } else if (error.message) {
-                // Si hay un mensaje general de error
                 if (error.message.includes('Network Error')) {
                     errorMessage = 'Error de conexión al servidor. Verifica tu conexión a internet.';
                 } else {
@@ -121,46 +169,56 @@ export default function PantallaRegistroDispositivo() {
                 <View style={styles.cardContainer}>
                     <Text style={styles.title}>Registrar Dispositivo IoT</Text>
 
-                    <Text style={styles.label}>Dirección MAC</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="00:1B:44:11:3A:B7"
-                        value={macAddress}
-                        onChangeText={setMacAddress}
-                        autoCapitalize="none"
-                    />
+                    {isFetchingMac ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color="#007bff" />
+                            <Text style={styles.loadingText}>Conectando con el dispositivo...</Text>
+                        </View>
+                    ) : (
+                        <>
+                            <Text style={styles.label}>Dirección MAC</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="00:1B:44:11:3A:B7"
+                                value={macAddress}
+                                onChangeText={setMacAddress}
+                                autoCapitalize="none"
+                                editable={!isFetchingMac} // Deshabilitar durante carga
+                            />
 
-                    <Text style={styles.label}>Nombre del Dispositivo</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Sensor de Temperatura"
-                        value={name}
-                        onChangeText={setName}
-                    />
+                            <Text style={styles.label}>Nombre del Dispositivo</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Sensor de Temperatura"
+                                value={name}
+                                onChangeText={setName}
+                            />
 
-                    <Text style={styles.label}>PIN de Acceso (4 dígitos)</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="1234"
-                        value={pin}
-                        onChangeText={validatePin}
-                        keyboardType="numeric"
-                        maxLength={4}
-                        secureTextEntry={true}
-                    />
-                    <Text style={styles.pinInfo}>
-                        Este PIN se usará para acceder al dispositivo desde la cerradura física.
-                    </Text>
+                            <Text style={styles.label}>PIN de Acceso (4 dígitos)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="1234"
+                                value={pin}
+                                onChangeText={validatePin}
+                                keyboardType="numeric"
+                                maxLength={4}
+                                secureTextEntry={true}
+                            />
+                            <Text style={styles.pinInfo}>
+                                Este PIN se usará para acceder al dispositivo desde la cerradura física.
+                            </Text>
 
-                    <TouchableOpacity
-                        style={[styles.button, isLoading && styles.buttonDisabled]}
-                        onPress={handleRegisterDevice}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.buttonText}>
-                            {isLoading ? 'Registrando...' : 'Registrar'}
-                        </Text>
-                    </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.button, isLoading && styles.buttonDisabled]}
+                                onPress={handleRegisterDevice}
+                                disabled={isLoading}
+                            >
+                                <Text style={styles.buttonText}>
+                                    {isLoading ? 'Registrando...' : 'Registrar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
 
                     {message ? (
                         <Text style={[
@@ -176,6 +234,7 @@ export default function PantallaRegistroDispositivo() {
     );
 }
 
+// Agregar nuevos estilos
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
@@ -255,5 +314,15 @@ const styles = StyleSheet.create({
     errorMessage: {
         backgroundColor: '#f8d7da',
         color: '#721c24',
+    },
+    loadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#666',
     },
 });

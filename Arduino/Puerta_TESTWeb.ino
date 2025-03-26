@@ -45,7 +45,6 @@ byte pinesColumnas[COLUMNAS] = {27, 26, 5, 33};
 Keypad teclado = Keypad(makeKeymap(teclas), pinesFilas, pinesColumnas, FILAS, COLUMNAS);
 
 // Configuración de contraseña
-const char claveCorrecta[5] = "1750";
 char claveIngresada[5];
 int indiceClave = 0;
 bool estaBloqueado = true;
@@ -293,6 +292,53 @@ void setup() {
 
   // Asegurar que esta ruta también tenga CORS
   server.on("/api/arduino/rfid/reset", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  // Añadir en setup(), junto con los otros handlers
+
+  // Nueva ruta para obtener información del dispositivo
+  server.on("/api/arduino/info", HTTP_GET, []() {
+    sendCORSHeaders();
+    
+    // Obtener la MAC address
+    String mac = WiFi.macAddress();
+    
+    // Mostrar en el LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("MAC Address:");
+    lcd.setCursor(0, 1);
+    lcd.print(mac);
+    
+    // Enviar respuesta con la MAC
+    DynamicJsonDocument doc(200);
+    doc["mac"] = mac;
+    doc["ip"] = WiFi.localIP().toString();
+    
+    String response;
+    serializeJson(doc, response);
+    server.send(200, "application/json", response);
+  });
+
+  // Manejador para opciones CORS
+  server.on("/api/arduino/info", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  // Agregar ruta para indicar que el registro se completó
+  server.on("/api/arduino/register-complete", HTTP_POST, []() {
+    sendCORSHeaders();
+    
+    // Volver a la pantalla principal
+    mostrarMenuPrincipal();
+    
+    server.send(200, "application/json", "{\"success\":true}");
+  });
+
+  server.on("/api/arduino/register-complete", HTTP_OPTIONS, []() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
   });
@@ -684,7 +730,46 @@ void ingresarClave(char tecla) {
     // Verificar si se completó la clave
     if (indiceClave == 4) {
       claveIngresada[4] = '\0';
-      if (strcmp(claveIngresada, claveCorrecta) == 0) {
+      
+      // Verificar el PIN contra el servidor
+      verificarPINEnServidor();
+      
+      indiceClave = 0;
+      reemplazarCaracter = false; // Reiniciar flag
+    }
+  }
+}
+
+// Nueva función para verificar el PIN en el servidor
+void verificarPINEnServidor() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Verificando PIN...");
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/pins/verify";
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+    
+    // Obtener la MAC address del ESP32
+    String macAddress = WiFi.macAddress();
+    
+    // Crear el JSON con la MAC y el PIN ingresado
+    String jsonData = "{\"macAddress\":\"" + macAddress + "\",\"pin\":\"" + String(claveIngresada) + "\"}";
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if (httpResponseCode == 200) {
+      String response = http.getString();
+      
+      // Verificar si el PIN está autorizado
+      DynamicJsonDocument doc(256);
+      deserializeJson(doc, response);
+      
+      if (doc["authorized"].as<bool>()) {
+        // PIN válido, conceder acceso
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("Acceso");
@@ -696,16 +781,15 @@ void ingresarClave(char tecla) {
         // Reiniciar contador y estado de alarma
         contadorDetecciones = 0;
         alarmaActivada = false;
-        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        alarmaCicloCompletado = false;
         
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
-        // Bloqueamos de nuevo lógicamente
         estaBloqueado = true; 
         intentosFallidos = 0;
         estadoMenu = 0;
-        mostrarMenuPrincipal();
       } else {
+        // PIN no válido, mostrar error
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("PIN");
@@ -716,13 +800,29 @@ void ingresarClave(char tecla) {
           pitidoError();
         }
         delay(2000);
-        estadoMenu = 0;
-        mostrarMenuPrincipal();
       }
-      indiceClave = 0;
-      reemplazarCaracter = false; // Reiniciar flag
+    } else {
+      // Error de conexión
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error de");
+      lcd.setCursor(0, 1);
+      lcd.print("conexion");
+      delay(2000);
     }
+    
+    http.end();
+  } else {
+    // Sin conexión WiFi
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Sin conexion");
+    lcd.setCursor(0, 1);
+    lcd.print("WiFi");
+    delay(2000);
   }
+  
+  mostrarMenuPrincipal();
 }
 
 // Modificar la función verificarSensorPIR()
