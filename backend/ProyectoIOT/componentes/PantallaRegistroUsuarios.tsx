@@ -458,6 +458,42 @@ export default function PantallaRegistroUsuarios() {
         }
     };
 
+    const handleRegister = async () => {
+        try {
+            // Primero, limpia los datos de cualquier sesión anterior
+            await AsyncStorage.multiRemove([
+                'userToken',
+                'userId',
+                'userHasDevice',
+                'userName',
+                'userEmail'
+                // Cualquier otra clave que almacenes para el usuario
+            ]);
+
+            // Luego procede con el registro normal
+            const response = await axios.post('http://192.168.8.6:8082/api/users/register', {
+                // datos de registro
+            });
+
+            // Si el registro es exitoso, guarda los nuevos datos
+            if (response.status === 201) {
+                const { token, _id, name, email } = response.data;
+
+                // Guarda los datos del nuevo usuario
+                await AsyncStorage.setItem('userToken', token);
+                await AsyncStorage.setItem('userId', _id);
+                await AsyncStorage.setItem('userName', name);
+                await AsyncStorage.setItem('userEmail', email);
+                await AsyncStorage.setItem('userHasDevice', 'false'); // Por defecto
+
+                // Navega a la pantalla adecuada
+                router.replace('/Datosperfil'); // Usa replace en lugar de push
+            }
+        } catch (error) {
+            console.error('Error al registrar:', error);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
