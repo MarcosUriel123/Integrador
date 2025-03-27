@@ -37,7 +37,7 @@ export default function PantallaPrincipal() {
         const fetchFAQs = async () => {
             try {
                 setLoadingFaqs(true);
-                const response = await axios.get<FAQ[]>('http://192.168.8.5:8082/api/preguntasFrecuentes');
+                const response = await axios.get<FAQ[]>('http://192.168.8.3:8082/api/preguntasFrecuentes');
                 setFaqs(response.data);
                 setError('');
             } catch (err) {

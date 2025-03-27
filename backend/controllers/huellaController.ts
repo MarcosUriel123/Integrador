@@ -3,7 +3,7 @@ import axios from 'axios';
 
 export const registrarHuella = async (req: Request, res: Response) => {
     try {
-        const arduinoUrl = "http://192.168.8.4/registrar-huella"; // IP del ESP32
+        const arduinoUrl = "http://192.168.8.2/registrar-huella"; // IP del ESP32
 
         // Enviar solicitud a Arduino
         const response = await axios.get(arduinoUrl);

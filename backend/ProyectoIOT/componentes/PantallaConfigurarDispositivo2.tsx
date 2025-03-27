@@ -50,7 +50,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.get(
-                'http://192.168.8.5:8082/api/devices/info',
+                'http://192.168.8.3:8082/api/devices/info',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -90,7 +90,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.post(
-                'http://192.168.8.5:8082/api/devices/update-pin',
+                'http://192.168.8.3:8082/api/devices/update-pin',
                 { devicePin: newPin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -141,6 +141,28 @@ export default function PantallaConfigurarDispositivo() {
                                 value={deviceInfo?.macAddress || "Cargando..."}
                                 editable={false}
                                 placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        {/* Desactivar todos los seguros */}
+                        <View style={styles.toggleRow}>
+                            <Text style={styles.toggleLabel}>Desactivar todos los seguros</Text>
+                            <Switch
+                                value={seguroActivo}
+                                onValueChange={toggleSeguro}
+                                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                thumbColor={seguroActivo ? "#4CAF50" : "#f4f3f4"}
+                            />
+                        </View>
+
+                        {/* Desactivar alarma sonora */}
+                        <View style={styles.toggleRow}>
+                            <Text style={styles.toggleLabel}>Desactivar alarma sonora</Text>
+                            <Switch
+                                value={alarmaActiva}
+                                onValueChange={toggleAlarma}
+                                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                                thumbColor={alarmaActiva ? "#4CAF50" : "#f4f3f4"}
                             />
                         </View>
 

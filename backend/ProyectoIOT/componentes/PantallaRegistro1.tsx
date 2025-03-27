@@ -46,7 +46,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
             try {
                 setIsLoadingQuestions(true);
                 // Añadir el tipo genérico para la respuesta
-                const response = await axios.get<SecretQuestion[]>('http://192.168.8.5:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>('http://192.168.8.3:8082/api/secretQuestions');
                 if (response.status === 200) {
                     setSecretQuestions(response.data);
 
@@ -81,7 +81,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
 
         try {
             setIsRegistering(true);
-            const response = await axios.post('http://192.168.8.5:8082/api/users/register', {
+            const response = await axios.post('http://192.168.8.3:8082/api/users/register', {
                 name,
                 lastName,
                 surname,

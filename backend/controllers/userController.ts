@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import bcrypt from 'bcrypt';
-import Device from '../models/Device'; // Import the Device model
 
 // Tipado explícito para las funciones del controlador
 export const registerUser = async (
@@ -19,7 +18,7 @@ export const registerUser = async (
         if (!name || !lastName || !email || !password || !secretQuestion || !secretAnswer) {
             return res.status(400).json({ error: "Todos los campos son requeridos" });
         }
-
+ 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             name,
@@ -147,30 +146,5 @@ export const resetPassword = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Error al reiniciar la contraseña:', error);
         res.status(500).json({ message: 'Error en el servidor', error: error.message });
-    }
-};
-
-// Corregir la definición de tipos para la función
-export const checkUserDevice = async (
-    req: Request & { user?: { _id: string } }, // Añadir interfaz extendida para req.user
-    res: Response,
-    next?: NextFunction
-) => {
-    try {
-        // Obtener el ID del usuario desde el token
-        const userId = req.user?._id;
-
-        if (!userId) {
-            return res.status(401).json({ message: 'Usuario no autenticado' });
-        }
-
-        // Buscar dispositivos asociados al usuario
-        const devices = await Device.find({ userId });
-
-        // Devolver true/false dependiendo de si el usuario tiene dispositivos
-        res.json({ hasDevice: devices.length > 0 });
-    } catch (error) {
-        console.error('Error al verificar dispositivos:', error);
-        res.status(500).json({ message: 'Error al verificar dispositivos' });
     }
 };

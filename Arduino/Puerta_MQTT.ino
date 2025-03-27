@@ -17,7 +17,7 @@ const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
 const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
 
 // Configuración del servidor
-const char* ipServer = "192.168.8.5:8082"; // IP y puerto del servidor backend
+const char* ipServer = "192.168.8.3:8082"; // IP y puerto del servidor backend
 
 // Configuración del servidor web
 WebServer server(80);
@@ -100,7 +100,7 @@ bool reemplazarCaracter = false;
 int posicionTeclaActual = -1;
 
 // Configuración MQTT
-const char* mqtt_server = "192.168.8.5"; // Servidor MQTT (misma IP que usaba mqttfuncional)
+const char* mqtt_server = "192.168.8.3"; // Servidor MQTT (misma IP que usaba mqttfuncional)
 const int mqtt_port = 1883;               // Puerto MQTT
 WiFiClient espClient;                     // Cliente para comunicación WiFi
 PubSubClient mqttClient(espClient);       // Cliente MQTT (uso otro nombre para evitar conflicto)

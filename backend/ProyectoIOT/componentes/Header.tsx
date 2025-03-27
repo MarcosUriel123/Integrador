@@ -59,32 +59,27 @@ const Header = ({
 
             console.log('[Header] Solicitando estado del dispositivo al servidor...');
 
-            const response = await fetch('http://192.168.8.5:8082/api/users/check-device', {
+            // Aquí debes implementar la llamada a tu endpoint para verificar dispositivos
+            const response = await fetch('http://192.168.8.3:8082/api/users/check-device', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            // Añadir manejo detallado de errores
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('[Header] Error al verificar dispositivo:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    errorBody: errorText
-                });
-                return;
+            if (response.ok) {
+                const data = await response.json();
+                console.log('[Header] Respuesta del servidor:', data);
+
+                const hasDeviceValue = String(data.hasDevice);
+                await AsyncStorage.setItem('userHasDevice', hasDeviceValue);
+                setHasDevice(data.hasDevice);
+
+                console.log(`[Header] Estado de dispositivo actualizado a: ${hasDeviceValue}`);
+            } else {
+                console.error('[Header] Error al verificar dispositivo:', response.status);
             }
-
-            const data = await response.json();
-            console.log('[Header] Respuesta del servidor:', data);
-
-            const hasDeviceValue = String(data.hasDevice);
-            await AsyncStorage.setItem('userHasDevice', hasDeviceValue);
-            setHasDevice(data.hasDevice);
         } catch (error) {
-            console.error('[Header] Error al refrescar estado del dispositivo:',
-                error instanceof Error ? error.message : String(error));
+            console.error('[Header] Error al refrescar estado del dispositivo:', error);
         }
     };
 
