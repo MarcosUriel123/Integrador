@@ -61,7 +61,7 @@ export default function PantallaCheckout() {
                     if (userId) {
                         try {
                             const token = await AsyncStorage.getItem('userToken');
-                            const response = await axios.get(`http://192.168.8.3:8082/api/users/${userId}`, {
+                            const response = await axios.get(`http://192.168.8.6:8082/api/users/${userId}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
                             if (response.data && response.data.email) {
@@ -144,7 +144,7 @@ export default function PantallaCheckout() {
 
         try {
             // Enviar solicitud al backend
-            const response = await axios.post('http://192.168.8.3:8082/api/purchase/send-purchase-email', {
+            const response = await axios.post('http://192.168.8.6:8082/api/purchase/send-purchase-email', {
                 email: userEmail,
                 cart: cartItems.map(item => ({
                     product: {

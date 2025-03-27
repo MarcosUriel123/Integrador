@@ -22,7 +22,7 @@ export default function PantallaPuerta() {
     const obtenerEstadoRealPuerta = async () => {
         try {
             // Verificar IP del Arduino en la consola del ESP32
-            const response = await axios.get<{ status: string }>('http://192.168.8.2/api/arduino/doorstatus');
+            const response = await axios.get<{ status: string }>('http://192.168.8.8/api/arduino/doorstatus');
 
             // Depurar la respuesta
             console.log('Respuesta del sensor:', response.data);
@@ -54,8 +54,8 @@ export default function PantallaPuerta() {
 
             // Realizamos la solicitud al backend para abrir o cerrar la puerta
             const url = puertaAbierta
-                ? 'http://192.168.8.3:8082/api/door/cerrar'
-                : 'http://192.168.8.3:8082/api/door/abrir';
+                ? 'http://192.168.8.6:8082/api/door/cerrar'
+                : 'http://192.168.8.6:8082/api/door/abrir';
 
             const response = await axios.get(url);
 

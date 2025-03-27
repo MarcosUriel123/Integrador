@@ -11,13 +11,14 @@
 #include <HTTPClient.h> 
 #include <ArduinoJson.h>  // Añadir esta biblioteca
 #include <PubSubClient.h> // Biblioteca para MQTT
+#include <WiFiClientSecure.h> // Para conexión TLS
 
 // Configuración del WiFi
 const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
 const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
 
 // Configuración del servidor
-const char* ipServer = "192.168.8.3:8082"; // IP y puerto del servidor backend
+const char* ipServer = "192.168.8.6:8082"; // IP y puerto del servidor backend
 
 // Configuración del servidor web
 WebServer server(80);
@@ -99,12 +100,17 @@ unsigned long tiempoUltimaTecla = 0;
 bool reemplazarCaracter = false;
 int posicionTeclaActual = -1;
 
-// Configuración MQTT
-const char* mqtt_server = "192.168.8.3"; // Servidor MQTT (misma IP que usaba mqttfuncional)
-const int mqtt_port = 1883;               // Puerto MQTT
-WiFiClient espClient;                     // Cliente para comunicación WiFi
-PubSubClient mqttClient(espClient);       // Cliente MQTT (uso otro nombre para evitar conflicto)
-unsigned long lastMqttPublish = 0;        // Control de tiempo para publicación MQTT
+// Configuración MQTT para HiveMQ Cloud
+const char* mqtt_server = "cff146d73f214b82bb19d3ae4f6a3e7d.s1.eu.hivemq.cloud"; // URL de tu cluster
+const int mqtt_port = 8883; // Puerto TLS
+const char* mqtt_user = "PuertaIOT"; // Nombre de usuario que configuraste
+const char* mqtt_password = "1234abcD"; // Contraseña que configuraste
+const char* mqtt_client_id = "ESP32_Puerta_"; // Base del Client ID
+
+// Configuración para conexión segura
+WiFiClientSecure espClient; // Cliente seguro para TLS
+PubSubClient mqttClient(espClient); // Cliente MQTT
+unsigned long lastMqttPublish = 0; // Control de tiempo para publicación MQTT
 const unsigned long MQTT_PUBLISH_INTERVAL = 2000; // Intervalo de publicación (2 segundos)
 
 void pitidoCorto() {
@@ -171,8 +177,6 @@ void setup() {
     server.send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
-  // Agregar este código antes de server.begin():
-
   // Manejador para solicitudes OPTIONS preflight
   server.on("/api/arduino/fingerprint/register", HTTP_OPTIONS, []() {
     sendCORSHeaders();
@@ -199,7 +203,7 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
-  // También puedes añadir un manejador genérico para cualquier ruta OPTIONS
+  // Manejador genérico para cualquier ruta OPTIONS
   server.onNotFound([]() {
     if (server.method() == HTTP_OPTIONS) {
       sendCORSHeaders();
@@ -209,9 +213,6 @@ void setup() {
     }
   });
 
-  // Añadir estos manejadores en la sección de configuración del servidor (setup)
-
-  // Agrega esto justo después de los otros handlers en el setup
   // Manejadores para eliminar huellas (fingerprint)
   server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_DELETE, [](){
     sendCORSHeaders();
@@ -271,11 +272,6 @@ void setup() {
     delay(2000);
     mostrarMenuPrincipal();
     
-    // Nota: Aquí deberías implementar la lógica real para eliminar el RFID
-    // de tu sistema de almacenamiento (EEPROM, SD, etc.)
-    // Como no veo en el código actual un sistema para almacenar IDs,
-    // solo devuelvo un mensaje de éxito
-    
     server.send(200, "application/json", "{\"success\":true,\"message\":\"RFID eliminado correctamente\"}");
   });
 
@@ -290,8 +286,7 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
-  // Añadir esta nueva ruta de API en el setup() del Arduino
-
+  // Nueva ruta de API
   server.on("/api/arduino/rfid/reset", HTTP_POST, []() {
     sendCORSHeaders();
     
@@ -313,8 +308,6 @@ void setup() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
   });
-
-  // Añadir en setup(), junto con los otros handlers
 
   // Nueva ruta para obtener información del dispositivo
   server.on("/api/arduino/info", HTTP_GET, []() {
@@ -372,6 +365,7 @@ void setup() {
   server.begin();
   Serial.println("Servidor web iniciado");
 
+  // Configurar MQTT para HiveMQ
   setupMQTT();
 
   mostrarMenuPrincipal();
@@ -451,15 +445,12 @@ void handleStatus() {
   server.send(200, "application/json", response);
 }
 
-// Reemplazar o modificar la función handleStartRFIDRead() existente
-
 void handleStartRFIDRead() {
   sendCORSHeaders();
   
   // Verificar si ya hay una operación en curso
   if (isRFIDOperationActive) {
     // Si la última operación empezó hace más de 30 segundos, reiniciamos el estado
-    // (esto evita operaciones bloqueadas permanentemente)
     if (millis() - rfidOperationStartTime > RFID_TIMEOUT) {
       isRFIDOperationActive = false;
       rfidStatus = "idle";
@@ -505,7 +496,6 @@ void handleRFIDStatus() {
         tagID += String(mfrc522.uid.uidByte[i], HEX);
       }
       
-      // Corregir estas líneas:
       tagID.toUpperCase();  // Convertir a mayúsculas in-place
       lastCardId = tagID;   // Asignar a lastCardId
       
@@ -619,7 +609,6 @@ void actualizarClave() {
   }
 }
 
-// Modificar la función ingresarClave():
 void ingresarClave(char tecla) {
   pitidoCorto();
   
@@ -645,9 +634,10 @@ void ingresarClave(char tecla) {
     if (indiceClave == 4) {
       claveIngresada[4] = '\0';
       
-      // Publicar el PIN en MQTT
+      // Publicar el PIN en HiveMQ
       if (mqttClient.connected()) {
         mqttClient.publish("valoresPuerta/PIN", claveIngresada, true);
+        Serial.println("PIN publicado en HiveMQ: " + String(claveIngresada));
       }
       
       // Verificar el PIN contra el servidor
@@ -659,7 +649,6 @@ void ingresarClave(char tecla) {
   }
 }
 
-// Nueva función para verificar el PIN en el servidor
 void verificarPINEnServidor() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -701,25 +690,6 @@ void verificarPINEnServidor() {
         contadorDetecciones = 0;
         alarmaActivada = false;
         alarmaCicloCompletado = false;
-
-        // Enviar registro de acceso exitoso con PIN
-        if(WiFi.status() == WL_CONNECTED) {
-          HTTPClient http;
-          String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
-          http.begin(serverUrl);
-          http.addHeader("Content-Type", "application/json");
-          http.addHeader("X-API-Key", "IntegradorIOTKey2025");
-          
-          String jsonData = "{\"mensaje\":\"Acceso con PIN\",\"descripcion\":\"Acceso exitoso usando PIN\"}";
-          int httpResponseCode = http.POST(jsonData);
-          
-          if(httpResponseCode > 0) {
-            Serial.println("Registro de acceso con PIN creado");
-          } else {
-            Serial.println("Error al crear registro de acceso: " + String(httpResponseCode));
-          }
-          http.end();
-        }
         
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
@@ -736,28 +706,6 @@ void verificarPINEnServidor() {
         intentosFallidos++;
         if (intentosFallidos >= 5) {
           pitidoError();
-          
-          // Enviar alerta de intentos fallidos
-          if(WiFi.status() == WL_CONNECTED) {
-            HTTPClient httpAlert;
-            String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
-            httpAlert.begin(serverUrl);
-            httpAlert.addHeader("Content-Type", "application/json");
-            httpAlert.addHeader("X-API-Key", "IntegradorIOTKey2025");
-            
-            String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Múltiples intentos fallidos de acceso con PIN\"}";
-            int httpResponseCode = httpAlert.POST(jsonData);
-            
-            if(httpResponseCode > 0) {
-              Serial.println("Alerta de intentos fallidos con PIN enviada");
-            } else {
-              Serial.println("Error al enviar alerta de intentos fallidos: " + String(httpResponseCode));
-            }
-            httpAlert.end();
-          }
-          
-          // Reiniciar contador después de enviar la alerta
-          intentosFallidos = 0;
         }
         delay(2000);
       }
@@ -784,8 +732,6 @@ void verificarPINEnServidor() {
   
   mostrarMenuPrincipal();
 }
-
-// Modificar la función verificarRFID() actual con esta implementación
 
 void verificarRFID() {
   // Si estamos en registro de RFID, no verificar accesos
@@ -819,18 +765,19 @@ void verificarRFID() {
   tagID.toUpperCase();
   Serial.println("RFID detectado: " + tagID);
   
-  // Publicar el RFID en MQTT
+  // Publicar el RFID en HiveMQ
   if (mqttClient.connected()) {
     mqttClient.publish("valoresPuerta/valorRFID", tagID.c_str(), true);
+    Serial.println("RFID publicado en HiveMQ: " + tagID);
   }
 
   // Verificar el RFID contra el servidor
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
-    String serverUrl = "http://" + String(ipServer) + "/api/rfids/verify-device"; // Usar la nueva ruta específica
+    String serverUrl = "http://" + String(ipServer) + "/api/rfids/verify-device";
     http.begin(serverUrl);
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-API-Key", "IntegradorIOTKey2025"); // Añadir clave API compartida
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
     
     String jsonData = "{\"rfid\":\"" + tagID + "\"}";
     int httpResponseCode = http.POST(jsonData);
@@ -855,25 +802,8 @@ void verificarRFID() {
         // Reiniciar contador y estado de alarma
         contadorDetecciones = 0;
         alarmaActivada = false;
-        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        alarmaCicloCompletado = false;
         
-        // Enviar registro de acceso exitoso con RFID
-        HTTPClient httpAcceso;
-        String serverUrlAcceso = "http://" + String(ipServer) + "/api/registros/add";
-        httpAcceso.begin(serverUrlAcceso);
-        httpAcceso.addHeader("Content-Type", "application/json");
-        httpAcceso.addHeader("X-API-Key", "IntegradorIOTKey2025");
-
-        String jsonDataAcceso = "{\"mensaje\":\"Acceso con RFID\",\"descripcion\":\"Acceso exitoso usando tarjeta RFID: " + tagID.substring(0, 8) + "...\"}";
-        int httpAccesoCode = httpAcceso.POST(jsonDataAcceso);
-
-        if(httpAccesoCode > 0) {
-          Serial.println("Registro de acceso con RFID creado");
-        } else {
-          Serial.println("Error al crear registro de acceso RFID: " + String(httpAccesoCode));
-        }
-        httpAcceso.end();
-
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         intentosFallidos = 0;
@@ -886,28 +816,6 @@ void verificarRFID() {
         intentosFallidos++;
         if (intentosFallidos >= 5) {
           pitidoError();
-          
-          // Enviar alerta de intentos fallidos
-          if(WiFi.status() == WL_CONNECTED) {
-            HTTPClient httpAlert;
-            String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
-            httpAlert.begin(serverUrl);
-            httpAlert.addHeader("Content-Type", "application/json");
-            httpAlert.addHeader("X-API-Key", "IntegradorIOTKey2025");
-            
-            String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Múltiples intentos fallidos de acceso con RFID\"}";
-            int httpResponseCode = httpAlert.POST(jsonData);
-            
-            if(httpResponseCode > 0) {
-              Serial.println("Alerta de intentos fallidos con RFID enviada");
-            } else {
-              Serial.println("Error al enviar alerta de intentos fallidos: " + String(httpResponseCode));
-            }
-            httpAlert.end();
-          }
-          
-          // Reiniciar contador después de enviar la alerta
-          intentosFallidos = 0;
         }
         delay(2000);
       }
@@ -941,8 +849,6 @@ void verificarRFID() {
   // Regresamos al menú principal
   mostrarMenuPrincipal();
 }
-
-// Modificar la función verificarSensorPIR()
 
 void verificarSensorPIR() {
   unsigned long tiempoActual = millis();
@@ -983,14 +889,20 @@ void verificarSensorPIR() {
             Serial.println("Error en la petición HTTP. Código: " + String(httpResponseCode));
           }
           http.end();
-        }        
+        }
+        
+        // Publicar alarma en HiveMQ
+        if (mqttClient.connected()) {
+          mqttClient.publish("valoresPuerta/alarma", "activada", true);
+          Serial.println("Alarma publicada en HiveMQ");
+        }
       }
     }
   } else {
     // Reinicio del contador por inactividad
     if (tiempoActual - tiempoUltimaDeteccion > 30000) {
       contadorDetecciones = 0;
-      alarmaCicloCompletado = false;  // Reiniciar esta bandera cuando se reinicia el contador
+      alarmaCicloCompletado = false;
       Serial.println("Contador reiniciado por inactividad");
     }
   }
@@ -1007,7 +919,7 @@ void verificarSensorPIR() {
       
       if (contadorPitidos >= 6) {
         alarmaActivada = false;
-        alarmaCicloCompletado = true;  // Marcar que ya completó un ciclo
+        alarmaCicloCompletado = true;
         Serial.println("Alarma desactivada después de 6 pitidos");
       }
     }
@@ -1041,27 +953,8 @@ void verificarHuella() {
         // Reiniciar contador y estado de alarma
         contadorDetecciones = 0;
         alarmaActivada = false;
-        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        alarmaCicloCompletado = false;
         
-        // Enviar registro de acceso exitoso con huella
-        if(WiFi.status() == WL_CONNECTED) {
-          HTTPClient http;
-          String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
-          http.begin(serverUrl);
-          http.addHeader("Content-Type", "application/json");
-          http.addHeader("X-API-Key", "IntegradorIOTKey2025");
-          
-          String jsonData = "{\"mensaje\":\"Acceso con huella\",\"descripcion\":\"Acceso exitoso usando huella ID: " + String(finger.fingerID) + "\"}";
-          int httpResponseCode = http.POST(jsonData);
-          
-          if(httpResponseCode > 0) {
-            Serial.println("Registro de acceso con huella creado");
-          } else {
-            Serial.println("Error al crear registro de acceso: " + String(httpResponseCode));
-          }
-          http.end();
-        }
-
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         intentosFallidos = 0;
@@ -1071,28 +964,6 @@ void verificarHuella() {
         intentosFallidos++;
         if (intentosFallidos >= 5) {
           pitidoError();
-          
-          // Enviar alerta de intentos fallidos
-          if(WiFi.status() == WL_CONNECTED) {
-            HTTPClient httpAlert;
-            String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
-            httpAlert.begin(serverUrl);
-            httpAlert.addHeader("Content-Type", "application/json");
-            httpAlert.addHeader("X-API-Key", "IntegradorIOTKey2025");
-            
-            String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Múltiples intentos fallidos de acceso con huella\"}";
-            int httpResponseCode = httpAlert.POST(jsonData);
-            
-            if(httpResponseCode > 0) {
-              Serial.println("Alerta de intentos fallidos con huella enviada");
-            } else {
-              Serial.println("Error al enviar alerta de intentos fallidos: " + String(httpResponseCode));
-            }
-            httpAlert.end();
-          }
-          
-          // Reiniciar contador después de enviar la alerta
-          intentosFallidos = 0;
         }
         delay(2000);
       }
@@ -1101,7 +972,6 @@ void verificarHuella() {
   }
 }
 
-// Añadir esta función a tu código Arduino
 void processFingerprintRegistration() {
   if (!isRegistrationActive) return;
   
@@ -1109,7 +979,7 @@ void processFingerprintRegistration() {
     case 1: // Esperando primera captura
       {
         // Mostrar mensaje en LCD periódicamente
-        if (millis() % 2000 < 1000) {  // Alternar cada segundo
+        if (millis() % 2000 < 1000) {
           lcd.setCursor(0, 0);
           lcd.print("Coloca tu dedo  ");
         } else {
@@ -1238,7 +1108,160 @@ void processFingerprintRegistration() {
   }
 }
 
-// Modificar la función loop() para manejar el cambio de carácter:
+void verificarSensorMagnetico() {
+  unsigned long tiempoActual = millis();
+  
+  // Verificar el sensor cada DOOR_CHECK_INTERVAL ms
+  if (tiempoActual - lastDoorStatusCheck >= DOOR_CHECK_INTERVAL) {
+    lastDoorStatusCheck = tiempoActual;
+    
+    int nuevoEstado = digitalRead(MAGNETIC_SENSOR_PIN);
+    
+    // Si hay un cambio de estado
+    if (nuevoEstado != doorState) {
+      doorState = nuevoEstado;
+      Serial.println("Estado de puerta: " + String(doorState == HIGH ? "Abierta" : "Cerrada"));
+      
+      // Enviar notificación de cambio de estado al servidor
+      enviarCambioEstadoPuerta();
+    }
+  }
+}
+
+void enviarCambioEstadoPuerta() {
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/door/status-change";
+    
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+    
+    String estadoActual = doorState == HIGH ? "open" : "closed";
+    String jsonData = "{\"status\":\"" + estadoActual + "\"}";
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if(httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Notificación de cambio enviada: " + response);
+    } else {
+      Serial.println("Error al enviar cambio de estado: " + String(httpResponseCode));
+    }
+    http.end();
+    
+    // Publicar estado en HiveMQ
+    if (mqttClient.connected()) {
+      mqttClient.publish("valoresPuerta/estadoPuerta", estadoActual.c_str(), true);
+      Serial.println("Estado de puerta publicado en HiveMQ: " + estadoActual);
+    }
+    
+    // Añadir un registro en el historial cuando la puerta se abre
+    if(estadoActual == "open") {
+      http.begin("http://" + String(ipServer) + "/api/registros/add");
+      http.addHeader("Content-Type", "application/json");
+      http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+      
+      String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
+      httpResponseCode = http.POST(registroData);
+      
+      if(httpResponseCode > 0) {
+        Serial.println("Registro de apertura creado correctamente");
+      } else {
+        Serial.println("Error al crear registro de apertura: " + String(httpResponseCode));
+      }
+      http.end();
+    }
+  }
+}
+
+void handleDoorStatus() {
+  sendCORSHeaders();
+  
+  DynamicJsonDocument doc(200);
+  doc["status"] = doorState == HIGH ? "open" : "closed";
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void enviarAlertaApertura() {
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+    
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+    
+    // Crear un mensaje JSON con la alerta
+    String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Apertura forzada de puerta\"}";
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if(httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Alerta de apertura enviada: " + response);
+    } else {
+      Serial.println("Error al enviar alerta: " + String(httpResponseCode));
+    }
+    http.end();
+  }
+}
+
+// Configuración MQTT para HiveMQ
+void setupMQTT() {
+  // Configurar cliente seguro (opcionalmente puedes omitir la verificación SSL para desarrollo)
+  espClient.setInsecure(); // ¡OJO! Solo para desarrollo, en producción usa certificados
+  
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  Serial.println("Configuración MQTT para HiveMQ Cloud completada");
+}
+
+// Función para reconectar a HiveMQ
+void reconnectMQTT() {
+  // Crear un Client ID único
+  String clientId = mqtt_client_id;
+  clientId += String(WiFi.macAddress()).substring(12);
+  
+  // Intentar reconexión si no está conectado
+  while (!mqttClient.connected()) {
+    Serial.print("Conectando a HiveMQ Cloud...");
+    
+    if (mqttClient.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
+      Serial.println("conectado");
+      // Publicar mensaje de conexión
+      mqttClient.publish("valoresPuerta/status", "online", true);
+    } else {
+      Serial.print("falló, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" reintentando en 5 segundos");
+      delay(5000);
+    }
+  }
+}
+
+// Función para publicar valores en HiveMQ
+void publishMQTTValues() {
+  if (!mqttClient.connected()) {
+    reconnectMQTT();
+    return;
+  }
+  
+  // Publicar conteo PIR
+  char pirMsg[10];
+  sprintf(pirMsg, "%d", contadorDetecciones);
+  mqttClient.publish("valoresPuerta/conteoPIR", pirMsg, true);
+  
+  // Publicar estado del sensor magnético (1=abierto, 0=cerrado)
+  char doorMsg[2];
+  sprintf(doorMsg, "%d", doorState);
+  mqttClient.publish("valoresPuerta/sensorMagnetico", doorMsg, true);
+  
+  Serial.println("Datos publicados en HiveMQ Cloud");
+}
+
 void loop() {
   // Verificar si hay que reemplazar un carácter por asterisco
   if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 400) {
@@ -1269,7 +1292,7 @@ void loop() {
   verificarSensorPIR();
   verificarRFID();
   verificarHuella();
-  verificarSensorMagnetico(); // Añadir verificación del sensor magnético
+  verificarSensorMagnetico();
   processFingerprintRegistration();
   
   // Manejar solicitudes del servidor web
@@ -1281,156 +1304,10 @@ void loop() {
   }
   mqttClient.loop();
   
-  // Publicar valores en MQTT periódicamente
+  // Publicar valores en HiveMQ periódicamente
   unsigned long currentMillis = millis();
   if (currentMillis - lastMqttPublish >= MQTT_PUBLISH_INTERVAL) {
     lastMqttPublish = currentMillis;
     publishMQTTValues();
   }
 }
-
-// Función para verificar el estado del sensor magnético
-void verificarSensorMagnetico() {
-  unsigned long tiempoActual = millis();
-  
-  // Verificar el sensor cada DOOR_CHECK_INTERVAL ms
-  if (tiempoActual - lastDoorStatusCheck >= DOOR_CHECK_INTERVAL) {
-    lastDoorStatusCheck = tiempoActual;
-    
-    int nuevoEstado = digitalRead(MAGNETIC_SENSOR_PIN);
-    
-    // Si hay un cambio de estado
-    if (nuevoEstado != doorState) {
-      doorState = nuevoEstado;
-      Serial.println("Estado de puerta: " + String(doorState == HIGH ? "Abierta" : "Cerrada"));
-      
-      // Enviar notificación de cambio de estado al servidor
-      enviarCambioEstadoPuerta();
-      
-      // The door forced alert code has been removed from here
-    }
-  }
-}
-
-// Nueva función para enviar el cambio de estado al servidor
-void enviarCambioEstadoPuerta() {
-  if(WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String serverUrl = "http://" + String(ipServer) + "/api/door/status-change";
-    
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
-    
-    String estadoActual = doorState == HIGH ? "open" : "closed";
-    String jsonData = "{\"status\":\"" + estadoActual + "\"}";
-    
-    int httpResponseCode = http.POST(jsonData);
-    
-    if(httpResponseCode > 0) {
-      String response = http.getString();
-      Serial.println("Notificación de cambio enviada: " + response);
-    } else {
-      Serial.println("Error al enviar cambio de estado: " + String(httpResponseCode));
-    }
-    http.end();
-    
-    // Añadir un registro en el historial cuando la puerta se abre
-    if(estadoActual == "open") {
-      http.begin("http://" + String(ipServer) + "/api/registros/add");
-      http.addHeader("Content-Type", "application/json");
-      http.addHeader("X-API-Key", "IntegradorIOTKey2025");
-      
-      String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
-      int httpResponseCode = http.POST(registroData);
-      
-      if(httpResponseCode > 0) {
-        Serial.println("Registro de apertura creado correctamente");
-      } else {
-        Serial.println("Error al crear registro de apertura: " + String(httpResponseCode));
-      }
-      http.end();
-    }
-  }
-}
-
-// Mantenemos el endpoint existente para consultas bajo demanda
-void handleDoorStatus() {
-  sendCORSHeaders();
-  
-  DynamicJsonDocument doc(200);
-  doc["status"] = doorState == HIGH ? "open" : "closed";
-  
-  String response;
-  serializeJson(doc, response);
-  server.send(200, "application/json", response);
-}
-
-// Función para enviar una alerta de apertura forzada al servidor
-void enviarAlertaApertura() {
-  if(WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
-    
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
-    
-    // Crear un mensaje JSON con la alerta
-    String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Apertura forzada de puerta\"}";
-    
-    int httpResponseCode = http.POST(jsonData);
-    
-    if(httpResponseCode > 0) {
-      String response = http.getString();
-      Serial.println("Alerta de apertura enviada: " + response);
-    } else {
-      Serial.println("Error al enviar alerta: " + String(httpResponseCode));
-    }
-    http.end();
-  }
-}
-
-// Función para conectar a MQTT
-void setupMQTT() {
-  mqttClient.setServer(mqtt_server, mqtt_port);
-  Serial.println("MQTT configurado");
-}
-
-// Función para reconectar a MQTT
-void reconnectMQTT() {
-  // Intentar reconexión si no está conectado
-  if (!mqttClient.connected()) {
-    Serial.print("Conectando a MQTT...");
-    if (mqttClient.connect("ESP32PuertaClient")) {
-      Serial.println("conectado");
-      // Aquí puedes añadir suscripciones si necesitas recibir comandos
-    } else {
-      Serial.print("falló, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(" reintentando en la próxima iteración");
-    }
-  }
-}
-
-// Función para publicar valores en MQTT
-void publishMQTTValues() {
-  if (!mqttClient.connected()) {
-    return; // Si no hay conexión, salir
-  }
-  
-  // Publicar conteo PIR
-  char pirMsg[10];
-  sprintf(pirMsg, "%d", contadorDetecciones);
-  mqttClient.publish("valoresPuerta/conteoPIR", pirMsg, true);
-  
-  // Publicar estado del sensor magnético (1=abierto, 0=cerrado)
-  char doorMsg[2];
-  sprintf(doorMsg, "%d", doorState);
-  mqttClient.publish("valoresPuerta/sensorMagnetico", doorMsg, true);
-  
-  // El PIN y RFID se publicarán en sus funciones específicas
-  // cuando sean capturados, no aquí periódicamente
-}
-
-// FIN DEL ARCHIVO - No debe haber nada después de esta línea

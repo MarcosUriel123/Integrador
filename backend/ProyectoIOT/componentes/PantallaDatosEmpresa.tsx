@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 
 export default function PantallaDatosEmpresa() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.8.3:8082/api'; //(IPCONFIG)
+    const API_BASE = 'http://192.168.8.6:8082/api'; //(IPCONFIG)
 
     // Estado para almacenar los datos del formulario
     const [formData, setFormData] = useState({

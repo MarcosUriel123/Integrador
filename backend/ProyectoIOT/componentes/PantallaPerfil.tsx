@@ -68,7 +68,7 @@ export default function PantallaPerfil({ userId }: Props) {
         try {
             setLoading(true);
             console.log(`Intentando obtener datos para userId: ${localUserId}`);
-            const response = await axios.get<User>(`http://192.168.8.3:8082/api/users/${localUserId}`);
+            const response = await axios.get<User>(`http://192.168.8.6:8082/api/users/${localUserId}`);
             setUserData(response.data);
             setError('');
         } catch (error) {

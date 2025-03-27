@@ -30,7 +30,7 @@ export default function PantallaLogin1() {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post<LoginResponse>('http://192.168.8.3:8082/api/users/login', {
+            const response = await axios.post<LoginResponse>('http://192.168.8.6:8082/api/users/login', {
                 email,
                 password,
             });
@@ -40,9 +40,17 @@ export default function PantallaLogin1() {
                 if (response.data && response.data.token) {
                     await AsyncStorage.setItem('userToken', response.data.token);
                     await AsyncStorage.setItem('userId', response.data._id);
+
+                    // NUEVO: Inicializar el valor userHasDevice como 'false' por defecto
+                    // Esto evita problemas cuando Header intenta leer este valor
+                    await AsyncStorage.setItem('userHasDevice', 'false');
+
                     console.log('Token guardado:', response.data.token);
+                    console.log('Estado de dispositivo inicializado como: false');
                 } else {
                     console.error('No se recibió un token del servidor');
+                    setErrorMessage("Error en la respuesta del servidor");
+                    return; // Detener la ejecución si no hay token
                 }
 
                 // Redirige a la pantalla principal usando expo-router
@@ -50,9 +58,7 @@ export default function PantallaLogin1() {
             }
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
-            setErrorMessage("Credenciales inválidas");
         }
-
     };
 
     const handleSuccessfulLogin = async () => {

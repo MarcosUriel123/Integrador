@@ -17,7 +17,7 @@ export default function RFIDControlScreen() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    const ESP32_IP = "http://192.168.8.2"; // Cambia por la IP real de tu ESP32
+    const ESP32_IP = "http://192.168.8.8"; // Cambia por la IP real de tu ESP32
 
     const handleScanRFID = async () => {
         setLoading(true);

@@ -47,7 +47,7 @@ export default function PantallaCatalogoProductos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const { addToCart } = useCart();
-    
+
     // Estados para paginación
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(10);
@@ -56,7 +56,7 @@ export default function PantallaCatalogoProductos() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.8.3:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://192.168.8.6:8082/api/products/get');
                 if (response.status === 200) {
                     // Mapear la respuesta para convertir _id a id
                     const formattedProducts = response.data.map(product => ({
@@ -68,7 +68,7 @@ export default function PantallaCatalogoProductos() {
                         image: product.image
                     }));
                     setProducts(formattedProducts);
-                    
+
                     // Calcular el número total de páginas
                     setTotalPages(Math.ceil(formattedProducts.length / productsPerPage));
                 }
@@ -120,15 +120,18 @@ export default function PantallaCatalogoProductos() {
         return products.slice(indexOfFirstProduct, indexOfLastProduct);
     };
 
+    // Modificar la función renderProductItem para manejar el ancho de las cards
     const renderProductItem = ({ item }: { item: Product }) => (
-        <ProductCard
-            product={item}
-            onPress={() => handleProductPress(item)}
-            onAddToCart={(product) => {
-                addToCart(product);
-                Alert.alert('Producto añadido', `${product.name} se añadió al carrito`);
-            }}
-        />
+        <View style={styles.productCardContainer}>
+            <ProductCard
+                product={item}
+                onPress={() => handleProductPress(item)}
+                onAddToCart={(product) => {
+                    addToCart(product);
+                    Alert.alert('Producto añadido', `${product.name} se añadió al carrito`);
+                }}
+            />
+        </View>
     );
 
     // Referencia para el ScrollView
@@ -136,7 +139,7 @@ export default function PantallaCatalogoProductos() {
 
     return (
         <SafeAreaView style={styles.screen}>
-            <ScrollView 
+            <ScrollView
                 ref={scrollViewRef}
                 style={{ flex: 1 }}
             >
@@ -155,7 +158,7 @@ export default function PantallaCatalogoProductos() {
                     ) : (
                         <View style={styles.contentContainer}>
                             <Text style={styles.title}>Catálogo de Productos</Text>
-                            
+
                             {products.length === 0 ? (
                                 <Text style={styles.emptyText}>No hay productos disponibles</Text>
                             ) : (
@@ -167,12 +170,12 @@ export default function PantallaCatalogoProductos() {
                                         scrollEnabled={false}
                                         contentContainerStyle={styles.listContent}
                                     />
-                                    
+
                                     {/* Controles de paginación */}
                                     <View style={styles.paginationContainer}>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={[
-                                                styles.paginationButton, 
+                                                styles.paginationButton,
                                                 currentPage === 1 && styles.paginationButtonDisabled
                                             ]}
                                             onPress={goToPreviousPage}
@@ -184,14 +187,14 @@ export default function PantallaCatalogoProductos() {
                                                 currentPage === 1 && styles.paginationButtonTextDisabled
                                             ]}>Anterior</Text>
                                         </TouchableOpacity>
-                                        
+
                                         <Text style={styles.paginationInfo}>
                                             Página {currentPage} de {totalPages}
                                         </Text>
-                                        
-                                        <TouchableOpacity 
+
+                                        <TouchableOpacity
                                             style={[
-                                                styles.paginationButton, 
+                                                styles.paginationButton,
                                                 currentPage === totalPages && styles.paginationButtonDisabled
                                             ]}
                                             onPress={goToNextPage}
@@ -223,7 +226,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#CFE2FF',
     },
     cardContainer: {
-        margin: 20,
+        // Eliminar el margen horizontal para ocupar el ancho completo
+        marginVertical: 20,
+        marginHorizontal: 0, // Cambiar de margin: 20 a solo márgenes verticales
         backgroundColor: '#FFFFFF',
         borderRadius: 15,
         padding: 20,
@@ -235,9 +240,12 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         flex: 1,
+        width: '100%', // Asegurar que ocupa todo el ancho
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 20,
+        // Eliminar cualquier padding horizontal si existe
+        paddingHorizontal: 0,
         minHeight: 300,
     },
     title: {
@@ -266,6 +274,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         width: '100%',
+        paddingHorizontal: 0, // Eliminar el padding horizontal
     },
     // Nuevos estilos para paginación
     paginationContainer: {
@@ -338,5 +347,10 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         paddingVertical: 4,
         paddingHorizontal: 8,
+    },
+    // Nuevo estilo para el contenedor de cada tarjeta
+    productCardContainer: {
+        width: '100%', // Cada tarjeta ocupa el 100% del ancho
+        marginBottom: 15, // Aumentar el espacio entre tarjetas para mejor separación visual
     },
 });

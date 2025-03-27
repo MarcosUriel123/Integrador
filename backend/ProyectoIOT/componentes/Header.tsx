@@ -41,9 +41,10 @@ const Header = ({
             setIsLoggedIn(isLogged);
             setHasDevice(hasDeviceValue);
 
-            // Si está logueado pero no tenemos información del dispositivo, verificar con el servidor
-            if (isLogged && userHasDevice === null) {
-                console.log('[Header] No hay información sobre dispositivo. Verificando con el servidor...');
+            // MODIFICADO: Verificar con el servidor siempre que esté logueado
+            // para tener información actualizada sobre dispositivos
+            if (isLogged) {
+                console.log('[Header] Verificando con el servidor si hay dispositivos nuevos...');
                 await refreshDeviceStatus();
             }
         } catch (error) {
@@ -59,27 +60,32 @@ const Header = ({
 
             console.log('[Header] Solicitando estado del dispositivo al servidor...');
 
-            // Aquí debes implementar la llamada a tu endpoint para verificar dispositivos
-            const response = await fetch('http://192.168.8.3:8082/api/users/check-device', {
+            const response = await fetch('http://192.168.8.6:8082/api/users/check-device', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('[Header] Respuesta del servidor:', data);
-
-                const hasDeviceValue = String(data.hasDevice);
-                await AsyncStorage.setItem('userHasDevice', hasDeviceValue);
-                setHasDevice(data.hasDevice);
-
-                console.log(`[Header] Estado de dispositivo actualizado a: ${hasDeviceValue}`);
-            } else {
-                console.error('[Header] Error al verificar dispositivo:', response.status);
+            // Añadir manejo detallado de errores
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[Header] Error al verificar dispositivo:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorBody: errorText
+                });
+                return;
             }
+
+            const data = await response.json();
+            console.log('[Header] Respuesta del servidor:', data);
+
+            const hasDeviceValue = String(data.hasDevice);
+            await AsyncStorage.setItem('userHasDevice', hasDeviceValue);
+            setHasDevice(data.hasDevice);
         } catch (error) {
-            console.error('[Header] Error al refrescar estado del dispositivo:', error);
+            console.error('[Header] Error al refrescar estado del dispositivo:',
+                error instanceof Error ? error.message : String(error));
         }
     };
 

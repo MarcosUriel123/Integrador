@@ -89,7 +89,6 @@ export default function ProductDetail() {
                     }
                 ]
             );
-            router.push('/registroDispositivo');
         } else {
             // Usuario sin sesión iniciada
             Alert.alert(
@@ -113,10 +112,7 @@ export default function ProductDetail() {
                     }
                 ]
             );
-            router.push({
-                pathname: '/Login1',
-                params: { returnTo: currentPath, productParam: productParam }
-            });
+
         }
     };
 

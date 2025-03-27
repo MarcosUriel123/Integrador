@@ -47,10 +47,12 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 3,
         overflow: 'hidden',
+        width: '100%', // Añadir explícitamente width: 100%
     },
     card: {
         flexDirection: 'row',
         padding: 12,
+        width: '100%', // Asegurar que también ocupe todo el ancho
     },
     image: {
         width: 80,
@@ -79,6 +81,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%', // Asegurar que el botón ocupe todo el ancho
     },
     buttonText: {
         color: '#FFFFFF',
