@@ -96,12 +96,21 @@ export default function PantallaConfigurarDispositivo() {
             );
 
             if (response.status === 200) {
+                // Modificar la alerta para navegar a PantallaPuerta después de cerrar el modal
                 Alert.alert(
                     'Éxito',
                     'El PIN del dispositivo ha sido actualizado correctamente.',
-                    [{ text: 'OK', onPress: () => setModalVisible(false) }]
+                    [{
+                        text: 'OK',
+                        onPress: () => {
+                            setModalVisible(false); // Cerrar el modal
+                            setNewPin(''); // Limpiar el campo
+
+                            // Navegar a la pantalla de puerta
+                            router.push('/puerta');
+                        }
+                    }]
                 );
-                setNewPin('');
             }
         } catch (error) {
             console.error('Error actualizando PIN:', error);

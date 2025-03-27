@@ -46,22 +46,19 @@ export default function PantallaPuerta() {
         }
     };
 
-    // Función para abrir o cerrar la puerta
+    // Modificar la función handleTogglePuerta para que siempre abra la puerta
     const handleTogglePuerta = async () => {
         try {
             // Al momento de enviar el comando, actualizar también el estado
             obtenerEstadoRealPuerta();
 
-            // Realizamos la solicitud al backend para abrir o cerrar la puerta
-            const url = puertaAbierta
-                ? 'http://192.168.8.6:8082/api/door/cerrar'
-                : 'http://192.168.8.6:8082/api/door/abrir';
+            // Siempre intentamos abrir la puerta, sin importar el estado actual
+            const url = 'http://192.168.8.6:8082/api/door/abrir';
 
             const response = await axios.get(url);
 
-            // Si la respuesta es exitosa, actualizamos el estado de la puerta
-            setPuertaAbierta(!puertaAbierta);
-            alert(response.data);
+            // No cambiamos el estado puertaAbierta ya que ya no lo usamos para el texto del botón
+            // alert(response.data);
 
             // Actualizamos el estado después de la acción para reflejar el cambio
             setTimeout(obtenerEstadoRealPuerta, 1000);
@@ -138,7 +135,7 @@ export default function PantallaPuerta() {
                         {/* Botón para abrir/cerrar */}
                         <TouchableOpacity style={styles.botonPuerta} onPress={handleTogglePuerta}>
                             <Text style={styles.textoBoton}>
-                                {puertaAbierta ? "Cerrar puerta" : "Abrir puerta"}
+                                Abrir puerta
                             </Text>
                         </TouchableOpacity>
 
