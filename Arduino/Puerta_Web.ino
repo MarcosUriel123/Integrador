@@ -16,7 +16,7 @@ const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
 const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
 
 // Configuración del servidor
-const char* ipServer = "192.168.8.6:8082"; // IP y puerto del servidor backend
+const char* ipServer = "192.168.8.3:8082"; // IP y puerto del servidor backend
 
 // Configuración del servidor web
 WebServer server(80);
@@ -26,6 +26,12 @@ WebServer server(80);
 #define RST_PIN 15
 #define RELAY_PIN 25
 MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+// Configuración del sensor magnético
+#define MAGNETIC_SENSOR_PIN 36
+int doorState = -1;  // -1: desconocido, 0: cerrado, 1: abierto
+unsigned long lastDoorStatusCheck = 0;
+const unsigned long DOOR_CHECK_INTERVAL = 1000; // Verificar cada segundo
 
 // Configuración del LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -120,6 +126,9 @@ void setup() {
   pinMode(pinPIR, INPUT);
   pinMode(pinBuzzer, OUTPUT);
   digitalWrite(pinBuzzer, LOW);
+  
+  // Inicialización del sensor magnético
+  pinMode(MAGNETIC_SENSOR_PIN, INPUT);
 
   // Inicialización del RFID
   SPI.begin();
@@ -339,6 +348,13 @@ void setup() {
   });
 
   server.on("/api/arduino/register-complete", HTTP_OPTIONS, []() {
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  // Añadir la nueva ruta de API en el setup() del Arduino
+  server.on("/api/arduino/doorstatus", HTTP_GET, handleDoorStatus);
+  server.on("/api/arduino/doorstatus", HTTP_OPTIONS, []() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
   });
@@ -1083,9 +1099,9 @@ void processFingerprintRegistration() {
 // Modificar la función loop() para manejar el cambio de carácter:
 void loop() {
   // Verificar si hay que reemplazar un carácter por asterisco
-  if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 1000) {
+  if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 400) {
     lcd.setCursor(5 + posicionTeclaActual, 1);
-    lcd.print("*");  // Reemplazar con asterisco después de 1 segundo
+    lcd.print("*");  // Reemplazar con asterisco después de 400 milisegundos
     reemplazarCaracter = false;
   }
   
@@ -1107,13 +1123,116 @@ void loop() {
     }
   }
   
-  // Resto del código existente
+  // Verificar sensores
   verificarSensorPIR();
   verificarRFID();
   verificarHuella();
+  verificarSensorMagnetico(); // Añadir verificación del sensor magnético
   processFingerprintRegistration();
   
   // Manejar solicitudes del servidor web
   server.handleClient();
 }
+
+// Función para verificar el estado del sensor magnético
+void verificarSensorMagnetico() {
+  unsigned long tiempoActual = millis();
+  
+  // Verificar el sensor cada DOOR_CHECK_INTERVAL ms
+  if (tiempoActual - lastDoorStatusCheck >= DOOR_CHECK_INTERVAL) {
+    lastDoorStatusCheck = tiempoActual;
+    
+    int nuevoEstado = digitalRead(MAGNETIC_SENSOR_PIN);
+    
+    // Si hay un cambio de estado
+    if (nuevoEstado != doorState) {
+      doorState = nuevoEstado;
+      Serial.println("Estado de puerta: " + String(doorState == HIGH ? "Abierta" : "Cerrada"));
+      
+      // Enviar notificación de cambio de estado al servidor
+      enviarCambioEstadoPuerta();
+      
+      // Si la puerta se abre cuando debería estar cerrada
+      if (doorState == HIGH && estaBloqueado) {
+        // Activar alarma por apertura no autorizada
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Alerta!");
+        lcd.setCursor(0, 1);
+        lcd.print("Puerta forzada");
+        
+        // Activar alarma
+        alarmaActivada = true;
+        contadorPitidos = 0;
+        tiempoUltimoPitido = tiempoActual;
+        
+        // Enviar alerta al servidor
+        enviarAlertaApertura();
+      }
+    }
+  }
+}
+
+// Nueva función para enviar el cambio de estado al servidor
+void enviarCambioEstadoPuerta() {
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/door/status-change";
+    
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+    
+    String estadoActual = doorState == HIGH ? "open" : "closed";
+    String jsonData = "{\"status\":\"" + estadoActual + "\"}";
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if(httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Notificación de cambio enviada: " + response);
+    } else {
+      Serial.println("Error al enviar cambio de estado: " + String(httpResponseCode));
+    }
+    http.end();
+  }
+}
+
+// Mantenemos el endpoint existente para consultas bajo demanda
+void handleDoorStatus() {
+  sendCORSHeaders();
+  
+  DynamicJsonDocument doc(200);
+  doc["status"] = doorState == HIGH ? "open" : "closed";
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+// Función para enviar una alerta de apertura forzada al servidor
+void enviarAlertaApertura() {
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+    
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+    
+    // Crear un mensaje JSON con la alerta
+    String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Apertura forzada de puerta\"}";
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if(httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Alerta de apertura enviada: " + response);
+    } else {
+      Serial.println("Error al enviar alerta: " + String(httpResponseCode));
+    }
+    http.end();
+  }
+}
+
 // FIN DEL ARCHIVO - No debe haber nada después de esta línea

@@ -331,7 +331,7 @@ void verificarSensorPIR() {
           HTTPClient http;
           
           // URL correcta
-          String serverUrl = "http://192.168.8.6:8082/api/registros/add"; //IP DE IPCONFIG
+          String serverUrl = "http://192.168.8.3:8082/api/registros/add"; //IP DE IPCONFIG
           Serial.println("Intentando conectar a: " + serverUrl);
           
           http.begin(serverUrl);

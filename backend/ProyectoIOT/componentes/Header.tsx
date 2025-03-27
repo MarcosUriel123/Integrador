@@ -60,7 +60,7 @@ const Header = ({
             console.log('[Header] Solicitando estado del dispositivo al servidor...');
 
             // Aquí debes implementar la llamada a tu endpoint para verificar dispositivos
-            const response = await fetch('http://192.168.8.6:8082/api/users/check-device', {
+            const response = await fetch('http://192.168.8.3:8082/api/users/check-device', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
