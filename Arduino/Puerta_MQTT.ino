@@ -736,6 +736,28 @@ void verificarPINEnServidor() {
         intentosFallidos++;
         if (intentosFallidos >= 5) {
           pitidoError();
+          
+          // Enviar alerta de intentos fallidos
+          if(WiFi.status() == WL_CONNECTED) {
+            HTTPClient httpAlert;
+            String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+            httpAlert.begin(serverUrl);
+            httpAlert.addHeader("Content-Type", "application/json");
+            httpAlert.addHeader("X-API-Key", "IntegradorIOTKey2025");
+            
+            String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Múltiples intentos fallidos de acceso con PIN\"}";
+            int httpResponseCode = httpAlert.POST(jsonData);
+            
+            if(httpResponseCode > 0) {
+              Serial.println("Alerta de intentos fallidos con PIN enviada");
+            } else {
+              Serial.println("Error al enviar alerta de intentos fallidos: " + String(httpResponseCode));
+            }
+            httpAlert.end();
+          }
+          
+          // Reiniciar contador después de enviar la alerta
+          intentosFallidos = 0;
         }
         delay(2000);
       }
@@ -864,6 +886,28 @@ void verificarRFID() {
         intentosFallidos++;
         if (intentosFallidos >= 5) {
           pitidoError();
+          
+          // Enviar alerta de intentos fallidos
+          if(WiFi.status() == WL_CONNECTED) {
+            HTTPClient httpAlert;
+            String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+            httpAlert.begin(serverUrl);
+            httpAlert.addHeader("Content-Type", "application/json");
+            httpAlert.addHeader("X-API-Key", "IntegradorIOTKey2025");
+            
+            String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Múltiples intentos fallidos de acceso con RFID\"}";
+            int httpResponseCode = httpAlert.POST(jsonData);
+            
+            if(httpResponseCode > 0) {
+              Serial.println("Alerta de intentos fallidos con RFID enviada");
+            } else {
+              Serial.println("Error al enviar alerta de intentos fallidos: " + String(httpResponseCode));
+            }
+            httpAlert.end();
+          }
+          
+          // Reiniciar contador después de enviar la alerta
+          intentosFallidos = 0;
         }
         delay(2000);
       }
@@ -1027,6 +1071,28 @@ void verificarHuella() {
         intentosFallidos++;
         if (intentosFallidos >= 5) {
           pitidoError();
+          
+          // Enviar alerta de intentos fallidos
+          if(WiFi.status() == WL_CONNECTED) {
+            HTTPClient httpAlert;
+            String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+            httpAlert.begin(serverUrl);
+            httpAlert.addHeader("Content-Type", "application/json");
+            httpAlert.addHeader("X-API-Key", "IntegradorIOTKey2025");
+            
+            String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Múltiples intentos fallidos de acceso con huella\"}";
+            int httpResponseCode = httpAlert.POST(jsonData);
+            
+            if(httpResponseCode > 0) {
+              Serial.println("Alerta de intentos fallidos con huella enviada");
+            } else {
+              Serial.println("Error al enviar alerta de intentos fallidos: " + String(httpResponseCode));
+            }
+            httpAlert.end();
+          }
+          
+          // Reiniciar contador después de enviar la alerta
+          intentosFallidos = 0;
         }
         delay(2000);
       }
@@ -1276,7 +1342,7 @@ void enviarCambioEstadoPuerta() {
       http.addHeader("X-API-Key", "IntegradorIOTKey2025");
       
       String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
-      httpResponseCode = http.POST(registroData);
+      int httpResponseCode = http.POST(registroData);
       
       if(httpResponseCode > 0) {
         Serial.println("Registro de apertura creado correctamente");
