@@ -701,6 +701,25 @@ void verificarPINEnServidor() {
         contadorDetecciones = 0;
         alarmaActivada = false;
         alarmaCicloCompletado = false;
+
+        // Enviar registro de acceso exitoso con PIN
+        if(WiFi.status() == WL_CONNECTED) {
+          HTTPClient http;
+          String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+          http.begin(serverUrl);
+          http.addHeader("Content-Type", "application/json");
+          http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+          
+          String jsonData = "{\"mensaje\":\"Acceso con PIN\",\"descripcion\":\"Acceso exitoso usando PIN\"}";
+          int httpResponseCode = http.POST(jsonData);
+          
+          if(httpResponseCode > 0) {
+            Serial.println("Registro de acceso con PIN creado");
+          } else {
+            Serial.println("Error al crear registro de acceso: " + String(httpResponseCode));
+          }
+          http.end();
+        }
         
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
@@ -816,6 +835,23 @@ void verificarRFID() {
         alarmaActivada = false;
         alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
         
+        // Enviar registro de acceso exitoso con RFID
+        HTTPClient httpAcceso;
+        String serverUrlAcceso = "http://" + String(ipServer) + "/api/registros/add";
+        httpAcceso.begin(serverUrlAcceso);
+        httpAcceso.addHeader("Content-Type", "application/json");
+        httpAcceso.addHeader("X-API-Key", "IntegradorIOTKey2025");
+
+        String jsonDataAcceso = "{\"mensaje\":\"Acceso con RFID\",\"descripcion\":\"Acceso exitoso usando tarjeta RFID: " + tagID.substring(0, 8) + "...\"}";
+        int httpAccesoCode = httpAcceso.POST(jsonDataAcceso);
+
+        if(httpAccesoCode > 0) {
+          Serial.println("Registro de acceso con RFID creado");
+        } else {
+          Serial.println("Error al crear registro de acceso RFID: " + String(httpAccesoCode));
+        }
+        httpAcceso.end();
+
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         intentosFallidos = 0;
@@ -963,6 +999,25 @@ void verificarHuella() {
         alarmaActivada = false;
         alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
         
+        // Enviar registro de acceso exitoso con huella
+        if(WiFi.status() == WL_CONNECTED) {
+          HTTPClient http;
+          String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+          http.begin(serverUrl);
+          http.addHeader("Content-Type", "application/json");
+          http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+          
+          String jsonData = "{\"mensaje\":\"Acceso con huella\",\"descripcion\":\"Acceso exitoso usando huella ID: " + String(finger.fingerID) + "\"}";
+          int httpResponseCode = http.POST(jsonData);
+          
+          if(httpResponseCode > 0) {
+            Serial.println("Registro de acceso con huella creado");
+          } else {
+            Serial.println("Error al crear registro de acceso: " + String(httpResponseCode));
+          }
+          http.end();
+        }
+
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
         intentosFallidos = 0;
@@ -1186,23 +1241,7 @@ void verificarSensorMagnetico() {
       // Enviar notificación de cambio de estado al servidor
       enviarCambioEstadoPuerta();
       
-      // Si la puerta se abre cuando debería estar cerrada
-      if (doorState == HIGH && estaBloqueado) {
-        // Activar alarma por apertura no autorizada
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Alerta!");
-        lcd.setCursor(0, 1);
-        lcd.print("Puerta forzada");
-        
-        // Activar alarma
-        alarmaActivada = true;
-        contadorPitidos = 0;
-        tiempoUltimoPitido = tiempoActual;
-        
-        // Enviar alerta al servidor
-        enviarAlertaApertura();
-      }
+      // The door forced alert code has been removed from here
     }
   }
 }
@@ -1229,6 +1268,23 @@ void enviarCambioEstadoPuerta() {
       Serial.println("Error al enviar cambio de estado: " + String(httpResponseCode));
     }
     http.end();
+    
+    // Añadir un registro en el historial cuando la puerta se abre
+    if(estadoActual == "open") {
+      http.begin("http://" + String(ipServer) + "/api/registros/add");
+      http.addHeader("Content-Type", "application/json");
+      http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+      
+      String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
+      httpResponseCode = http.POST(registroData);
+      
+      if(httpResponseCode > 0) {
+        Serial.println("Registro de apertura creado correctamente");
+      } else {
+        Serial.println("Error al crear registro de apertura: " + String(httpResponseCode));
+      }
+      http.end();
+    }
   }
 }
 
