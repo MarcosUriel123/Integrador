@@ -47,7 +47,7 @@ export default function PantallaCatalogoProductos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const { addToCart } = useCart();
-    
+
     // Estados para paginación
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(10);
@@ -56,7 +56,7 @@ export default function PantallaCatalogoProductos() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.8.3:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://192.168.8.5:8082/api/products/get');
                 if (response.status === 200) {
                     // Mapear la respuesta para convertir _id a id
                     const formattedProducts = response.data.map(product => ({
@@ -68,7 +68,7 @@ export default function PantallaCatalogoProductos() {
                         image: product.image
                     }));
                     setProducts(formattedProducts);
-                    
+
                     // Calcular el número total de páginas
                     setTotalPages(Math.ceil(formattedProducts.length / productsPerPage));
                 }
@@ -136,7 +136,7 @@ export default function PantallaCatalogoProductos() {
 
     return (
         <SafeAreaView style={styles.screen}>
-            <ScrollView 
+            <ScrollView
                 ref={scrollViewRef}
                 style={{ flex: 1 }}
             >
@@ -155,7 +155,7 @@ export default function PantallaCatalogoProductos() {
                     ) : (
                         <View style={styles.contentContainer}>
                             <Text style={styles.title}>Catálogo de Productos</Text>
-                            
+
                             {products.length === 0 ? (
                                 <Text style={styles.emptyText}>No hay productos disponibles</Text>
                             ) : (
@@ -167,12 +167,12 @@ export default function PantallaCatalogoProductos() {
                                         scrollEnabled={false}
                                         contentContainerStyle={styles.listContent}
                                     />
-                                    
+
                                     {/* Controles de paginación */}
                                     <View style={styles.paginationContainer}>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={[
-                                                styles.paginationButton, 
+                                                styles.paginationButton,
                                                 currentPage === 1 && styles.paginationButtonDisabled
                                             ]}
                                             onPress={goToPreviousPage}
@@ -184,14 +184,14 @@ export default function PantallaCatalogoProductos() {
                                                 currentPage === 1 && styles.paginationButtonTextDisabled
                                             ]}>Anterior</Text>
                                         </TouchableOpacity>
-                                        
+
                                         <Text style={styles.paginationInfo}>
                                             Página {currentPage} de {totalPages}
                                         </Text>
-                                        
-                                        <TouchableOpacity 
+
+                                        <TouchableOpacity
                                             style={[
-                                                styles.paginationButton, 
+                                                styles.paginationButton,
                                                 currentPage === totalPages && styles.paginationButtonDisabled
                                             ]}
                                             onPress={goToNextPage}

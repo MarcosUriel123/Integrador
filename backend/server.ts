@@ -1,30 +1,13 @@
-import dotenv from 'dotenv';
-dotenv.config(); // Agregar esto al principio
-
 import express from 'express';
 import cors from 'cors';
-
 import connectDB from './config/db';
-
 import fingerprintRoutes from './routes/fingerprintRoutes';
 import passwordRoutes from './routes/passwordRoutes';
 import userRoutes from './routes/userRoutes';
 import huellaRoutes from './routes/huellaRoutes';
-import doorRoutes from './routes/doorRoutes';
+import doorRoutes from './routes/doorRoutes';  
 import productRoutes from './routes/productRoutes'; // Import product routes
 import empresaRoutes from './routes/empresaRoutes';
-import deviceRoutes from './routes/deviceRoutes';  // Importamos las rutas del dispositivo
-import registroRoutes from './routes/registroRoutes';
-import loginRoutes from './routes/loginRoutes'
-import subUserRoutes from './routes/subUserRoutes'; // Importamos las rutas de subusuarios
-import secretQuestionRoutes from './routes/secretQuestionRoutes';
-import preguntasFrecuentesRoutes from './routes/preguntasFrecuentesRoutes';
-import pinRoutes from './routes/pinRoutes';
-
-const rfidRoutes = require('./routes/rfidRoutes');
-import purchaseRoutes from './routes/purchaseRoutes';
-
-// import './ProyectoIOT/src/express/index.d.ts'; // Asegúrate de que la ruta sea correcta
 
 const app = express();
 const PORT = process.env.PORT || 8082;
@@ -64,18 +47,7 @@ app.use('/api/huella', huellaRoutes);  // Rutas para el control de huellas
 app.use('/api/products', productRoutes); // Rutas para el control de productos
 app.use('/api', empresaRoutes); // Rutas para el control de los datos de la empresa
 
-app.use('/api/devices', deviceRoutes); // Ruta para los dispositivos IoT
-app.use('/api/registros', registroRoutes);
-app.use('/api/users', loginRoutes);
-app.use('/api/secretQuestions', secretQuestionRoutes);
-app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
-app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Usando el router
-app.use('/api/rfids', rfidRoutes); // Agregamos la ruta de RFID
-
-app.use('/api/purchase', purchaseRoutes); // Agregamos la ruta de purchase
-
-app.use('/api/pins', pinRoutes);
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://192.168.8.3:${PORT}`);
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });

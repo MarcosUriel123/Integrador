@@ -4,7 +4,8 @@ import {
     getUserById,
     updateUser,
     verifyRecovery,
-    resetPassword
+    resetPassword,
+    checkUserDevice // Añadir esta importación
 } from '../controllers/userController';
 import { protect } from '../middlewares/authMiddleware'; // Importar middleware de autenticación
 import { loginUser, logoutUser } from '../controllers/loginController';
@@ -32,6 +33,9 @@ router.post('/verify-token', protect as RequestHandler, (req, res) => {
         }
     });
 });
+
+// Añadir esta nueva ruta para verificar si el usuario tiene dispositivos
+router.get('/check-device', protect as RequestHandler, checkUserDevice as RequestHandler);
 
 // Añadir esta ruta junto con las demás rutas existentes
 router.post('/logout', protect, logoutUser);

@@ -15,7 +15,7 @@ import Footer from '../componentes/Footer'; // Import Footer component
 
 export default function VisionScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.8.3:8082/api'; // Ajusta tu URL según sea necesario(IPCONFIG)
+    const API_BASE = 'http://192.168.8.5:8082/api'; // Ajusta tu URL según sea necesario(IPCONFIG)
     const [vision, setVision] = useState('');
 
     // useEffect para cargar los datos de la visión desde el backend
