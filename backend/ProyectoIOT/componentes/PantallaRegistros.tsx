@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
     SafeAreaView,
-    ScrollView,
     View,
     Text,
     StyleSheet,
     FlatList,
     ActivityIndicator,
-    TouchableOpacity
+    TouchableOpacity,
+    RefreshControl
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { Entypo, Feather } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 
 interface Registro {
     _id: string;
@@ -24,27 +24,44 @@ export default function PantallaRegistros() {
     const router = useRouter();
     const [registros, setRegistros] = useState<Registro[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        const fetchRegistros = async () => {
-            try {
-                const response = await axios.get('http://192.168.8.3:8082/api/registros/get'); //(IPCONFIG)
-                if (response.status === 200) {
-                    setRegistros(response.data as Registro[]);
+    const fetchRegistros = async () => {
+        try {
+            console.log("Obteniendo registros...");
+            setLoading(true);
+            const response = await axios.get<Registro[]>('http://192.168.8.3:8082/api/registros/get');
+            if (response.status === 200) {
+                const registrosData = response.data as Registro[];
+                console.log(`Registros recibidos: ${registrosData.length}`);
+                if ((response.data as Registro[]).length > 0) {
+                    console.log(`Último registro: ${JSON.stringify(response.data[0])}`);
+                } else {
+                    console.log("No hay registros disponibles");
                 }
-            } catch (err) {
-                setError('Error al cargar los registros');
-            } finally {
-                setLoading(false);
+                setRegistros(response.data as Registro[]);
             }
-        };
+        } catch (err: any) {
+            console.error("Error al cargar registros:", err.message);
+            setError('Error al cargar los registros');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
 
+    useEffect(() => {
         fetchRegistros();
-        // Actualizar cada 5 segundos
+
         const interval = setInterval(fetchRegistros, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchRegistros();
+    };
 
     const renderRegistroItem = ({ item }: { item: Registro }) => (
         <View style={styles.registroCard}>
@@ -56,25 +73,29 @@ export default function PantallaRegistros() {
         </View>
     );
 
-    if (loading) {
+    const renderEmptyList = () => (
+        <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No hay registros disponibles</Text>
+            <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={fetchRegistros}
+            >
+                <Text style={styles.refreshButtonText}>Actualizar</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    if (loading && !refreshing) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#007bff" />
-            </View>
-        );
-    }
-
-    if (error) {
-        return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.loadingText}>Cargando registros...</Text>
             </View>
         );
     }
 
     return (
         <SafeAreaView style={styles.screen}>
-            {/* Botón para volver */}
             <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.push('/puerta')}
@@ -83,7 +104,6 @@ export default function PantallaRegistros() {
                 <Text style={styles.backButtonText}>Volver</Text>
             </TouchableOpacity>
 
-            {/* Contenido principal - elimina cualquier referencia al Header */}
             <View style={styles.contentContainer}>
                 <Text style={styles.title}>Registros de Acceso</Text>
 
@@ -91,10 +111,27 @@ export default function PantallaRegistros() {
                     data={registros}
                     renderItem={renderRegistroItem}
                     keyExtractor={(item) => item._id}
-                    scrollEnabled={false}
-                    contentContainerStyle={styles.listContent}
+                    scrollEnabled={true} // Habilitar el scroll
+                    contentContainerStyle={[
+                        styles.listContent,
+                        registros.length === 0 && styles.emptyList
+                    ]}
+                    ListEmptyComponent={renderEmptyList}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={["#007bff"]}
+                        />
+                    }
                 />
             </View>
+
+            {error ? (
+                <View style={styles.errorBanner}>
+                    <Text style={styles.errorBannerText}>{error}</Text>
+                </View>
+            ) : null}
         </SafeAreaView>
     );
 }
@@ -103,40 +140,7 @@ const styles = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: '#f5f5f5',
-        paddingTop: 50, // Dar espacio para el botón de volver
-    },
-    cardContainer: {
-        margin: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 6,
-    },
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    nav: {
-        flexDirection: 'row',
-    },
-    navText: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginLeft: 20,
+        paddingTop: 50,
     },
     title: {
         fontSize: 24,
@@ -171,6 +175,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#6c757d',
+    },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -180,8 +189,47 @@ const styles = StyleSheet.create({
         color: '#dc3545',
         fontSize: 16,
     },
+    errorBanner: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#dc3545',
+        padding: 10,
+    },
+    errorBannerText: {
+        color: 'white',
+        textAlign: 'center',
+    },
     listContent: {
         width: '100%',
+        paddingBottom: 20,
+    },
+    emptyList: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#6c757d',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    refreshButton: {
+        backgroundColor: '#007bff',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 5,
+    },
+    refreshButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
     },
     backButton: {
         position: 'absolute',
