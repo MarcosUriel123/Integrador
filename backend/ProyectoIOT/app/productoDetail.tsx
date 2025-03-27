@@ -77,7 +77,7 @@ export default function ProductDetail() {
             // Usuario con sesión iniciada
             // Mostrar mensaje de compra exitosa
             Alert.alert(
-                "¡Compra Exitosa!",
+                "¡Compra Exitosa, ahora puedes dar de alta tu dispositivo!",
                 `Has comprado ${product?.name} correctamente.`,
                 [
                     {
@@ -89,6 +89,7 @@ export default function ProductDetail() {
                     }
                 ]
             );
+            
         } else {
             // Usuario sin sesión iniciada
             Alert.alert(

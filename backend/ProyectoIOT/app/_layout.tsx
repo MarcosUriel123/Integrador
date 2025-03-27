@@ -100,6 +100,15 @@ export default function Layout() {
         {/* Otras pantallas de tu aplicación */}
         <Stack.Screen name="registroDispositivo" />
         <Stack.Screen name="carrito" />
+
+        {/* Pantalla de selección de dispositivo */}
+        <Stack.Screen
+          name="seleccionDispositivo"
+          options={{
+            title: "Seleccionar Dispositivo",
+            headerShown: false
+          }}
+        />
       </Stack>
     </CartProvider>
   );

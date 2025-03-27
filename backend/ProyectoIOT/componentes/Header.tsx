@@ -253,7 +253,7 @@ const Header = ({
 
                             {/* Mostrar opción Dispositivo IoT solo si el usuario tiene un dispositivo y está logueado */}
                             {isLoggedIn && hasDevice && (
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/puerta')}>
+                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/devices')}>
                                     <Text style={styles.modalText}>
                                         Control de mi dispositivo IoT
                                     </Text>
@@ -265,7 +265,7 @@ const Header = ({
                                 <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroDispositivo')}>
                                     <Text style={styles.modalText}>Registrar Dispositivo</Text>
                                 </TouchableOpacity>
-                            )} */}
+                            )}
 
                             {/* Admin options
                             <TouchableOpacity onPress={() => navigateWithAuthCheck('/Aggprod')}>
