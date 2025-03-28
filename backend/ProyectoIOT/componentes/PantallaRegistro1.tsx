@@ -47,25 +47,50 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
             try {
                 setIsLoadingQuestions(true);
                 // Añadir el tipo genérico para la respuesta
-                const response = await axios.get<SecretQuestion[]>('http://192.168.8.6:8082/api/secretQuestions');
-                if (response.status === 200) {
-                    setSecretQuestions(response.data);
+                const response = await axios.get<SecretQuestion[]>('http://192.168.8.2:8082/api/secretQuestions');
 
-                    // Convertir las preguntas al formato que necesita DropDownPicker
-                    const dropdownItems = response.data.map(question => ({
+                if (response.status === 200) {
+                    console.log('Datos recibidos:', response.data); // Debug
+
+                    // Filtrar preguntas sin _id válido
+                    const validQuestions = response.data.filter(q => q && q._id !== undefined);
+                    setSecretQuestions(validQuestions);
+
+                    // Convertir las preguntas al formato que necesita DropDownPicker con manejo seguro
+                    const dropdownItems = validQuestions.map(question => ({
                         label: question.pregunta,
                         value: question._id,
-                        key: `question_${question._id.toString()}` // Añadir key única
+                        // Usar operador de coalescencia para manejar posibles valores nulos
+                        key: `question_${String(question._id || 'unknown')}`
                     }));
+
                     setItems(dropdownItems);
 
                     // Seleccionar la primera pregunta por defecto si hay preguntas
-                    if (response.data.length > 0) {
-                        setSelectedQuestion(response.data[0]._id);
+                    if (validQuestions.length > 0) {
+                        setSelectedQuestion(validQuestions[0]._id);
                     }
                 }
             } catch (error) {
                 console.error('Error al cargar preguntas secretas:', error);
+
+                // Usar preguntas predefinidas como respaldo
+                const fallbackQuestions = [
+                    { _id: 1, pregunta: "¿Cuál fue el nombre de tu primera mascota?" },
+                    { _id: 2, pregunta: "¿En qué ciudad naciste?" },
+                    { _id: 3, pregunta: "¿Cuál es el nombre de tu madre?" }
+                ];
+
+                setSecretQuestions(fallbackQuestions);
+
+                const fallbackItems = fallbackQuestions.map(q => ({
+                    label: q.pregunta,
+                    value: q._id,
+                    key: `fallback_${q._id}`
+                }));
+
+                setItems(fallbackItems);
+                setSelectedQuestion(fallbackQuestions[0]._id);
             } finally {
                 setIsLoadingQuestions(false);
             }
@@ -83,7 +108,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
 
         try {
             setIsRegistering(true);
-            const response = await axios.post('http://192.168.8.6:8082/api/users/register', {
+            const response = await axios.post('http://192.168.8.2:8082/api/users/register', {
                 name,
                 lastName,
                 surname,
@@ -171,9 +196,9 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
                                     open={open}
                                     value={selectedQuestion}
                                     items={items}
-                                    setOpen={setOpen}
-                                    setValue={setSelectedQuestion}
-                                    setItems={setItems}
+                                    setOpen={setOpen as React.Dispatch<React.SetStateAction<boolean>>}
+                                    setValue={setSelectedQuestion as React.Dispatch<React.SetStateAction<number>>}
+                                    setItems={setItems as React.Dispatch<React.SetStateAction<{ label: string; value: number }[]>>}
                                     placeholder="Selecciona una pregunta secreta"
                                     style={styles.dropdown}
                                     dropDownContainerStyle={styles.dropdownList}
@@ -181,6 +206,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
                                     scrollViewProps={{
                                         nestedScrollEnabled: true,
                                     }}
+                                // keyExtractor={(item: { label: string; value: number }) => `dropdown_item_${item.value.toString()}`}
                                 />
                             </View>
                         )}

@@ -15,7 +15,7 @@ import BotonVolver from '../componentes/BotonVolver';
 
 export default function ValoresScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.8.6:8082/api'; // Update with your actual IP address (use ipconfig)
+    const API_BASE = 'http://192.168.8.2:8082/api'; // Update with your actual IP address (use ipconfig)
     const [valor, setValor] = useState(''); // Usamos una variable para almacenar solo el último valor
 
     // useEffect para cargar el último valor desde el backend

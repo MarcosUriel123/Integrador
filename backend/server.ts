@@ -78,5 +78,5 @@ app.use('/api/purchases', purchaseRoutes); // Plural "purchases"
 app.use('/api/pins', pinRoutes);
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://192.168.8.6:${PORT}`);
+  console.log(`Servidor corriendo en http://192.168.8.2:${PORT}`);
 });

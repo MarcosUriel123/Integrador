@@ -6,7 +6,7 @@ export const verifyToken = async (): Promise<boolean> => {
         const token = await AsyncStorage.getItem('userToken');
         if (!token) return false;
 
-        const response = await axios.post('http://192.168.8.6:8082/api/users/verify-token', {}, {
+        const response = await axios.post('http://192.168.8.2:8082/api/users/verify-token', {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -27,7 +27,7 @@ export const logout = async (): Promise<void> => {
         if (token) {
             try {
                 // Llamar al endpoint de logout para invalidar el token en el servidor
-                await axios.post('http://192.168.8.6:8082/api/users/logout', {}, {
+                await axios.post('http://192.168.8.2:8082/api/users/logout', {}, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 console.log('Token invalidado en el servidor');
