@@ -30,7 +30,7 @@ export default function PantallaRegistros() {
     useEffect(() => {
         const fetchRegistros = async () => {
             try {
-                const response = await axios.get('http://192.168.8.7:8082/api/registros/get'); //(ipconfig)
+                const response = await axios.get('http://192.168.1.133:8082/api/registros/get'); //(ipconfig)
                 if (response.status === 200) {
                     setRegistros(response.data as Registro[]);
                 }

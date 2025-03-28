@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import BotonVolver from '../componentes/BotonVolver';
@@ -10,9 +10,18 @@ import {
     Image,
     StyleSheet,
     TouchableOpacity,
-    Alert
+    Alert,
+    Animated,
+    Dimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import Header from '../componentes/Header';
+import Footer from '../componentes/Footer';
+
+// Obtener dimensiones de pantalla
+const { width } = Dimensions.get('window');
 
 interface Product {
     id: string;
@@ -29,6 +38,11 @@ export default function ProductDetail() {
     const params = useLocalSearchParams();
     const productParam = params.product as string;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    // Animaciones
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
 
     console.log("Parámetros recibidos:", params);
     console.log("Product param:", productParam);
@@ -55,6 +69,29 @@ export default function ProductDetail() {
         }
     };
 
+    // Animación de entrada
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 700,
+                useNativeDriver: true,
+            })
+        ]).start();
+
+        checkLoginStatus();
+    }, []);
+
     // Reemplazamos el hook useEffect con useFocusEffect para detectar cuando la pantalla recibe el foco
     useFocusEffect(
         useCallback(() => {
@@ -62,11 +99,6 @@ export default function ProductDetail() {
             checkLoginStatus();
         }, [])
     );
-
-    // También mantemos un useEffect para la carga inicial (opcional)
-    useEffect(() => {
-        checkLoginStatus();
-    }, []);
 
     const handlePurchase = async () => {
         console.log("Botón de compra presionado");  // Añadir para depuración
@@ -90,7 +122,7 @@ export default function ProductDetail() {
                     }
                 ]
             );
-            
+
         } else {
             // Usuario sin sesión iniciada
             Alert.alert(
@@ -114,11 +146,8 @@ export default function ProductDetail() {
                     }
                 ]
             );
-
         }
     };
-
-    // El resto del componente se mantiene igual...
 
     // El renderizado condicional para cuando no hay producto
     if (!product) {
@@ -126,12 +155,27 @@ export default function ProductDetail() {
             <SafeAreaView style={styles.screen}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.cardContainer}>
-                        <View style={styles.topBar}>
-                            <Text style={styles.logo}>Segurix</Text>
-                        </View>
-                        <View style={styles.contentContainer}>
-                            <Text style={styles.errorText}>Producto no encontrado</Text>
-                        </View>
+                        <Header />
+                        <Animated.View
+                            style={[
+                                styles.errorContainer,
+                                { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+                            ]}
+                        >
+                            <MaterialCommunityIcons name="alert-circle-outline" size={64} color="#FC8181" />
+                            <Text style={styles.errorTitle}>Producto no encontrado</Text>
+                            <Text style={styles.errorText}>
+                                El producto solicitado no está disponible o ha sido eliminado.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.backToProductsButton}
+                                onPress={() => router.push('/CatalogoProductosScreen')}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.backToProductsText}>Ver catálogo de productos</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
+                        <Footer />
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -143,159 +187,315 @@ export default function ProductDetail() {
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
-                    <View style={styles.topBar}>
-                        <Text style={styles.logo}>Segurix</Text>
-                    </View>
-                    <BotonVolver destino="/empresa" />
+                    <Header title="Detalle de Producto" />
 
-                    <View style={styles.contentContainer}>
-                        <Text style={styles.title}>Detalle de {product.name}</Text>
-                        <Image source={{ uri: product.image }} style={styles.image} />
-                        <View style={styles.detailsRow}>
-                            <Text style={styles.label}>Precio:</Text>
-                            <Text style={styles.value}>${product.price}</Text>
+                    <View style={styles.buttonBackContainer}>
+                        <BotonVolver destino="/CatalogoProductosScreen" />
+                    </View>
+
+                    <Animated.View
+                        style={[
+                            styles.productSection,
+                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+                        ]}
+                    >
+                        <View style={styles.imageContainer}>
+                            <Image
+                                source={{ uri: product.image }}
+                                style={styles.image}
+                                resizeMode="cover"
+                            />
+                            <View style={styles.categoryBadge}>
+                                <Text style={styles.categoryText}>{product.category}</Text>
+                            </View>
                         </View>
-                        <View style={styles.detailsRow}>
-                            <Text style={styles.label}>Categoría:</Text>
-                            <Text style={styles.value}>{product.category}</Text>
-                        </View>
-                        <View style={styles.detailsRow}>
-                            <Text style={styles.label}>Descripción:</Text>
-                            <Text style={styles.value}>
+
+                        <View style={styles.productInfoContainer}>
+                            <Text style={styles.productTitle}>{product.name}</Text>
+
+                            <View style={styles.priceContainer}>
+                                <Text style={styles.priceLabel}>Precio:</Text>
+                                <Text style={styles.priceValue}>${product.price.toFixed(2)}</Text>
+                            </View>
+
+                            <View style={styles.divider} />
+
+                            <Text style={styles.descriptionLabel}>Descripción</Text>
+                            <Text style={styles.descriptionText}>
                                 {product.description || 'Sin descripción disponible.'}
                             </Text>
+
+                            {/* Características del producto */}
+                            <View style={styles.featuresContainer}>
+                                <View style={styles.featureItem}>
+                                    <View style={styles.featureIconContainer}>
+                                        <MaterialCommunityIcons name="shield-check" size={20} color="#3182CE" />
+                                    </View>
+                                    <Text style={styles.featureText}>Garantía de 12 meses</Text>
+                                </View>
+
+                                <View style={styles.featureItem}>
+                                    <View style={styles.featureIconContainer}>
+                                        <MaterialCommunityIcons name="truck-delivery" size={20} color="#3182CE" />
+                                    </View>
+                                    <Text style={styles.featureText}>Envío gratuito</Text>
+                                </View>
+                            </View>
+
+                            {/* Información de instalación */}
+                            <Animated.View
+                                style={[
+                                    styles.installInfoContainer,
+                                    { transform: [{ translateY: slideAnim }] }
+                                ]}
+                            >
+                                <View style={styles.installInfoIconContainer}>
+                                    <Ionicons name="information-circle" size={24} color="#3182CE" />
+                                </View>
+                                <Text style={styles.installInfoText}>
+                                    Después de la compra, podrás registrar este dispositivo en tu cuenta.
+                                </Text>
+                            </Animated.View>
+
+                            {/* Botón de Compra mejorado */}
+                            <TouchableOpacity
+                                style={styles.purchaseButtonContainer}
+                                onPress={handlePurchase}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={isLoggedIn ? ['#3182CE', '#2C5282'] : ['#ED8936', '#DD6B20']}
+                                    style={styles.purchaseButton}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    <FontAwesome5
+                                        name={isLoggedIn ? "shopping-cart" : "sign-in-alt"}
+                                        size={16}
+                                        color="#FFFFFF"
+                                        style={{ marginRight: 8 }}
+                                    />
+                                    <Text style={styles.purchaseButtonText}>
+                                        {isLoggedIn ? "Comprar Ahora" : "Iniciar sesión para comprar"}
+                                    </Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+
+                            {!isLoggedIn && (
+                                <Text style={styles.loginNote}>
+                                    Debes iniciar sesión para realizar una compra
+                                </Text>
+                            )}
                         </View>
+                    </Animated.View>
 
-                        {/* Botón de Compra mejorado con estilos ajustados */}
-                        <TouchableOpacity
-                            style={[
-                                styles.purchaseButton,
-                                !isLoggedIn && styles.purchaseButtonWithLogin
-                            ]}
-                            onPress={handlePurchase}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={styles.purchaseButtonText}>
-                                {isLoggedIn ? "Comprar Ahora" : "Iniciar sesión para comprar"}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {!isLoggedIn && (
-                            <Text style={styles.loginNote}>
-                                Debes iniciar sesión para realizar una compra
-                            </Text>
-                        )}
-                    </View>
+                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-// Los estilos se mantienen iguales...
 const styles = StyleSheet.create({
-    // Los estilos no cambian
     screen: {
         flex: 1,
-        backgroundColor: '#CFE2FF',
+        backgroundColor: '#f0f4f8',
     },
     scrollContent: {
         flexGrow: 1,
-        justifyContent: 'center',
     },
     cardContainer: {
-        margin: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
         padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 6,
     },
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        marginBottom: 20,
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    contentContainer: {
-        alignItems: 'center',
-    },
-    errorText: {
-        fontSize: 18,
-        color: 'red',
-        textAlign: 'center',
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
+    buttonBackContainer: {
         marginBottom: 15,
-        textAlign: 'center',
+        marginTop: 5,
+    },
+    productSection: {
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        shadowColor: "rgba(0,0,0,0.2)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 24,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.8)',
+        marginBottom: 25,
+        overflow: 'hidden',
+    },
+    imageContainer: {
+        position: 'relative',
+        width: '100%',
     },
     image: {
         width: '100%',
-        height: 200,
-        borderRadius: 10,
+        height: 260,
+    },
+    categoryBadge: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        backgroundColor: 'rgba(49, 130, 206, 0.85)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    categoryText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+        fontSize: 12,
+        letterSpacing: 0.5,
+    },
+    productInfoContainer: {
+        padding: 24,
+    },
+    productTitle: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: '#1A365D',
+        marginBottom: 12,
+        letterSpacing: 0.3,
+    },
+    priceContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 20,
     },
-    detailsRow: {
+    priceLabel: {
+        fontSize: 18,
+        color: '#4A5568',
+        marginRight: 8,
+    },
+    priceValue: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#3182CE',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#E2E8F0',
+        marginBottom: 20,
+    },
+    descriptionLabel: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#2D3748',
+        marginBottom: 8,
+    },
+    descriptionText: {
+        fontSize: 16,
+        color: '#4A5568',
+        lineHeight: 24,
+        marginBottom: 20,
+    },
+    featuresContainer: {
+        marginBottom: 20,
+    },
+    featureItem: {
         flexDirection: 'row',
-        width: '100%',
-        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 10,
     },
-    label: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
+    featureIconContainer: {
+        backgroundColor: '#EBF8FF',
+        padding: 8,
+        borderRadius: 8,
+        marginRight: 12,
     },
-    value: {
-        fontSize: 18,
-        color: '#2C2C2C',
-        maxWidth: '60%',
-        textAlign: 'right',
+    featureText: {
+        fontSize: 14,
+        color: '#2D3748',
     },
-    // Estilos mejorados para el botón de compra
+    installInfoContainer: {
+        backgroundColor: '#EBF8FF',
+        borderRadius: 16,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    installInfoIconContainer: {
+        marginRight: 12,
+    },
+    installInfoText: {
+        fontSize: 14,
+        color: '#2D3748',
+        flex: 1,
+        lineHeight: 20,
+    },
+    purchaseButtonContainer: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: "rgba(0,0,0,0.3)",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
     purchaseButton: {
-        backgroundColor: '#007BFF',
-        padding: 15,
-        borderRadius: 10,
-        marginTop: 20,
-        width: '100%',  // Asegura que el botón ocupe todo el ancho disponible
+        paddingVertical: 16,
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 50,  // Altura fija para hacerlo más fácil de presionar
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    purchaseButtonWithLogin: {
-        backgroundColor: '#FFA500', // Color naranja para indicar que se requiere login
     },
     purchaseButtonText: {
         color: '#FFFFFF',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
-        textAlign: 'center',
+        letterSpacing: 0.5,
     },
     loginNote: {
         marginTop: 10,
-        color: '#666',
+        color: '#718096',
         fontSize: 14,
         textAlign: 'center',
         fontStyle: 'italic',
     },
+    // Estilos para la pantalla de error
+    errorContainer: {
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        shadowColor: "rgba(0,0,0,0.2)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 24,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.8)',
+        padding: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 20,
+    },
+    errorTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#2D3748',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#4A5568',
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+    },
+    backToProductsButton: {
+        backgroundColor: '#3182CE',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        shadowColor: "#2C5282",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    backToProductsText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    }
 });

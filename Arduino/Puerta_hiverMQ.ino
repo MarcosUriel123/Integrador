@@ -6,22 +6,24 @@
 #include <Adafruit_Fingerprint.h>
 #include <SPI.h>
 #include <MFRC522.h>
-#include <WiFi.h> // Biblioteca para WiFi
-#include <WebServer.h> // Biblioteca para el servidor web
+#include <WiFi.h>
+#include <WebServer.h>
 #include <HTTPClient.h> 
-#include <ArduinoJson.h>  // Añadir esta biblioteca
+#include <ArduinoJson.h>
+#include <PubSubClient.h>
+#include <WiFiClientSecure.h>
 
 // Configuración del WiFi
-const char* ssid = "Telcel-A2C3"; // Cambia esto por tu SSID
-const char* password = "A810YHTMGRD"; // Cambia esto por tu contraseña
+const char* ssid = "Telcel-A2C3";
+const char* password = "A810YHTMGRD";
 
 // Configuración del servidor
-const char* ipServer = "192.168.1.133:8082"; // IP y puerto del servidor backend
+const char* ipServer = "192.168.1.133:8082";
 
 // Configuración del servidor web
 WebServer server(80);
 
-// Configuración del RFID
+// Configuración del RFID
 #define SS_PIN 4
 #define RST_PIN 15
 #define RELAY_PIN 25
@@ -29,14 +31,14 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 // Configuración del sensor magnético
 #define MAGNETIC_SENSOR_PIN 36
-int doorState = -1;  // -1: desconocido, 0: cerrado, 1: abierto
+int doorState = -1;
 unsigned long lastDoorStatusCheck = 0;
-const unsigned long DOOR_CHECK_INTERVAL = 1000; // Verificar cada segundo
+const unsigned long DOOR_CHECK_INTERVAL = 1000;
 
-// Configuración del LCD
+// Configuración del LCD
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-// Configuración del teclado
+// Configuración del teclado
 const byte FILAS = 4;
 const byte COLUMNAS = 4;
 char teclas[FILAS][COLUMNAS] = {
@@ -50,13 +52,13 @@ byte pinesFilas[FILAS] = {32, 14, 12, 13};
 byte pinesColumnas[COLUMNAS] = {27, 26, 5, 33};
 Keypad teclado = Keypad(makeKeymap(teclas), pinesFilas, pinesColumnas, FILAS, COLUMNAS);
 
-// Configuración de contraseña
+// Configuración de contraseña
 char claveIngresada[5];
 int indiceClave = 0;
 bool estaBloqueado = true;
 int intentosFallidos = 0;
 
-// Estado del menú
+// Estado del menú
 int estadoMenu = 0;
 
 // Configuración del sensor PIR y buzzer
@@ -66,37 +68,105 @@ int contadorDetecciones = 0;
 unsigned long tiempoUltimaDeteccion = 0;
 const unsigned long retrasoDeteccion = 1000;
 bool alarmaActivada = false;
-int contadorPitidos = 0;          // Nuevo: para contar los pitidos
-unsigned long tiempoUltimoPitido = 0; // Nuevo: para controlar el tiempo entre pitidos
-bool alarmaCicloCompletado = false;  // NUEVA: Indica si ya completó un ciclo de 6 pitidos
+int contadorPitidos = 0;
+unsigned long tiempoUltimoPitido = 0;
+bool alarmaCicloCompletado = false;
 
-// Configuración del sensor de huella
+// Configuración del sensor de huella
 HardwareSerial mySerial(2);
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
 // Variables para el estado de los procesos
-String rfidStatus = "idle"; // Variable global para el estado
+String rfidStatus = "idle";
 String fingerprintStatus = "idle";
 String lastCardId = "";
 int lastFingerprintId = -1;
 String lastErrorMessage = "";
 bool isRegistrationActive = false;
 int registrationStep = 0;
-
 bool isRFIDOperationActive = false;
-
 unsigned long rfidOperationStartTime = 0;
-const unsigned long RFID_TIMEOUT = 30000; // 30 segundos
-
+const unsigned long RFID_TIMEOUT = 30000;
 bool registroRemotoActivo = false;
-
-// Añade estas variables globales junto con las otras variables de estado
-bool registroRfidActivo = false;  // Para controlar cuando estamos registrando un RFID
+bool registroRfidActivo = false;
 
 // Variables para controlar la visualización temporal de dígitos
 unsigned long tiempoUltimaTecla = 0;
 bool reemplazarCaracter = false;
 int posicionTeclaActual = -1;
+
+// Configuración MQTT
+const char* mqtt_server = "cff146d73f214b82bb19d3ae4f6a3e7d.s1.eu.hivemq.cloud";
+const int mqtt_port = 8883;
+const char* mqtt_user = "PuertaIOT";
+const char* mqtt_password = "1234abcD";
+const char* mqtt_client_id = "ESP32_Puerta_";
+const char* mqtt_command_topic = "valoresPuerta/comandos";
+const char* mqtt_status_topic = "valoresPuerta/estadoPuerta";
+const char* mqtt_pir_topic = "valoresPuerta/conteoPIR";
+const char* mqtt_magnetic_topic = "valoresPuerta/sensorMagnetico";
+const char* mqtt_mac_topic = "valoresPuerta/direccionMAC";
+
+WiFiClientSecure espClient;
+PubSubClient mqttClient(espClient);
+unsigned long lastMqttPublish = 0;
+const unsigned long MQTT_PUBLISH_INTERVAL = 2000;
+
+void setupMQTT() {
+  espClient.setInsecure();
+  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.setCallback(mqttCallback);
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Mensaje recibido [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  
+  String message;
+  for (int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  Serial.println(message);
+
+  if (String(topic) == mqtt_command_topic) {
+    if (message == "abrir") {
+      digitalWrite(RELAY_PIN, LOW);
+      Serial.println("Puerta abierta por comando MQTT");
+      mqttClient.publish(mqtt_status_topic, "open", true);
+      delay(5000);
+      digitalWrite(RELAY_PIN, HIGH);
+      mqttClient.publish(mqtt_status_topic, "closed", true);
+    } else if (message == "cerrar") {
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.println("Puerta cerrada por comando MQTT");
+      mqttClient.publish(mqtt_status_topic, "closed", true);
+    }
+  }
+}
+
+void reconnectMQTT() {
+  String clientId = mqtt_client_id;
+  String macAddress = WiFi.macAddress();
+  clientId += macAddress.substring(12);
+  
+  while (!mqttClient.connected()) {
+    Serial.print("Conectando a HiveMQ Cloud...");
+    
+    if (mqttClient.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
+      Serial.println("conectado");
+      mqttClient.subscribe(mqtt_command_topic);
+      mqttClient.publish("valoresPuerta/status", "online", true);
+      // Publicar la dirección MAC en el tópico correspondiente
+      mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+    } else {
+      Serial.print("falló, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" reintentando en 5 segundos");
+      delay(5000);
+    }
+  }
+}
 
 void pitidoCorto() {
   digitalWrite(pinBuzzer, HIGH);
@@ -127,20 +197,16 @@ void setup() {
   pinMode(pinBuzzer, OUTPUT);
   digitalWrite(pinBuzzer, LOW);
   
-  // Inicialización del sensor magnético
   pinMode(MAGNETIC_SENSOR_PIN, INPUT);
 
-  // Inicialización del RFID
   SPI.begin();
   mfrc522.PCD_Init();
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, HIGH);
 
-  // Inicialización del sensor de huella
   mySerial.begin(57600, SERIAL_8N1, 16, 17);
   finger.begin(57600);
 
-  // Conectar a WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -150,8 +216,8 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   // Configurar rutas del servidor web
-  server.on("/leerRFID", handleLeerRFID); // Ruta para leer el RFID
-  server.on("/controlPuerta", handleControlPuerta); // Ruta para controlar la puerta
+  server.on("/leerRFID", handleLeerRFID);
+  server.on("/controlPuerta", handleControlPuerta);
   server.on("/api/arduino/status", HTTP_GET, handleStatus);
   server.on("/api/arduino/rfid/read", HTTP_POST, handleStartRFIDRead);
   server.on("/api/arduino/rfid/status", HTTP_GET, handleRFIDStatus);
@@ -162,9 +228,6 @@ void setup() {
     server.send(200, "application/json", "{\"status\":\"ok\"}");
   });
 
-  // Agregar este código antes de server.begin():
-
-  // Manejador para solicitudes OPTIONS preflight
   server.on("/api/arduino/fingerprint/register", HTTP_OPTIONS, []() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
@@ -190,7 +253,6 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
-  // También puedes añadir un manejador genérico para cualquier ruta OPTIONS
   server.onNotFound([]() {
     if (server.method() == HTTP_OPTIONS) {
       sendCORSHeaders();
@@ -200,26 +262,19 @@ void setup() {
     }
   });
 
-  // Añadir estos manejadores en la sección de configuración del servidor (setup)
-
-  // Agrega esto justo después de los otros handlers en el setup
-  // Manejadores para eliminar huellas (fingerprint)
   server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_DELETE, [](){
     sendCORSHeaders();
     
-    // Extraer el ID de la URL
     String uri = server.uri();
     int lastSlash = uri.lastIndexOf('/');
     String idStr = uri.substring(lastSlash + 1);
     int id = idStr.toInt();
     
-    // Verificar ID válido
     if (id < 1 || id > 127) {
       server.send(400, "application/json", "{\"success\":false,\"message\":\"ID de huella inválido\"}");
       return;
     }
     
-    // Eliminar huella
     uint8_t p = finger.deleteModel(id);
     if (p == FINGERPRINT_OK) {
       lcd.clear();
@@ -244,16 +299,13 @@ void setup() {
     }
   });
 
-  // Manejadores para eliminar RFID
   server.on("/api/arduino/rfid/([^/]+)", HTTP_DELETE, [](){
     sendCORSHeaders();
     
-    // Extraer el ID de la URL
     String uri = server.uri();
     int lastSlash = uri.lastIndexOf('/');
     String rfidId = uri.substring(lastSlash + 1);
     
-    // Mostrar mensaje en LCD
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Tarjeta RFID");
@@ -262,15 +314,9 @@ void setup() {
     delay(2000);
     mostrarMenuPrincipal();
     
-    // Nota: Aquí deberías implementar la lógica real para eliminar el RFID
-    // de tu sistema de almacenamiento (EEPROM, SD, etc.)
-    // Como no veo en el código actual un sistema para almacenar IDs,
-    // solo devuelvo un mensaje de éxito
-    
     server.send(200, "application/json", "{\"success\":true,\"message\":\"RFID eliminado correctamente\"}");
   });
 
-  // Manejadores OPTIONS para CORS
   server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_OPTIONS, [](){
     sendCORSHeaders();
     server.send(200, "text/plain", "");
@@ -281,12 +327,9 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
-  // Añadir esta nueva ruta de API en el setup() del Arduino
-
   server.on("/api/arduino/rfid/reset", HTTP_POST, []() {
     sendCORSHeaders();
     
-    // Reiniciar variables de estado RFID
     isRFIDOperationActive = false;
     registroRfidActivo = false;
     rfidStatus = "idle";
@@ -295,33 +338,25 @@ void setup() {
     
     Serial.println("Estado de RFID reiniciado");
     
-    // Respuesta JSON
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Estado RFID reiniciado\"}");
   });
 
-  // Asegurar que esta ruta también tenga CORS
   server.on("/api/arduino/rfid/reset", HTTP_OPTIONS, []() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
   });
 
-  // Añadir en setup(), junto con los otros handlers
-
-  // Nueva ruta para obtener información del dispositivo
   server.on("/api/arduino/info", HTTP_GET, []() {
     sendCORSHeaders();
     
-    // Obtener la MAC address
     String mac = WiFi.macAddress();
     
-    // Mostrar en el LCD
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("MAC Address:");
     lcd.setCursor(0, 1);
     lcd.print(mac);
     
-    // Enviar respuesta con la MAC
     DynamicJsonDocument doc(200);
     doc["mac"] = mac;
     doc["ip"] = WiFi.localIP().toString();
@@ -331,17 +366,14 @@ void setup() {
     server.send(200, "application/json", response);
   });
 
-  // Manejador para opciones CORS
   server.on("/api/arduino/info", HTTP_OPTIONS, []() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
   });
 
-  // Agregar ruta para indicar que el registro se completó
   server.on("/api/arduino/register-complete", HTTP_POST, []() {
     sendCORSHeaders();
     
-    // Volver a la pantalla principal
     mostrarMenuPrincipal();
     
     server.send(200, "application/json", "{\"success\":true}");
@@ -352,16 +384,16 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
-  // Añadir la nueva ruta de API en el setup() del Arduino
   server.on("/api/arduino/doorstatus", HTTP_GET, handleDoorStatus);
   server.on("/api/arduino/doorstatus", HTTP_OPTIONS, []() {
     sendCORSHeaders();
     server.send(200, "text/plain", "");
   });
 
-  // Iniciar servidor
   server.begin();
   Serial.println("Servidor web iniciado");
+
+  setupMQTT();
 
   mostrarMenuPrincipal();
 }
@@ -373,53 +405,43 @@ void sendCORSHeaders() {
 }
 
 void handleLeerRFID() {
-  // Agregar encabezados CORS
   sendCORSHeaders();
 
-  // Verifica si hay una tarjeta cerca
   if (!mfrc522.PICC_IsNewCardPresent()) {
     server.send(200, "text/plain", "No se detectó ninguna tarjeta RFID");
     return;
   }
 
-  // Intenta leer la tarjeta
   if (!mfrc522.PICC_ReadCardSerial()) {
     server.send(200, "text/plain", "Error al leer la tarjeta RFID");
     return;
   }
 
-  // Leer el UID de la tarjeta
   String tagID = "";
   for (byte i = 0; i < mfrc522.uid.size; i++) {
     tagID += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
     tagID += String(mfrc522.uid.uidByte[i], HEX);
   }
-  // Convertir a mayúsculas para consistencia
   tagID.toUpperCase();
 
-  // Enviar el UID como respuesta
   server.send(200, "text/plain", tagID);
-
-  // Finalizar la comunicación con la tarjeta
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
 }
 
 void handleControlPuerta() {
-  // Agregar encabezados CORS
   sendCORSHeaders();
 
-  // Verificar si se recibió un parámetro 'action'
   if (server.hasArg("action")) {
     String action = server.arg("action");
 
     if (action == "abrir") {
-      digitalWrite(RELAY_PIN, LOW); // Abrir la puerta
+      digitalWrite(RELAY_PIN, LOW);
       server.send(200, "text/plain", "Puerta abierta");
-      delay(5000); // Mantener la puerta abierta por 5 segundos
-      digitalWrite(RELAY_PIN, HIGH); // Cerrar la puerta
+      delay(5000);
+      digitalWrite(RELAY_PIN, HIGH);
     } else if (action == "cerrar") {
-      digitalWrite(RELAY_PIN, HIGH); // Cerrar la puerta
+      digitalWrite(RELAY_PIN, HIGH);
       server.send(200, "text/plain", "Puerta cerrada");
     } else {
       server.send(400, "text/plain", "Acción no válida");
@@ -440,28 +462,21 @@ void handleStatus() {
   server.send(200, "application/json", response);
 }
 
-// Reemplazar o modificar la función handleStartRFIDRead() existente
-
 void handleStartRFIDRead() {
   sendCORSHeaders();
   
-  // Verificar si ya hay una operación en curso
   if (isRFIDOperationActive) {
-    // Si la última operación empezó hace más de 30 segundos, reiniciamos el estado
-    // (esto evita operaciones bloqueadas permanentemente)
     if (millis() - rfidOperationStartTime > RFID_TIMEOUT) {
       isRFIDOperationActive = false;
       rfidStatus = "idle";
       lastCardId = "";
       lastErrorMessage = "";
     } else {
-      // Todavía está activa y dentro del tiempo límite
       server.send(409, "application/json", "{\"error\":\"Ya hay una operación RFID en progreso\"}");
       return;
     }
   }
   
-  // Iniciar nueva operación
   isRFIDOperationActive = true;
   registroRfidActivo = true;
   rfidStatus = "reading";
@@ -469,14 +484,12 @@ void handleStartRFIDRead() {
   lastCardId = "";
   lastErrorMessage = "";
   
-  // Mostrar mensaje en LCD
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Acerque tarjeta");
   lcd.setCursor(0, 1);
   lcd.print("RFID al lector");
   
-  // Respuesta JSON
   server.send(200, "application/json", "{\"success\":true,\"message\":\"Iniciando lectura RFID\"}");
   
   Serial.println("Iniciando lectura RFID");
@@ -485,7 +498,6 @@ void handleStartRFIDRead() {
 void handleRFIDStatus() {
   sendCORSHeaders();
   
-  // Si está en estado "reading", intentar leer tarjeta
   if (rfidStatus == "reading") {
     if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
       String tagID = "";
@@ -494,16 +506,14 @@ void handleRFIDStatus() {
         tagID += String(mfrc522.uid.uidByte[i], HEX);
       }
       
-      // Corregir estas líneas:
-      tagID.toUpperCase();  // Convertir a mayúsculas in-place
-      lastCardId = tagID;   // Asignar a lastCardId
+      tagID.toUpperCase();
+      lastCardId = tagID;
       
       rfidStatus = "completed";
       
       mfrc522.PICC_HaltA();
       mfrc522.PCD_StopCrypto1();
       
-      // Si estaba en modo registro, mostrar mensaje adicional
       if (registroRfidActivo) {
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -522,7 +532,6 @@ void handleRFIDStatus() {
   if (rfidStatus == "completed") {
     doc["cardId"] = lastCardId;
     
-    // Resetear los flags si hemos completado
     isRFIDOperationActive = false;
     registroRfidActivo = false;
   }
@@ -530,7 +539,6 @@ void handleRFIDStatus() {
   if (rfidStatus == "error") {
     doc["message"] = lastErrorMessage;
     
-    // Resetear los flags en caso de error
     isRFIDOperationActive = false;
     registroRfidActivo = false;
   }
@@ -548,13 +556,10 @@ void handleFingerprintRegister() {
   
   String userName = doc["userName"].as<String>();
   
-  // Obtener un ID disponible para la huella
-  lastFingerprintId = random(1, 128);  // En producción, usar una lógica para IDs únicos
+  lastFingerprintId = random(1, 128);
   
-  // Activar el modo de registro remoto
   registroRemotoActivo = true;
   
-  // Mostrar mensaje en LCD
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Registrando");
@@ -571,7 +576,7 @@ void handleFingerprintRegister() {
   String response;
   serializeJson(responseDoc, response);
   server.send(200, "application/json", response);
-  responseDoc.clear(); // Liberar memoria
+  responseDoc.clear();
 }
 
 void handleFingerprintStatus() {
@@ -608,120 +613,6 @@ void actualizarClave() {
   }
 }
 
-// Reemplazar la función verificarRFID() actual con esta implementación
-
-void verificarRFID() {
-  // Si estamos en registro de RFID, no verificar accesos
-  if (registroRfidActivo || isRFIDOperationActive) return;
-  
-  // Reinicializar el módulo RFID
-  mfrc522.PCD_Init();
-  delay(50); // Pequeña pausa para estabilización
-  
-  // Verifica si hay una tarjeta cerca
-  if (!mfrc522.PICC_IsNewCardPresent()) {
-    return;
-  }
-  
-  // Espera un momento para asegurarse de que la tarjeta esté estable
-  delay(50);
-  
-  // Intenta leer la tarjeta
-  if (!mfrc522.PICC_ReadCardSerial()) {
-    return;
-  }
-
-  String tagID = "";
-  // Leer el UID de la tarjeta (con ceros a la izquierda)
-  for (byte i = 0; i < mfrc522.uid.size; i++) {
-    tagID += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
-    tagID += String(mfrc522.uid.uidByte[i], HEX);
-  }
-  
-  // Convertir a mayúsculas para consistencia
-  tagID.toUpperCase();
-  Serial.println("RFID detectado: " + tagID);
-
-  // Verificar el RFID contra el servidor
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String serverUrl = "http://" + String(ipServer) + "/api/rfids/verify-device"; // Usar la nueva ruta específica
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-API-Key", "IntegradorIOTKey2025"); // Añadir clave API compartida
-    
-    String jsonData = "{\"rfid\":\"" + tagID + "\"}";
-    int httpResponseCode = http.POST(jsonData);
-    
-    if (httpResponseCode == 200) {
-      String response = http.getString();
-      Serial.println("Respuesta: " + response);
-      
-      // Verificar si el RFID está autorizado
-      DynamicJsonDocument doc(256);
-      deserializeJson(doc, response);
-      
-      if (doc["authorized"].as<bool>()) {
-        // Conceder acceso
-        lcd.clear();
-        lcd.print("Acceso Concedido");
-        lcd.setCursor(0, 1);
-        lcd.print("RFID: " + tagID.substring(0, 8) + "...");
-        pitidoExito();
-        digitalWrite(RELAY_PIN, LOW);
-        
-        // Reiniciar contador y estado de alarma
-        contadorDetecciones = 0;
-        alarmaActivada = false;
-        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
-        
-        delay(5000);
-        digitalWrite(RELAY_PIN, HIGH);
-        intentosFallidos = 0;
-      } else {
-        // RFID no autorizado
-        lcd.clear();
-        lcd.print("RFID no");
-        lcd.setCursor(0, 1);
-        lcd.print("autorizado");
-        intentosFallidos++;
-        if (intentosFallidos >= 5) {
-          pitidoError();
-        }
-        delay(2000);
-      }
-    } else {
-      // Error de conexión
-      lcd.clear();
-      lcd.print("Error de");
-      lcd.setCursor(0, 1);
-      lcd.print("verificacion");
-      delay(2000);
-    }
-    
-    http.end();
-  } else {
-    // Sin conexión WiFi, no podemos verificar
-    lcd.clear();
-    lcd.print("Sin conexion");
-    lcd.setCursor(0, 1);
-    lcd.print("al servidor");
-    delay(2000);
-  }
-
-  // Finalizar correctamente la comunicación con la tarjeta
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
-  
-  // Asegurarnos de que el módulo esté listo para la siguiente lectura
-  mfrc522.PCD_Reset();
-  mfrc522.PCD_Init();
-
-  // Regresamos al menú principal
-  mostrarMenuPrincipal();
-}
-
-// Modificar la función ingresarClave():
 void ingresarClave(char tecla) {
   pitidoCorto();
   
@@ -732,31 +623,31 @@ void ingresarClave(char tecla) {
   else if (tecla >= '0' && tecla <= '9' && indiceClave < 4) {
     claveIngresada[indiceClave] = tecla;
     
-    // Mostrar el número real en lugar de asterisco
     lcd.setCursor(5 + indiceClave, 1);
-    lcd.print(tecla);  // Mostrar el dígito real
+    lcd.print(tecla);
     
-    // Guardar la posición para cambiarla después
     posicionTeclaActual = indiceClave;
     reemplazarCaracter = true;
     tiempoUltimaTecla = millis();
     
     indiceClave++;
     
-    // Verificar si se completó la clave
     if (indiceClave == 4) {
       claveIngresada[4] = '\0';
       
-      // Verificar el PIN contra el servidor
+      if (mqttClient.connected()) {
+        mqttClient.publish("valoresPuerta/PIN", claveIngresada, true);
+        Serial.println("PIN publicado en HiveMQ: " + String(claveIngresada));
+      }
+      
       verificarPINEnServidor();
       
       indiceClave = 0;
-      reemplazarCaracter = false; // Reiniciar flag
+      reemplazarCaracter = false;
     }
   }
 }
 
-// Nueva función para verificar el PIN en el servidor
 void verificarPINEnServidor() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -769,10 +660,7 @@ void verificarPINEnServidor() {
     http.addHeader("Content-Type", "application/json");
     http.addHeader("X-API-Key", "IntegradorIOTKey2025");
     
-    // Obtener la MAC address del ESP32
     String macAddress = WiFi.macAddress();
-    
-    // Crear el JSON con la MAC y el PIN ingresado
     String jsonData = "{\"macAddress\":\"" + macAddress + "\",\"pin\":\"" + String(claveIngresada) + "\"}";
     
     int httpResponseCode = http.POST(jsonData);
@@ -780,12 +668,10 @@ void verificarPINEnServidor() {
     if (httpResponseCode == 200) {
       String response = http.getString();
       
-      // Verificar si el PIN está autorizado
       DynamicJsonDocument doc(256);
       deserializeJson(doc, response);
       
       if (doc["authorized"].as<bool>()) {
-        // PIN válido, conceder acceso
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("Acceso");
@@ -794,7 +680,6 @@ void verificarPINEnServidor() {
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
         
-        // Reiniciar contador y estado de alarma
         contadorDetecciones = 0;
         alarmaActivada = false;
         alarmaCicloCompletado = false;
@@ -805,7 +690,6 @@ void verificarPINEnServidor() {
         intentosFallidos = 0;
         estadoMenu = 0;
       } else {
-        // PIN no válido, mostrar error
         lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print("PIN");
@@ -818,7 +702,6 @@ void verificarPINEnServidor() {
         delay(2000);
       }
     } else {
-      // Error de conexión
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Error de");
@@ -829,7 +712,6 @@ void verificarPINEnServidor() {
     
     http.end();
   } else {
-    // Sin conexión WiFi
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Sin conexion");
@@ -841,7 +723,104 @@ void verificarPINEnServidor() {
   mostrarMenuPrincipal();
 }
 
-// Modificar la función verificarSensorPIR()
+void verificarRFID() {
+  if (registroRfidActivo || isRFIDOperationActive) return;
+  
+  mfrc522.PCD_Init();
+  delay(50);
+  
+  if (!mfrc522.PICC_IsNewCardPresent()) {
+    return;
+  }
+  
+  delay(50);
+  
+  if (!mfrc522.PICC_ReadCardSerial()) {
+    return;
+  }
+
+  String tagID = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    tagID += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
+    tagID += String(mfrc522.uid.uidByte[i], HEX);
+  }
+  
+  tagID.toUpperCase();
+  Serial.println("RFID detectado: " + tagID);
+  
+  if (mqttClient.connected()) {
+    mqttClient.publish("valoresPuerta/valorRFID", tagID.c_str(), true);
+    Serial.println("RFID publicado en HiveMQ: " + tagID);
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/rfids/verify-device";
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+    
+    String jsonData = "{\"rfid\":\"" + tagID + "\"}";
+    int httpResponseCode = http.POST(jsonData);
+    
+    if (httpResponseCode == 200) {
+      String response = http.getString();
+      Serial.println("Respuesta: " + response);
+      
+      DynamicJsonDocument doc(256);
+      deserializeJson(doc, response);
+      
+      if (doc["authorized"].as<bool>()) {
+        lcd.clear();
+        lcd.print("Acceso Concedido");
+        lcd.setCursor(0, 1);
+        lcd.print("RFID: " + tagID.substring(0, 8) + "...");
+        pitidoExito();
+        digitalWrite(RELAY_PIN, LOW);
+        
+        contadorDetecciones = 0;
+        alarmaActivada = false;
+        alarmaCicloCompletado = false;
+        
+        delay(5000);
+        digitalWrite(RELAY_PIN, HIGH);
+        intentosFallidos = 0;
+      } else {
+        lcd.clear();
+        lcd.print("RFID no");
+        lcd.setCursor(0, 1);
+        lcd.print("autorizado");
+        intentosFallidos++;
+        if (intentosFallidos >= 5) {
+          pitidoError();
+        }
+        delay(2000);
+      }
+    } else {
+      lcd.clear();
+      lcd.print("Error de");
+      lcd.setCursor(0, 1);
+      lcd.print("verificacion");
+      delay(2000);
+    }
+    
+    http.end();
+  } else {
+    lcd.clear();
+    lcd.print("Sin conexion");
+    lcd.setCursor(0, 1);
+    lcd.print("al servidor");
+    delay(2000);
+  }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
+  
+  mfrc522.PCD_Reset();
+  mfrc522.PCD_Init();
+
+  mostrarMenuPrincipal();
+}
 
 void verificarSensorPIR() {
   unsigned long tiempoActual = millis();
@@ -853,14 +832,12 @@ void verificarSensorPIR() {
       Serial.println("Movimiento detectado");
       Serial.println("Contador " + String(contadorDetecciones));
 
-      // Solo activar alarma si no ha completado un ciclo de pitidos
       if (contadorDetecciones >= 12 && !alarmaActivada && !alarmaCicloCompletado) {
         alarmaActivada = true;
         contadorPitidos = 0;
         tiempoUltimoPitido = tiempoActual;
         Serial.println("Alarma activada");
         
-        // Enviar datos al servidor
         if(WiFi.status() == WL_CONNECTED) {
           HTTPClient http;
           String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
@@ -882,19 +859,22 @@ void verificarSensorPIR() {
             Serial.println("Error en la petición HTTP. Código: " + String(httpResponseCode));
           }
           http.end();
-        }        
+        }
+        
+        if (mqttClient.connected()) {
+          mqttClient.publish("valoresPuerta/alarma", "activada", true);
+          Serial.println("Alarma publicada en HiveMQ");
+        }
       }
     }
   } else {
-    // Reinicio del contador por inactividad
     if (tiempoActual - tiempoUltimaDeteccion > 30000) {
       contadorDetecciones = 0;
-      alarmaCicloCompletado = false;  // Reiniciar esta bandera cuando se reinicia el contador
+      alarmaCicloCompletado = false;
       Serial.println("Contador reiniciado por inactividad");
     }
   }
   
-  // Control de alarma
   if (alarmaActivada && contadorPitidos < 6) {
     if (tiempoActual - tiempoUltimoPitido > 500) {
       digitalWrite(pinBuzzer, HIGH);
@@ -906,12 +886,11 @@ void verificarSensorPIR() {
       
       if (contadorPitidos >= 6) {
         alarmaActivada = false;
-        alarmaCicloCompletado = true;  // Marcar que ya completó un ciclo
+        alarmaCicloCompletado = true;
         Serial.println("Alarma desactivada después de 6 pitidos");
       }
     }
   } else {
-    // Mantener el buzzer apagado
     digitalWrite(pinBuzzer, LOW);
   }
 }
@@ -923,7 +902,6 @@ void mostrarMensajeHuella(const char* mensaje) {
 }
 
 void verificarHuella() {
-  // Si estamos en registro remoto, no verificar accesos
   if (registroRemotoActivo) return;
   
   int p = finger.getImage();
@@ -937,10 +915,9 @@ void verificarHuella() {
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
         
-        // Reiniciar contador y estado de alarma
         contadorDetecciones = 0;
         alarmaActivada = false;
-        alarmaCicloCompletado = false;  // Importante: reiniciar también esta bandera
+        alarmaCicloCompletado = false;
         
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
@@ -959,15 +936,13 @@ void verificarHuella() {
   }
 }
 
-// Añadir esta función a tu código Arduino
 void processFingerprintRegistration() {
   if (!isRegistrationActive) return;
   
   switch (registrationStep) {
-    case 1: // Esperando primera captura
+    case 1:
       {
-        // Mostrar mensaje en LCD periódicamente
-        if (millis() % 2000 < 1000) {  // Alternar cada segundo
+        if (millis() % 2000 < 1000) {
           lcd.setCursor(0, 0);
           lcd.print("Coloca tu dedo  ");
         } else {
@@ -1002,7 +977,7 @@ void processFingerprintRegistration() {
       }
       break;
       
-    case 2: // Esperando que retire el dedo
+    case 2:
       {
         lcd.setCursor(0, 0);
         lcd.print("Retira tu dedo  ");
@@ -1018,9 +993,8 @@ void processFingerprintRegistration() {
       }
       break;
       
-    case 3: // Esperando segunda captura
+    case 3:
       {
-        // Mostrar mensaje en LCD periódicamente
         if (millis() % 2000 < 1000) {
           lcd.setCursor(0, 0);
           lcd.print("Coloca tu dedo  ");
@@ -1096,84 +1070,23 @@ void processFingerprintRegistration() {
   }
 }
 
-// Modificar la función loop() para manejar el cambio de carácter:
-void loop() {
-  // Verificar si hay que reemplazar un carácter por asterisco
-  if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 400) {
-    lcd.setCursor(5 + posicionTeclaActual, 1);
-    lcd.print("*");  // Reemplazar con asterisco después de 400 milisegundos
-    reemplazarCaracter = false;
-  }
-  
-  // Capturar teclas del teclado
-  char tecla = teclado.getKey();
-  if (tecla) {
-    Serial.println("Tecla presionada: " + String(tecla));
-    
-    // Manejar la tecla según el estado del sistema
-    if (estadoMenu == 0) {
-      ingresarClave(tecla);
-    } else {
-      // Mostrar la tecla para otros usos
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Tecla: " + String(tecla));
-      delay(1000);
-      mostrarMenuPrincipal();
-    }
-  }
-  
-  // Verificar sensores
-  verificarSensorPIR();
-  verificarRFID();
-  verificarHuella();
-  verificarSensorMagnetico(); // Añadir verificación del sensor magnético
-  processFingerprintRegistration();
-  
-  // Manejar solicitudes del servidor web
-  server.handleClient();
-}
-
-// Función para verificar el estado del sensor magnético
 void verificarSensorMagnetico() {
   unsigned long tiempoActual = millis();
   
-  // Verificar el sensor cada DOOR_CHECK_INTERVAL ms
   if (tiempoActual - lastDoorStatusCheck >= DOOR_CHECK_INTERVAL) {
     lastDoorStatusCheck = tiempoActual;
     
     int nuevoEstado = digitalRead(MAGNETIC_SENSOR_PIN);
     
-    // Si hay un cambio de estado
     if (nuevoEstado != doorState) {
       doorState = nuevoEstado;
       Serial.println("Estado de puerta: " + String(doorState == HIGH ? "Abierta" : "Cerrada"));
       
-      // Enviar notificación de cambio de estado al servidor
       enviarCambioEstadoPuerta();
-      
-      // Si la puerta se abre cuando debería estar cerrada
-      if (doorState == HIGH && estaBloqueado) {
-        // Activar alarma por apertura no autorizada
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Alerta!");
-        lcd.setCursor(0, 1);
-        lcd.print("Puerta forzada");
-        
-        // Activar alarma
-        alarmaActivada = true;
-        contadorPitidos = 0;
-        tiempoUltimoPitido = tiempoActual;
-        
-        // Enviar alerta al servidor
-        enviarAlertaApertura();
-      }
     }
   }
 }
 
-// Nueva función para enviar el cambio de estado al servidor
 void enviarCambioEstadoPuerta() {
   if(WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -1195,10 +1108,30 @@ void enviarCambioEstadoPuerta() {
       Serial.println("Error al enviar cambio de estado: " + String(httpResponseCode));
     }
     http.end();
+    
+    if (mqttClient.connected()) {
+      mqttClient.publish("valoresPuerta/estadoPuerta", estadoActual.c_str(), true);
+      Serial.println("Estado de puerta publicado en HiveMQ: " + estadoActual);
+    }
+    
+    if(estadoActual == "open") {
+      http.begin("http://" + String(ipServer) + "/api/registros/add");
+      http.addHeader("Content-Type", "application/json");
+      http.addHeader("X-API-Key", "IntegradorIOTKey2025");
+      
+      String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
+      httpResponseCode = http.POST(registroData);
+      
+      if(httpResponseCode > 0) {
+        Serial.println("Registro de apertura creado correctamente");
+      } else {
+        Serial.println("Error al crear registro de apertura: " + String(httpResponseCode));
+      }
+      http.end();
+    }
   }
 }
 
-// Mantenemos el endpoint existente para consultas bajo demanda
 void handleDoorStatus() {
   sendCORSHeaders();
   
@@ -1210,7 +1143,6 @@ void handleDoorStatus() {
   server.send(200, "application/json", response);
 }
 
-// Función para enviar una alerta de apertura forzada al servidor
 void enviarAlertaApertura() {
   if(WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -1220,7 +1152,6 @@ void enviarAlertaApertura() {
     http.addHeader("Content-Type", "application/json");
     http.addHeader("X-API-Key", "IntegradorIOTKey2025");
     
-    // Crear un mensaje JSON con la alerta
     String jsonData = "{\"mensaje\":\"Alerta\",\"descripcion\":\"Apertura forzada de puerta\"}";
     
     int httpResponseCode = http.POST(jsonData);
@@ -1235,4 +1166,54 @@ void enviarAlertaApertura() {
   }
 }
 
-// FIN DEL ARCHIVO - No debe haber nada después de esta línea
+void loop() {
+  if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 400) {
+    lcd.setCursor(5 + posicionTeclaActual, 1);
+    lcd.print("*");
+    reemplazarCaracter = false;
+  }
+  
+  char tecla = teclado.getKey();
+  if (tecla) {
+    Serial.println("Tecla presionada: " + String(tecla));
+    if (estadoMenu == 0) {
+      ingresarClave(tecla);
+    } else {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Tecla: " + String(tecla));
+      delay(1000);
+      mostrarMenuPrincipal();
+    }
+  }
+  
+  verificarSensorPIR();
+  verificarRFID();
+  verificarHuella();
+  verificarSensorMagnetico();
+  processFingerprintRegistration();
+  
+  server.handleClient();
+
+  if (!mqttClient.connected()) {
+    reconnectMQTT();
+  }
+  mqttClient.loop();
+  
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastMqttPublish >= MQTT_PUBLISH_INTERVAL) {
+    lastMqttPublish = currentMillis;
+    
+    char pirMsg[10];
+    sprintf(pirMsg, "%d", contadorDetecciones);
+    mqttClient.publish(mqtt_pir_topic, pirMsg, true);
+    
+    char doorMsg[2];
+    sprintf(doorMsg, "%d", doorState);
+    mqttClient.publish(mqtt_magnetic_topic, doorMsg, true);
+    
+    // Publicar la dirección MAC periódicamente
+    String macAddress = WiFi.macAddress();
+    mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+  }
+}

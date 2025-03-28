@@ -1,10 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    Modal,
+    Animated,
+    Dimensions,
+    TouchableWithoutFeedback
+} from 'react-native';
 import { Entypo, Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart } from './CartContext';
 import { useFocusEffect } from '@react-navigation/native';
+
+// Obtener dimensiones de pantalla
+const { width, height } = Dimensions.get('window');
 
 type HeaderProps = {
     title?: string;
@@ -24,6 +36,10 @@ const Header = ({
     const [menuVisible, setMenuVisible] = useState(false);
     const [hasDevice, setHasDevice] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    // Animaciones
+    const backdropAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(width)).current;
 
     // Función para verificar estado de login y dispositivo
     const checkDeviceAndLoginStatus = useCallback(async () => {
@@ -60,7 +76,7 @@ const Header = ({
 
             console.log('[Header] Solicitando estado del dispositivo al servidor...');
 
-            const response = await fetch('http://192.168.8.7:8082/api/users/check-device', {
+            const response = await fetch('http://192.168.1.133:8082/api/users/check-device', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -94,12 +110,40 @@ const Header = ({
         checkDeviceAndLoginStatus();
     }, [checkDeviceAndLoginStatus]);
 
-    // Verificar cada vez que el menú se abre
+    // Gestionar animaciones del menú
     useEffect(() => {
         if (menuVisible) {
             checkDeviceAndLoginStatus();
+
+            // Animar apertura del menú
+            Animated.parallel([
+                Animated.timing(backdropAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: width * 0.3,
+                    duration: 300,
+                    useNativeDriver: true,
+                })
+            ]).start();
+        } else {
+            // Animar cierre del menú
+            Animated.parallel([
+                Animated.timing(backdropAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: width,
+                    duration: 300,
+                    useNativeDriver: true,
+                })
+            ]).start();
         }
-    }, [menuVisible, checkDeviceAndLoginStatus]);
+    }, [menuVisible, checkDeviceAndLoginStatus, backdropAnim, slideAnim]);
 
     // Verificar cada vez que la pantalla recibe foco
     useFocusEffect(
@@ -185,6 +229,11 @@ const Header = ({
         router.push('/carrito');
     };
 
+    // Cerrar el menú al tocar el fondo
+    const closeMenu = () => {
+        setMenuVisible(false);
+    };
+
     return (
         <>
             {/* Barra Superior */}
@@ -219,7 +268,8 @@ const Header = ({
                             <Feather name="user" size={24} color="#1E1E1E" />
                         </TouchableOpacity>
                     )}
-                    {/* INVERTIDO: Primero el botón de menú */}
+
+                    {/* Botón de menú */}
                     {showMenu && (
                         <TouchableOpacity
                             onPress={() => setMenuVisible(true)}
@@ -231,88 +281,83 @@ const Header = ({
                 </View>
             </View>
 
-            {/* Modal para el Menú */}
+            {/* Menú Lateral (reemplaza el Modal) */}
             {showMenu && (
-                <Modal
-                    visible={menuVisible}
-                    transparent={true}
-                    animationType="slide"
-                    onRequestClose={() => setMenuVisible(false)}
-                >
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Opciones</Text>
+                <>
+                    {/* Fondo oscuro con efecto fade */}
+                    <Animated.View
+                        style={[
+                            styles.backdrop,
+                            {
+                                opacity: backdropAnim,
+                                display: menuVisible ? 'flex' : 'none'
+                            }
+                        ]}
+                    >
+                        <TouchableWithoutFeedback onPress={closeMenu}>
+                            <View style={{ width: '100%', height: '100%' }} />
+                        </TouchableWithoutFeedback>
+                    </Animated.View>
 
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/empresa')}>
-                                <Text style={styles.modalText}>Empresa</Text>
+                    {/* Panel lateral deslizante */}
+                    <Animated.View
+                        style={[
+                            styles.sideMenu,
+                            { transform: [{ translateX: slideAnim }] }
+                        ]}
+                    >
+                        <View style={styles.menuHeader}>
+                            <Text style={styles.menuTitle}>Menú</Text>
+                            <TouchableOpacity onPress={closeMenu} style={styles.closeIcon}>
+                                <Ionicons name="close" size={24} color="#1E1E1E" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.menuDivider} />
+
+                        <View style={styles.menuItems}>
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => navigateWithAuthCheck('/empresa')}
+                            >
+                                <Ionicons name="business-outline" size={22} color="#1E1E1E" style={styles.menuItemIcon} />
+                                <Text style={styles.menuItemText}>Empresa</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/CatalogoProductosScreen')}>
-                                <Text style={styles.modalText}>Productos</Text>
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => navigateWithAuthCheck('/CatalogoProductosScreen')}
+                            >
+                                <Ionicons name="grid-outline" size={22} color="#1E1E1E" style={styles.menuItemIcon} />
+                                <Text style={styles.menuItemText}>Productos</Text>
                             </TouchableOpacity>
 
                             {/* Mostrar opción Dispositivo IoT solo si el usuario tiene un dispositivo y está logueado */}
                             {isLoggedIn && hasDevice && (
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/devices')}>
-                                    <Text style={styles.modalText}>
-                                        Control de mi dispositivo IoT
-                                    </Text>
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={() => navigateWithAuthCheck('/devices')}
+                                >
+                                    <Ionicons name="hardware-chip-outline" size={22} color="#1E1E1E" style={styles.menuItemIcon} />
+                                    <Text style={styles.menuItemText}>Control IoT</Text>
                                 </TouchableOpacity>
                             )}
-
-                            {/* Mostrar opción para Registrar Dispositivo si está logueado pero no tiene dispositivo
-                            {isLoggedIn && !hasDevice && (
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/registroDispositivo')}>
-                                    <Text style={styles.modalText}>Registrar Dispositivo</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            {/* Admin options
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/Aggprod')}>
-                                <Text style={styles.modalText}>Admin (agg prod)</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => navigateWithAuthCheck('/AggDatosEmp')}>
-                                <Text style={styles.modalText}>Admin (datos empresa)</Text>
-                            </TouchableOpacity> */}
-
-                            {/* Opción para depuración - Solo visible en desarrollo
-                            {__DEV__ && (
-                                <TouchableOpacity onPress={() => navigateWithAuthCheck('/debug')}>
-                                    <Text style={styles.modalText}>Debug Info</Text>
-                                </TouchableOpacity>
-                            )} */}
-
-                            {/* Botón de cerrar */}
-                            <TouchableOpacity style={styles.closeButton} onPress={() => setMenuVisible(false)}>
-                                <Text style={styles.closeButtonText}>Cerrar</Text>
-                            </TouchableOpacity>
                         </View>
-                    </View>
-                </Modal>
+
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={closeMenu}
+                        >
+                            <Text style={styles.closeButtonText}>Cerrar</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </>
             )}
         </>
     );
 };
 
 const styles = StyleSheet.create({
-    // Estilos existentes...
-    badge: {
-        position: 'absolute',
-        right: -6,
-        top: -3,
-        backgroundColor: '#dc3545',
-        borderRadius: 10,
-        width: 18,
-        height: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    badgeText: {
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
     topBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -337,42 +382,98 @@ const styles = StyleSheet.create({
         marginLeft: 15,
         position: 'relative',
     },
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+    badge: {
+        position: 'absolute',
+        right: -6,
+        top: -3,
+        backgroundColor: '#dc3545',
+        borderRadius: 10,
+        width: 18,
+        height: 18,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    modalContent: {
-        width: '80%',
-        backgroundColor: '#FFF',
-        padding: 20,
-        borderRadius: 10,
+    badgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    backdrop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        zIndex: 10,
+    },
+    sideMenu: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: '70%',
+        height: '100%',
+        backgroundColor: '#FFFFFF',
+        zIndex: 11,
+        paddingTop: 50,
+        paddingHorizontal: 20,
+        paddingBottom: 30,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: -2,
+            height: 0
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    menuHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 20,
     },
-    modalTitle: {
-        fontSize: 22,
+    menuTitle: {
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 10,
+        color: '#1E1E1E',
     },
-    modalText: {
+    closeIcon: {
+        padding: 5,
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#E0E0E0',
+        marginBottom: 20,
+    },
+    menuItems: {
+        flex: 1,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    menuItemIcon: {
+        marginRight: 15,
+    },
+    menuItemText: {
         fontSize: 18,
-        paddingVertical: 10,
-    },
-    statusIndicator: {
-        color: 'green',
-        marginLeft: 5,
-        fontWeight: 'bold',
+        color: '#1E1E1E',
     },
     closeButton: {
-        marginTop: 15,
         backgroundColor: '#007bff',
-        padding: 10,
+        paddingVertical: 12,
         borderRadius: 5,
+        alignItems: 'center',
+        marginTop: 20,
     },
     closeButtonText: {
-        color: '#FFF',
+        color: '#FFFFFF',
         fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

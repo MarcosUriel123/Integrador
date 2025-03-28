@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -9,22 +9,22 @@ import {
     ActivityIndicator,
     TouchableOpacity,
     Image,
-    Alert
+    Alert,
+    Animated,
+    Dimensions
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Header from './Header';
 import Footer from './Footer';
-// Importación corregida - asumiendo que CartContext está en la raíz del proyecto
 import { useCart } from './CartContext';
-// Importación faltante de ProductCard
 import ProductCard from './ProductCard ';
-import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener esta dependencia
 import BotonVolver from '../componentes/BotonVolver';
 
 // Tipos existentes...
 type Product = {
-    id: string; // Cambiado de _id a id
+    id: string;
     name: string;
     description: string;
     price: number;
@@ -42,6 +42,9 @@ type ProductResponse = {
     image: string;
 };
 
+// Obtener dimensiones de pantalla
+const { width } = Dimensions.get('window');
+
 export default function PantallaCatalogoProductos() {
     const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
@@ -54,14 +57,32 @@ export default function PantallaCatalogoProductos() {
     const [productsPerPage] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
 
+    // Animaciones
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
     useEffect(() => {
+        // Animación de entrada
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            })
+        ]).start();
+
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.8.7:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://192.168.1.133:8082/api/products/get');
                 if (response.status === 200) {
                     // Mapear la respuesta para convertir _id a id
                     const formattedProducts = response.data.map(product => ({
-                        id: product._id, // Convertir _id a id
+                        id: product._id,
                         name: product.name,
                         description: product.description,
                         price: product.price,
@@ -123,7 +144,12 @@ export default function PantallaCatalogoProductos() {
 
     // Modificar la función renderProductItem para manejar el ancho de las cards
     const renderProductItem = ({ item }: { item: Product }) => (
-        <View style={styles.productCardContainer}>
+        <Animated.View
+            style={[
+                styles.productCardContainer,
+                { opacity: fadeAnim }
+            ]}
+        >
             <ProductCard
                 product={item}
                 onPress={() => handleProductPress(item)}
@@ -132,7 +158,7 @@ export default function PantallaCatalogoProductos() {
                     Alert.alert('Producto añadido', `${product.name} se añadió al carrito`);
                 }}
             />
-        </View>
+        </Animated.View>
     );
 
     // Referencia para el ScrollView
@@ -146,73 +172,85 @@ export default function PantallaCatalogoProductos() {
             >
                 <View style={styles.cardContainer}>
                     <Header title="Catálogo de Productos" />
-                    <BotonVolver destino="/" />
 
-                    {loading ? (
-                        <View style={styles.contentContainer}>
-                            <ActivityIndicator size="large" color="#007bff" />
-                            <Text style={styles.loadingText}>Cargando productos...</Text>
-                        </View>
-                    ) : error ? (
-                        <View style={styles.contentContainer}>
-                            <Text style={styles.errorText}>{error}</Text>
-                        </View>
-                    ) : (
-                        <View style={styles.contentContainer}>
-                            <Text style={styles.title}>Catálogo de Productos</Text>
+                    <View style={styles.buttonBackContainer}>
+                        <BotonVolver destino="/" />
+                    </View>
 
-                            {products.length === 0 ? (
-                                <Text style={styles.emptyText}>No hay productos disponibles</Text>
-                            ) : (
-                                <>
-                                    <FlatList
-                                        data={getCurrentPageProducts()}
-                                        renderItem={renderProductItem}
-                                        keyExtractor={(item) => item.id}
-                                        scrollEnabled={false}
-                                        contentContainerStyle={styles.listContent}
-                                    />
+                    <Animated.View
+                        style={[
+                            styles.contentContainer,
+                            { transform: [{ scale: scaleAnim }] }
+                        ]}
+                    >
+                        {loading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color="#3182CE" />
+                                <Text style={styles.loadingText}>Cargando productos...</Text>
+                            </View>
+                        ) : error ? (
+                            <View style={styles.errorContainer}>
+                                <Text style={styles.errorText}>{error}</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.productsSection}>
+                                <Text style={styles.sectionTitle}>Catálogo de Productos</Text>
 
-                                    {/* Controles de paginación */}
-                                    <View style={styles.paginationContainer}>
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.paginationButton,
-                                                currentPage === 1 && styles.paginationButtonDisabled
-                                            ]}
-                                            onPress={goToPreviousPage}
-                                            disabled={currentPage === 1}
-                                        >
-                                            <Ionicons name="chevron-back" size={22} color={currentPage === 1 ? "#999" : "#007bff"} />
-                                            <Text style={[
-                                                styles.paginationButtonText,
-                                                currentPage === 1 && styles.paginationButtonTextDisabled
-                                            ]}>Anterior</Text>
-                                        </TouchableOpacity>
+                                {products.length === 0 ? (
+                                    <Text style={styles.emptyText}>No hay productos disponibles</Text>
+                                ) : (
+                                    <>
+                                        <FlatList
+                                            data={getCurrentPageProducts()}
+                                            renderItem={renderProductItem}
+                                            keyExtractor={(item) => item.id}
+                                            scrollEnabled={false}
+                                            contentContainerStyle={styles.listContent}
+                                        />
 
-                                        <Text style={styles.paginationInfo}>
-                                            Página {currentPage} de {totalPages}
-                                        </Text>
+                                        {/* Controles de paginación */}
+                                        <View style={styles.paginationContainer}>
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.paginationButton,
+                                                    currentPage === 1 && styles.paginationButtonDisabled
+                                                ]}
+                                                onPress={goToPreviousPage}
+                                                disabled={currentPage === 1}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="chevron-back" size={22} color={currentPage === 1 ? "#A0AEC0" : "#3182CE"} />
+                                                <Text style={[
+                                                    styles.paginationButtonText,
+                                                    currentPage === 1 && styles.paginationButtonTextDisabled
+                                                ]}>Anterior</Text>
+                                            </TouchableOpacity>
 
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.paginationButton,
-                                                currentPage === totalPages && styles.paginationButtonDisabled
-                                            ]}
-                                            onPress={goToNextPage}
-                                            disabled={currentPage === totalPages}
-                                        >
-                                            <Text style={[
-                                                styles.paginationButtonText,
-                                                currentPage === totalPages && styles.paginationButtonTextDisabled
-                                            ]}>Siguiente</Text>
-                                            <Ionicons name="chevron-forward" size={22} color={currentPage === totalPages ? "#999" : "#007bff"} />
-                                        </TouchableOpacity>
-                                    </View>
-                                </>
-                            )}
-                        </View>
-                    )}
+                                            <Text style={styles.paginationInfo}>
+                                                Página {currentPage} de {totalPages}
+                                            </Text>
+
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.paginationButton,
+                                                    currentPage === totalPages && styles.paginationButtonDisabled
+                                                ]}
+                                                onPress={goToNextPage}
+                                                disabled={currentPage === totalPages}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Text style={[
+                                                    styles.paginationButtonText,
+                                                    currentPage === totalPages && styles.paginationButtonTextDisabled
+                                                ]}>Siguiente</Text>
+                                                <Ionicons name="chevron-forward" size={22} color={currentPage === totalPages ? "#A0AEC0" : "#3182CE"} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                        )}
+                    </Animated.View>
 
                     <Footer showContactInfo={true} showTerms={true} />
                 </View>
@@ -221,138 +259,153 @@ export default function PantallaCatalogoProductos() {
     );
 }
 
-// Estilos existentes más los nuevos...
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: '#CFE2FF',
+        backgroundColor: '#f0f4f8', // Mismo fondo que PantallaPrincipal
     },
     cardContainer: {
-        // Eliminar el margen horizontal para ocupar el ancho completo
-        marginVertical: 20,
-        marginHorizontal: 0, // Cambiar de margin: 20 a solo márgenes verticales
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
         padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 6,
+    },
+    buttonBackContainer: {
+        marginBottom: 15,
+        marginTop: 5,
     },
     contentContainer: {
-        flex: 1,
-        width: '100%', // Asegurar que ocupa todo el ancho
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 20,
-        // Eliminar cualquier padding horizontal si existe
-        paddingHorizontal: 0,
         minHeight: 300,
     },
-    title: {
-        fontSize: 22,
+    productsSection: {
+        width: '100%',
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        padding: 22,
+        shadowColor: "rgba(0,0,0,0.2)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 24,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.8)',
+        marginBottom: 30,
+    },
+    sectionTitle: {
+        fontSize: 26,
         fontWeight: 'bold',
-        color: '#1E1E1E',
-        marginVertical: 15,
-        textAlign: 'center',
+        marginBottom: 24,
+        color: '#1A365D',
+        borderBottomWidth: 3,
+        borderBottomColor: '#3182CE',
+        paddingBottom: 12,
+        width: '65%',
+        letterSpacing: 0.5,
     },
     emptyText: {
         fontSize: 16,
-        color: '#6c757d',
+        color: '#4A5568',
         textAlign: 'center',
         marginTop: 20,
+        marginBottom: 20,
     },
-    // Estilos existentes...
+    loadingContainer: {
+        padding: 40,
+        alignItems: 'center',
+        backgroundColor: '#F7FAFC',
+        borderRadius: 16,
+        marginVertical: 10,
+        shadowColor: "rgba(0,0,0,0.05)",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#EDF2F7',
+        width: '100%',
+    },
     loadingText: {
         marginTop: 15,
         fontSize: 16,
-        color: '#6c757d',
+        color: '#4A5568',
+        fontWeight: '500',
+    },
+    errorContainer: {
+        padding: 22,
+        backgroundColor: '#FFF5F5',
+        borderRadius: 16,
+        borderLeftWidth: 5,
+        borderLeftColor: '#FC8181',
+        marginVertical: 10,
+        shadowColor: "rgba(0,0,0,0.05)",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 2,
+        width: '100%',
     },
     errorText: {
-        color: '#dc3545',
-        fontSize: 18,
+        color: '#C53030',
         textAlign: 'center',
+        fontSize: 16,
+        fontWeight: '500',
+        letterSpacing: 0.3,
     },
     listContent: {
         width: '100%',
-        paddingHorizontal: 0, // Eliminar el padding horizontal
     },
-    // Nuevos estilos para paginación
+    productCardContainer: {
+        width: '100%',
+        marginBottom: 16,
+        backgroundColor: '#F7FAFC',
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        shadowColor: "rgba(0,0,0,0.06)",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
     paginationContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 25,
         width: '100%',
-        paddingHorizontal: 10,
+        paddingHorizontal: 5,
     },
     paginationButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: '#f0f8ff',
+        padding: 10,
+        borderRadius: 12,
+        backgroundColor: '#EBF8FF',
+        shadowColor: "rgba(0,0,0,0.05)",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 1,
     },
     paginationButtonDisabled: {
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#F7FAFC',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     paginationButtonText: {
-        color: '#007bff',
+        color: '#3182CE',
         fontWeight: '600',
         fontSize: 14,
+        marginHorizontal: 4,
+        letterSpacing: 0.2,
     },
     paginationButtonTextDisabled: {
-        color: '#999',
+        color: '#A0AEC0',
     },
     paginationInfo: {
         fontSize: 14,
-        color: '#555',
-    },
-    // Mantén el resto de estilos aquí...
-    productCard: {
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-        padding: 15,
-        marginBottom: 10,
-    },
-    productImage: {
-        width: '100%',
-        height: 150,
-        borderRadius: 8,
-        marginBottom: 10,
-    },
-    productName: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 5,
-    },
-    productDescription: {
-        fontSize: 14,
-        color: '#6c757d',
-        marginBottom: 8,
-    },
-    detailsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    priceText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#28a745',
-    },
-    categoryText: {
-        fontSize: 14,
-        color: '#fff',
-        backgroundColor: '#007bff',
-        borderRadius: 4,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-    },
-    // Nuevo estilo para el contenedor de cada tarjeta
-    productCardContainer: {
-        width: '100%', // Cada tarjeta ocupa el 100% del ancho
-        marginBottom: 15, // Aumentar el espacio entre tarjetas para mejor separación visual
+        color: '#4A5568',
+        fontWeight: '500',
     },
 });
