@@ -1,4 +1,3 @@
-// Ruta: Integrador/backend/routes/deviceRoutes.ts
 import express, { Request, Response } from 'express';
 import { registerDevice, getDevices, getDevicePin, getUserDevices } from '../controllers/deviceController';
 import { protect } from '../middlewares/authMiddleware';

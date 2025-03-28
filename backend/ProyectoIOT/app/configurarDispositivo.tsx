@@ -1,4 +1,4 @@
-// Ruta: backend/ProyectoIOT/app/configurarDispositivo.tsx
+// app/puerta.tsx
 import React from 'react';
 import PantallaConfigurarDispositivo from '../componentes/PantallaConfigurarDispositivo';
 
