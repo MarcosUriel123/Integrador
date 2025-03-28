@@ -4,7 +4,6 @@ import {
     ScrollView,
     View,
     Text,
-    TextInput,
     TouchableOpacity,
     StyleSheet
 } from 'react-native';
@@ -13,7 +12,7 @@ import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import BotonVolver from '../componentes/BotonVolver';
-import input from './Inputapp'; // Asegúrate de que la ruta sea correcta
+import InputApp from './Inputapp'; // Corregido: importación correcta
 
 // Define la interfaz para la respuesta del login
 interface LoginResponse {
@@ -30,7 +29,26 @@ export default function PantallaLogin1() {
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
+    // Estados para validación
+    const [emailValid, setEmailValid] = useState(false);
+    const [passwordValid, setPasswordValid] = useState(false);
+
     const handleLogin = async () => {
+        // Verificar que ambos campos sean válidos
+        if (!emailValid) {
+            setErrorMessage('Por favor, ingresa un correo electrónico válido');
+            return;
+        }
+
+        // No validamos exhaustivamente la contraseña en el login,
+        // pero sí verificamos que no esté vacía
+        if (!password) {
+            setErrorMessage('Por favor, ingresa tu contraseña');
+            return;
+        }
+
+        setErrorMessage('');
+
         try {
             const response = await axios.post<LoginResponse>('http://192.168.8.2:8082/api/users/login', {
                 email,
@@ -44,7 +62,6 @@ export default function PantallaLogin1() {
                     await AsyncStorage.setItem('userId', response.data._id);
 
                     // NUEVO: Inicializar el valor userHasDevice como 'false' por defecto
-                    // Esto evita problemas cuando Header intenta leer este valor
                     await AsyncStorage.setItem('userHasDevice', 'false');
 
                     console.log('Token guardado:', response.data.token);
@@ -52,19 +69,30 @@ export default function PantallaLogin1() {
                 } else {
                     console.error('No se recibió un token del servidor');
                     setErrorMessage("Error en la respuesta del servidor");
-                    return; // Detener la ejecución si no hay token
+                    return;
                 }
 
                 // Redirige a la pantalla principal usando expo-router
                 handleSuccessfulLogin();
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error al iniciar sesión:", error);
+
+            // Mostrar mensaje de error más específico
+            if (error.response) {
+                if (error.response.status === 401) {
+                    setErrorMessage("Credenciales incorrectas");
+                } else {
+                    setErrorMessage(error.response.data?.message || "Error al iniciar sesión");
+                }
+            } else {
+                setErrorMessage("No se pudo conectar con el servidor");
+            }
         }
     };
 
     const handleSuccessfulLogin = async () => {
-        // Después de guardar token y datos de usuario:
+        // Resto de la función sin cambios
         const redirectPath = await AsyncStorage.getItem('redirectAfterLogin');
 
         if (redirectPath) {
@@ -86,43 +114,62 @@ export default function PantallaLogin1() {
                     <View style={styles.contentContainer}>
                         <Feather name="lock" size={80} color="black" style={styles.icon} />
                         <Text style={styles.title}>Iniciar Sesión</Text>
-                        <Text style={styles.label}>Correo Electrónico</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ingresa tu correo electrónico"
+
+                        {/* Nuevo componente para correo electrónico */}
+                        <InputApp
+                            tipo="correo"
                             value={email}
                             onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
+                            showValidation={email.length > 0}
+                            onValidationChange={setEmailValid}
+                            containerStyle={styles.inputContainer}
                         />
-                        <Text style={styles.label}>Contraseña</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ingresa tu contraseña"
-                            secureTextEntry
+
+                        {/* Nuevo componente para contraseña */}
+                        <InputApp
+                            tipo="contrasenna"
                             value={password}
                             onChangeText={setPassword}
+                            showValidation={false} // No mostramos validaciones para contraseña en login
+                            onValidationChange={setPasswordValid}
+                            containerStyle={styles.inputContainer}
                         />
 
                         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.button,
+                                !emailValid && styles.buttonDisabled
+                            ]}
+                            onPress={handleLogin}
+                            disabled={!emailValid}
+                        >
                             <Text style={styles.buttonText}>Iniciar Sesión</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/registro1')}>
-                            <Text>¿No tienes cuenta? Regístrate aquí</Text>
+
+                        <TouchableOpacity
+                            style={styles.linkButton}
+                            onPress={() => router.push('/registro1')}
+                        >
+                            <Text style={styles.linkText}>¿No tienes cuenta? Regístrate aquí</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/recovery')}>
-                            <Text>¿Olvidaste tu contraseña?</Text>
+
+                        <TouchableOpacity
+                            style={styles.linkButton}
+                            onPress={() => router.push('/recovery')}
+                        >
+                            <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
-
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    // Estilos existentes
     screen: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -153,6 +200,7 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         alignItems: 'center',
+        width: '100%',
     },
     icon: {
         marginBottom: 20,
@@ -162,19 +210,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 20,
     },
-    label: {
-        alignSelf: 'flex-start',
-        fontSize: 16,
-        marginBottom: 5,
-    },
-    input: {
+    // Nuevos estilos para los componentes InputApp
+    inputContainer: {
+        marginBottom: 10,
         width: '100%',
-        height: 40,
-        borderColor: '#ccc',
-        borderWidth: 1,
-        borderRadius: 5,
-        marginBottom: 15,
-        paddingHorizontal: 10,
     },
     button: {
         width: '100%',
@@ -183,6 +222,10 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 10,
+    },
+    buttonDisabled: {
+        backgroundColor: '#cccccc',
     },
     buttonText: {
         color: '#fff',
@@ -192,14 +235,14 @@ const styles = StyleSheet.create({
     error: {
         color: 'red',
         marginBottom: 10,
+        textAlign: 'center',
     },
-    backButton: {
-        position: 'absolute',
-        top: 40,
-        left: 20,
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        zIndex: 10,
+    linkButton: {
+        marginTop: 15,
+        padding: 5,
     },
+    linkText: {
+        color: '#007bff',
+        textAlign: 'center',
+    }
 });

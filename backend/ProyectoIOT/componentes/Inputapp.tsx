@@ -7,13 +7,18 @@ import {
     StyleSheet,
     StyleProp,
     ViewStyle,
-    TextStyle
+    TextStyle,
+    KeyboardType
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-interface PasswordInputProps {
+// Tipos de input soportados
+type InputType = 'telefono' | 'nombre' | 'correo' | 'contrasenna' | 'texto';
+
+interface InputProps {
     value: string;
     onChangeText: (text: string) => void;
+    tipo: InputType;
     placeholder?: string;
     label?: string;
     errorMessage?: string;
@@ -21,84 +26,192 @@ interface PasswordInputProps {
     inputStyle?: StyleProp<TextStyle>;
     showValidation?: boolean;
     onValidationChange?: (isValid: boolean) => void;
+    maxLength?: number;
 }
 
 interface ValidationState {
-    minLength: boolean;
-    hasLowerCase: boolean;
-    hasUpperCase: boolean;
-    hasNumber: boolean;
-    hasSpecialChar: boolean;
+    isValid: boolean;
+    messages: { text: string; isValid: boolean }[];
 }
 
-export default function PasswordInput({
+export default function InputApp({
     value,
     onChangeText,
-    placeholder = 'Ingresa tu contraseña',
-    label = 'Contraseña',
+    tipo,
+    placeholder = '',
+    label = '',
     errorMessage,
     containerStyle,
     inputStyle,
     showValidation = true,
-    onValidationChange
-}: PasswordInputProps) {
+    onValidationChange,
+    maxLength
+}: InputProps) {
     const [visible, setVisible] = useState(false);
-    const [validations, setValidations] = useState<ValidationState>({
-        minLength: false,
-        hasLowerCase: false,
-        hasUpperCase: false,
-        hasNumber: false,
-        hasSpecialChar: false
+    const [validationState, setValidationState] = useState<ValidationState>({
+        isValid: false,
+        messages: []
     });
 
-    // Función para validar la contraseña
-    const validatePassword = (password: string) => {
-        const newValidations = {
-            minLength: password.length >= 8,
-            hasLowerCase: /[a-z]/.test(password),
-            hasUpperCase: /[A-Z]/.test(password),
-            hasNumber: /\d/.test(password),
-            hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-        };
+    // Configurar placeholder y label por defecto según el tipo
+    useEffect(() => {
+        if (!placeholder) {
+            switch (tipo) {
+                case 'telefono':
+                    placeholder = 'Ingresa tu número de teléfono';
+                    break;
+                case 'nombre':
+                    placeholder = 'Ingresa tu nombre';
+                    break;
+                case 'correo':
+                    placeholder = 'Ingresa tu correo electrónico';
+                    break;
+                case 'contrasenna':
+                    placeholder = 'Ingresa tu contraseña';
+                    break;
+                default:
+                    placeholder = 'Ingresa texto';
+            }
+        }
 
-        setValidations(newValidations);
+        if (!label) {
+            switch (tipo) {
+                case 'telefono':
+                    label = 'Teléfono';
+                    break;
+                case 'nombre':
+                    label = 'Nombre';
+                    break;
+                case 'correo':
+                    label = 'Correo electrónico';
+                    break;
+                case 'contrasenna':
+                    label = 'Contraseña';
+                    break;
+                default:
+                    label = 'Texto';
+            }
+        }
+    }, [tipo]);
 
-        // Verificar si todas las validaciones son verdaderas
-        const isValid = Object.values(newValidations).every(v => v);
+    // Determinar el tipo de teclado según el tipo de input
+    const getKeyboardType = (): KeyboardType => {
+        switch (tipo) {
+            case 'telefono':
+                return 'phone-pad';
+            case 'correo':
+                return 'email-address';
+            case 'contrasenna':
+                return 'default';
+            default:
+                return 'default';
+        }
+    };
+
+    // Función para validar según el tipo - MODIFICADA PARA CORREO
+    const validateInput = (text: string) => {
+        let messages: { text: string; isValid: boolean }[] = [];
+        let isValid = false;
+
+        switch (tipo) {
+            case 'telefono':
+                // Validación de teléfono sin cambios
+                const isOnlyNumbers = /^\d+$/.test(text);
+                const isCorrectLength = text.length === 10;
+
+                messages = [
+                    { text: 'Debe contener solo números', isValid: isOnlyNumbers },
+                    { text: 'Debe tener exactamente 10 dígitos', isValid: isCorrectLength }
+                ];
+
+                isValid = isOnlyNumbers && isCorrectLength;
+                break;
+
+            case 'nombre':
+                // Validación de nombre sin cambios
+                const hasOnlyLetters = /^[a-zA-Z\s]+$/.test(text);
+                const isUnderMaxLength = text.length <= (maxLength || 20);
+
+                messages = [
+                    { text: 'Solo debe contener letras', isValid: hasOnlyLetters },
+                    { text: `Máximo ${maxLength || 20} caracteres`, isValid: isUnderMaxLength }
+                ];
+
+                isValid = hasOnlyLetters && isUnderMaxLength;
+                break;
+
+            case 'correo':
+                // MODIFICACIÓN: Una única validación integral para correo
+                // La expresión regular verifica:
+                // - Que tenga texto antes del @
+                // - Que tenga un @ en medio
+                // - Que tenga texto después del @
+                // - Que termine en .com
+                const isValidEmail = /^[^\s@]+@[^\s@]+\.com$/i.test(text);
+
+                messages = [
+                    { text: 'Debe ser un correo válido', isValid: isValidEmail }
+                ];
+
+                isValid = isValidEmail;
+                break;
+
+            case 'contrasenna':
+                // Validación de contraseña sin cambios
+                const hasMinLength = text.length >= 8;
+                const hasLowerCase = /[a-z]/.test(text);
+                const hasUpperCase = /[A-Z]/.test(text);
+                const hasNumber = /\d/.test(text);
+                const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(text);
+
+                messages = [
+                    { text: 'Al menos 8 caracteres', isValid: hasMinLength },
+                    { text: 'Una letra minúscula', isValid: hasLowerCase },
+                    { text: 'Una letra mayúscula', isValid: hasUpperCase },
+                    { text: 'Un número', isValid: hasNumber },
+                    { text: 'Un caracter especial', isValid: hasSpecialChar }
+                ];
+
+                isValid = hasMinLength && hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar;
+                break;
+
+            default:
+                isValid = true;
+                break;
+        }
+
+        setValidationState({ isValid, messages });
+
         if (onValidationChange) {
             onValidationChange(isValid);
         }
     };
 
-    // Validar la contraseña cada vez que cambia
+    // Validar cada vez que cambia el valor
     useEffect(() => {
-        validatePassword(value);
+        validateInput(value);
     }, [value]);
 
     const toggleVisibility = () => {
         setVisible(!visible);
     };
 
-    // Función para renderizar cada criterio de validación
-    const renderValidationItem = (
-        key: keyof ValidationState,
-        text: string
-    ) => {
-        const isValid = validations[key];
+    // Renderiza cada elemento de validación
+    const renderValidationItem = (item: { text: string; isValid: boolean }, index: number) => {
         return (
-            <View style={styles.validationItem}>
+            <View key={index} style={styles.validationItem}>
                 <Feather
-                    name={isValid ? 'check-circle' : 'circle'}
+                    name={item.isValid ? 'check-circle' : 'circle'}
                     size={16}
-                    color={isValid ? '#4CAF50' : '#9E9E9E'}
+                    color={item.isValid ? '#4CAF50' : '#9E9E9E'}
                 />
                 <Text
                     style={[
                         styles.validationText,
-                        isValid ? styles.validText : styles.invalidText
+                        item.isValid ? styles.validText : styles.invalidText
                     ]}
                 >
-                    {text}
+                    {item.text}
                 </Text>
             </View>
         );
@@ -112,36 +225,48 @@ export default function PasswordInput({
                 <TextInput
                     style={[styles.input, inputStyle]}
                     placeholder={placeholder}
-                    secureTextEntry={!visible}
+                    secureTextEntry={tipo === 'contrasenna' && !visible}
                     value={value}
                     onChangeText={(text) => {
-                        onChangeText(text);
+                        // Aplicar filtros según el tipo
+                        let filteredText = text;
+
+                        if (tipo === 'telefono') {
+                            // Solo permitir números para teléfono
+                            filteredText = text.replace(/[^0-9]/g, '');
+                        } else if (tipo === 'nombre') {
+                            // Solo permitir letras y espacios para nombres
+                            filteredText = text.replace(/[^a-zA-Z\s]/g, '');
+                        }
+
+                        onChangeText(filteredText);
                     }}
-                    autoCapitalize="none"
+                    keyboardType={getKeyboardType()}
+                    autoCapitalize={tipo === 'correo' ? 'none' : 'sentences'}
+                    maxLength={tipo === 'telefono' ? 10 : (maxLength || undefined)}
                 />
-                <TouchableOpacity
-                    style={styles.visibilityToggle}
-                    onPress={toggleVisibility}
-                >
-                    <Feather
-                        name={visible ? 'eye-off' : 'eye'}
-                        size={24}
-                        color="#007bff"
-                    />
-                </TouchableOpacity>
+
+                {tipo === 'contrasenna' && (
+                    <TouchableOpacity
+                        style={styles.visibilityToggle}
+                        onPress={toggleVisibility}
+                    >
+                        <Feather
+                            name={visible ? 'eye-off' : 'eye'}
+                            size={24}
+                            color="#007bff"
+                        />
+                    </TouchableOpacity>
+                )}
             </View>
 
             {errorMessage ? (
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
             ) : null}
 
-            {showValidation && value.length > 0 && (
+            {showValidation && value.length > 0 && validationState.messages.length > 0 && (
                 <View style={styles.validationContainer}>
-                    {renderValidationItem('minLength', 'Al menos 8 caracteres')}
-                    {renderValidationItem('hasLowerCase', 'Una letra minúscula')}
-                    {renderValidationItem('hasUpperCase', 'Una letra mayúscula')}
-                    {renderValidationItem('hasNumber', 'Un número')}
-                    {renderValidationItem('hasSpecialChar', 'Un caracter especial')}
+                    {validationState.messages.map(renderValidationItem)}
                 </View>
             )}
         </View>
@@ -154,9 +279,10 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     label: {
-        alignSelf: 'flex-start',
         fontSize: 16,
         marginBottom: 5,
+        fontWeight: '500',
+        color: '#333',
     },
     inputContainer: {
         flexDirection: 'row',
@@ -164,11 +290,13 @@ const styles = StyleSheet.create({
         borderColor: '#ccc',
         borderWidth: 1,
         borderRadius: 5,
+        backgroundColor: 'white',
     },
     input: {
         flex: 1,
-        height: 40,
+        height: 45,
         paddingHorizontal: 10,
+        fontSize: 16,
     },
     visibilityToggle: {
         padding: 10,
@@ -176,6 +304,7 @@ const styles = StyleSheet.create({
     errorMessage: {
         color: 'red',
         marginTop: 5,
+        fontSize: 14,
     },
     validationContainer: {
         marginTop: 10,
