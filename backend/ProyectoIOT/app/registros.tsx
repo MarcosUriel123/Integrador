@@ -12,6 +12,7 @@ import {
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Entypo, Feather } from '@expo/vector-icons'; // Añadí Feather para el ícono de flecha
+import BotonVolver from '../componentes/BotonVolver';
 
 interface Registro {
     _id: string;
@@ -29,7 +30,7 @@ export default function PantallaRegistros() {
     useEffect(() => {
         const fetchRegistros = async () => {
             try {
-                const response = await axios.get('http://192.168.8.3:8082/api/registros/get'); //(ipconfig)
+                const response = await axios.get('http://192.168.8.6:8082/api/registros/get'); //(ipconfig)
                 if (response.status === 200) {
                     setRegistros(response.data as Registro[]);
                 }
@@ -75,12 +76,8 @@ export default function PantallaRegistros() {
     return (
         <SafeAreaView style={styles.screen}>
             {/* Botón para volver */}
-            <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-            >
-                <Feather name="arrow-left" size={24} color="#007bff" />
-            </TouchableOpacity>
+            <BotonVolver destino="/puerta" />
+            
 
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>

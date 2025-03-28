@@ -12,10 +12,11 @@ import { useRouter } from 'expo-router';
 import axios from 'axios';
 import Header from '../componentes/Header'; // Import Header component
 import Footer from '../componentes/Footer'; // Import Footer component
+import BotonVolver from '../componentes/BotonVolver';
 
 export default function PoliticasScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.8.3:8082/api'; // Update with your actual IP address (use ipconfig)
+    const API_BASE = 'http://192.168.8.6:8082/api'; // Update with your actual IP address (use ipconfig)
     const [politica, setPolitica] = useState('');
 
     // useEffect para cargar la última política desde el backend
@@ -40,7 +41,8 @@ export default function PoliticasScreen() {
                 <View style={styles.cardContainer}>
                     {/* Replace static topBar with Header component */}
                     <Header />
-
+         
+                    <BotonVolver destino="/empresa" />
                     {/* Sección Hero (Imagen) */}
                     <View style={styles.heroSection}>
                         <Image

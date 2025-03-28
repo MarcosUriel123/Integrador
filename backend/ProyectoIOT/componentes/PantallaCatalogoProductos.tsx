@@ -17,7 +17,12 @@ import Header from './Header';
 import Footer from './Footer';
 import { useCart } from './CartContext';
 import ProductCard from './ProductCard ';
+<<<<<<< HEAD
 import { Ionicons } from '@expo/vector-icons';
+=======
+import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener esta dependencia
+import BotonVolver from '../componentes/BotonVolver';
+>>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
 
 type Product = {
     id: string;
@@ -43,7 +48,12 @@ export default function PantallaCatalogoProductos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { addToCart } = useCart();
+<<<<<<< HEAD
     
+=======
+
+    // Estados para paginación
+>>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(6);
     const [totalPages, setTotalPages] = useState(0);
@@ -51,7 +61,7 @@ export default function PantallaCatalogoProductos() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.8.3:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://192.168.8.6:8082/api/products/get');
                 if (response.status === 200) {
                     const formattedProducts = response.data.map(product => ({
                         id: product._id,
@@ -62,6 +72,11 @@ export default function PantallaCatalogoProductos() {
                         image: product.image
                     }));
                     setProducts(formattedProducts);
+<<<<<<< HEAD
+=======
+
+                    // Calcular el número total de páginas
+>>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
                     setTotalPages(Math.ceil(formattedProducts.length / productsPerPage));
                 }
             } catch (err) {
@@ -106,27 +121,31 @@ export default function PantallaCatalogoProductos() {
         return products.slice(indexOfFirstProduct, indexOfLastProduct);
     };
 
+    // Modificar la función renderProductItem para manejar el ancho de las cards
     const renderProductItem = ({ item }: { item: Product }) => (
-        <ProductCard
-            product={item}
-            onPress={() => handleProductPress(item)}
-            onAddToCart={(product) => {
-                addToCart(product);
-                Alert.alert('Producto añadido', `${product.name} se añadió al carrito`);
-            }}
-        />
+        <View style={styles.productCardContainer}>
+            <ProductCard
+                product={item}
+                onPress={() => handleProductPress(item)}
+                onAddToCart={(product) => {
+                    addToCart(product);
+                    Alert.alert('Producto añadido', `${product.name} se añadió al carrito`);
+                }}
+            />
+        </View>
     );
 
     const scrollViewRef = useRef<ScrollView>(null);
 
     return (
         <SafeAreaView style={styles.screen}>
-            <ScrollView 
+            <ScrollView
                 ref={scrollViewRef}
                 style={{ flex: 1 }}
             >
                 <View style={styles.cardContainer}>
                     <Header title="Catálogo de Productos" />
+                    <BotonVolver destino="/" />
 
                     {loading ? (
                         <View style={styles.contentContainer}>
@@ -140,7 +159,7 @@ export default function PantallaCatalogoProductos() {
                     ) : (
                         <View style={styles.contentContainer}>
                             <Text style={styles.title}>Catálogo de Productos</Text>
-                            
+
                             {products.length === 0 ? (
                                 <Text style={styles.emptyText}>No hay productos disponibles</Text>
                             ) : (
@@ -152,11 +171,16 @@ export default function PantallaCatalogoProductos() {
                                         scrollEnabled={false}
                                         contentContainerStyle={styles.listContent}
                                     />
+<<<<<<< HEAD
                                     
+=======
+
+                                    {/* Controles de paginación */}
+>>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
                                     <View style={styles.paginationContainer}>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={[
-                                                styles.paginationButton, 
+                                                styles.paginationButton,
                                                 currentPage === 1 && styles.paginationButtonDisabled
                                             ]}
                                             onPress={goToPreviousPage}
@@ -168,14 +192,14 @@ export default function PantallaCatalogoProductos() {
                                                 currentPage === 1 && styles.paginationButtonTextDisabled
                                             ]}>Anterior</Text>
                                         </TouchableOpacity>
-                                        
+
                                         <Text style={styles.paginationInfo}>
                                             Página {currentPage} de {totalPages}
                                         </Text>
-                                        
-                                        <TouchableOpacity 
+
+                                        <TouchableOpacity
                                             style={[
-                                                styles.paginationButton, 
+                                                styles.paginationButton,
                                                 currentPage === totalPages && styles.paginationButtonDisabled
                                             ]}
                                             onPress={goToNextPage}
@@ -206,7 +230,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#CFE2FF',
     },
     cardContainer: {
-        margin: 20,
+        // Eliminar el margen horizontal para ocupar el ancho completo
+        marginVertical: 20,
+        marginHorizontal: 0, // Cambiar de margin: 20 a solo márgenes verticales
         backgroundColor: '#FFFFFF',
         borderRadius: 15,
         padding: 20,
@@ -218,9 +244,12 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         flex: 1,
+        width: '100%', // Asegurar que ocupa todo el ancho
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 20,
+        // Eliminar cualquier padding horizontal si existe
+        paddingHorizontal: 0,
         minHeight: 300,
     },
     title: {
@@ -248,6 +277,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         width: '100%',
+        paddingHorizontal: 0, // Eliminar el padding horizontal
     },
     paginationContainer: {
         flexDirection: 'row',
@@ -318,5 +348,10 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         paddingVertical: 4,
         paddingHorizontal: 8,
+    },
+    // Nuevo estilo para el contenedor de cada tarjeta
+    productCardContainer: {
+        width: '100%', // Cada tarjeta ocupa el 100% del ancho
+        marginBottom: 15, // Aumentar el espacio entre tarjetas para mejor separación visual
     },
 });

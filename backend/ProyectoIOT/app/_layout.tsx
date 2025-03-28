@@ -12,7 +12,7 @@ const verifyToken = async (): Promise<boolean> => {
     if (!token) return false;
 
     // Intentar verificar el token con el backend
-    const response = await axios.post('http://192.168.8.3:8082/api/users/verify-token', {}, {
+    const response = await axios.post('http://192.168.8.6:8082/api/users/verify-token', {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
@@ -100,6 +100,15 @@ export default function Layout() {
         {/* Otras pantallas de tu aplicación */}
         <Stack.Screen name="registroDispositivo" />
         <Stack.Screen name="carrito" />
+
+        {/* Pantalla de selección de dispositivo */}
+        <Stack.Screen
+          name="seleccionDispositivo"
+          options={{
+            title: "Seleccionar Dispositivo",
+            headerShown: false
+          }}
+        />
       </Stack>
     </CartProvider>
   );

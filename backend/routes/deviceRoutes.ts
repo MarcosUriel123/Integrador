@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { registerDevice, getDevices, getDevicePin } from '../controllers/deviceController';
+import { registerDevice, getDevices, getDevicePin, getUserDevices } from '../controllers/deviceController';
 import { protect } from '../middlewares/authMiddleware';
 import Device from '../models/Device';
 import User from '../models/User';
@@ -17,6 +17,7 @@ const router = express.Router();
 // Rutas que requieren autenticación
 router.post('/register', protect, registerDevice as express.RequestHandler);
 router.get('/', protect, getDevices as express.RequestHandler);
+router.get('/user-devices', protect as express.RequestHandler, getUserDevices as express.RequestHandler);
 
 // Ruta pública para que el ESP32 pueda obtener el PIN
 router.post('/get-pin', getDevicePin as express.RequestHandler);

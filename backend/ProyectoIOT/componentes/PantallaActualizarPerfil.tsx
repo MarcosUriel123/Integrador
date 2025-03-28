@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
 
 // Define la interfaz para el objeto Usuario
 interface User {
@@ -75,7 +76,7 @@ export default function PantallaPerfil({ userId }: Props) {
         try {
             console.log(`Intentando obtener datos para userId: ${localUserId}`);
             // Usar la interfaz User como tipo genérico
-            const response = await axios.get<User>(`http://192.168.8.3:8082/api/users/${localUserId}`);
+            const response = await axios.get<User>(`http://192.168.8.6:8082/api/users/${localUserId}`);
             const user = response.data;  // Ahora user tiene el tipo User
 
             setName(user.name || '');
@@ -110,7 +111,7 @@ export default function PantallaPerfil({ userId }: Props) {
         }
 
         try {
-            const response = await axios.put(`http://192.168.8.3:8082/api/users/update/${localUserId}`, updateData);
+            const response = await axios.put(`http://192.168.8.6:8082/api/users/update/${localUserId}`, updateData);
             if (response.status === 200) {
                 // Modificado: Mostrar Alert con opción para ir al perfil
                 Alert.alert(
@@ -160,12 +161,9 @@ export default function PantallaPerfil({ userId }: Props) {
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Mi Perfil</Text>
                         {/* Botón para volver al perfil sin guardar cambios */}
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => router.replace('/Datosperfil')}
-                        >
-                            <Feather name="arrow-left" size={24} color="#007bff" />
-                        </TouchableOpacity>
+
+                    <BotonVolver destino="/Datosperfil" />
+                        
                     </View>
                     <View style={styles.contentContainer}>
                         <Feather name="user" size={80} color="black" style={styles.icon} />

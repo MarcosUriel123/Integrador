@@ -3,6 +3,7 @@ import { SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity, Ani
 import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import { router } from 'expo-router';
+import BotonVolver from '../componentes/BotonVolver';
 
 export default function PantallaPuerta() {
     // Estado para saber si la puerta está abierta (true) o cerrada (false)
@@ -22,7 +23,7 @@ export default function PantallaPuerta() {
     const obtenerEstadoRealPuerta = async () => {
         try {
             // Verificar IP del Arduino en la consola del ESP32
-            const response = await axios.get<{ status: string }>('http://192.168.8.2/api/arduino/doorstatus');
+            const response = await axios.get<{ status: string }>('http://192.168.8.8/api/arduino/doorstatus');
 
             // Depurar la respuesta
             console.log('Respuesta del sensor:', response.data);
@@ -46,22 +47,19 @@ export default function PantallaPuerta() {
         }
     };
 
-    // Función para abrir o cerrar la puerta
+    // Modificar la función handleTogglePuerta para que siempre abra la puerta
     const handleTogglePuerta = async () => {
         try {
             // Al momento de enviar el comando, actualizar también el estado
             obtenerEstadoRealPuerta();
 
-            // Realizamos la solicitud al backend para abrir o cerrar la puerta
-            const url = puertaAbierta
-                ? 'http://192.168.8.3:8082/api/door/cerrar'
-                : 'http://192.168.8.3:8082/api/door/abrir';
+            // Siempre intentamos abrir la puerta, sin importar el estado actual
+            const url = 'http://192.168.8.6:8082/api/door/abrir';
 
             const response = await axios.get(url);
 
-            // Si la respuesta es exitosa, actualizamos el estado de la puerta
-            setPuertaAbierta(!puertaAbierta);
-            alert(response.data);
+            // No cambiamos el estado puertaAbierta ya que ya no lo usamos para el texto del botón
+            // alert(response.data);
 
             // Actualizamos el estado después de la acción para reflejar el cambio
             setTimeout(obtenerEstadoRealPuerta, 1000);
@@ -122,6 +120,7 @@ export default function PantallaPuerta() {
                             <Text style={styles.logo}>Segurix</Text>
                         </TouchableOpacity>
                     </View>
+                    <BotonVolver destino="/devices" />
 
                     {/* Contenido principal */}
                     <View style={styles.contentContainer}>
@@ -138,7 +137,7 @@ export default function PantallaPuerta() {
                         {/* Botón para abrir/cerrar */}
                         <TouchableOpacity style={styles.botonPuerta} onPress={handleTogglePuerta}>
                             <Text style={styles.textoBoton}>
-                                {puertaAbierta ? "Cerrar puerta" : "Abrir puerta"}
+                                Abrir puerta
                             </Text>
                         </TouchableOpacity>
 

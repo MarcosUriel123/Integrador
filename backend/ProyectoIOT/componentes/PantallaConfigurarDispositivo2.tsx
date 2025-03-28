@@ -1,3 +1,4 @@
+// Ruta: Integrador/backend/ProyectoIOT/componentes/PantallaConfigurarDispositivo2.tsx
 import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
@@ -50,7 +51,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.get(
-                'http://192.168.8.3:8082/api/devices/info',
+                'http://192.168.8.5:8082/api/devices/info',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -90,7 +91,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.post(
-                'http://192.168.8.3:8082/api/devices/update-pin',
+                'http://192.168.8.5:8082/api/devices/update-pin',
                 { devicePin: newPin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

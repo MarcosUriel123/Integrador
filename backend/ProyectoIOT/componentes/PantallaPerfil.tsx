@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logout } from '../utils/authUtils';
+import { useFocusEffect } from '@react-navigation/native';
+import BotonVolver from '../componentes/BotonVolver';
 
 // Define la interfaz para el objeto Usuario
 interface User {
@@ -28,36 +30,44 @@ export default function PantallaPerfil({ userId }: Props) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // Obtener el userId desde AsyncStorage si no se proporcionó como prop
-    useEffect(() => {
-        const getUserIdFromStorage = async () => {
-            try {
-                if (!localUserId) {
+    // Reemplazar el useEffect para obtener userId con useFocusEffect
+    useFocusEffect(
+        useCallback(() => {
+            const getUserIdFromStorage = async () => {
+                try {
+                    // Siempre verificar el userId almacenado al entrar a la pantalla
                     const storedUserId = await AsyncStorage.getItem('userId');
+                    console.log('ID de usuario obtenido de storage:', storedUserId);
+
                     if (storedUserId) {
                         setLocalUserId(storedUserId);
                     } else {
                         setError('No se pudo encontrar el ID de usuario');
+                        setLoading(false);
                     }
+                } catch (err) {
+                    console.error('Error al obtener userId de AsyncStorage:', err);
+                    setError('Error al cargar datos de usuario');
+                    setLoading(false);
                 }
-            } catch (err) {
-                console.error('Error al obtener userId de AsyncStorage:', err);
-                setError('Error al cargar datos de usuario');
-            } finally {
-                setLoading(false);
+            };
+
+            getUserIdFromStorage();
+
+            // No es necesario un return ya que no hay limpieza que hacer
+        }, [])
+    );
+
+    // Mejorar el useEffect que carga datos del usuario
+    useFocusEffect(
+        useCallback(() => {
+            if (localUserId) {
+                fetchUserData();
             }
-        };
+        }, [localUserId])
+    );
 
-        getUserIdFromStorage();
-    }, []);
-
-    // Cargar datos del usuario cuando tengamos un userId válido
-    useEffect(() => {
-        if (localUserId) {
-            fetchUserData();
-        }
-    }, [localUserId]);
-
+    // Mejorar la función fetchUserData para usar el token directamente
     const fetchUserData = async () => {
         if (!localUserId) {
             console.error('No hay userId disponible para obtener datos');
@@ -68,8 +78,19 @@ export default function PantallaPerfil({ userId }: Props) {
         try {
             setLoading(true);
             console.log(`Intentando obtener datos para userId: ${localUserId}`);
-            const response = await axios.get<User>(`http://192.168.8.3:8082/api/users/${localUserId}`);
+
+            // Obtener el token de autenticación
+            const token = await AsyncStorage.getItem('userToken');
+
+            const response = await axios.get<User>(
+                `http://192.168.8.6:8082/api/users/${localUserId}`,
+                {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                }
+            );
+
             setUserData(response.data);
+            console.log('Datos del usuario actualizados:', response.data.name);
             setError('');
         } catch (error) {
             console.error('Error al obtener datos del usuario:', error);
@@ -153,18 +174,13 @@ export default function PantallaPerfil({ userId }: Props) {
                 <View style={styles.cardContainer}>
                     <View style={styles.topBar}>
                         {/* Añadimos el botón de volver */}
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => router.back()}
-                        >
-                            <Feather name="arrow-left" size={24} color="#007bff" />
-                        </TouchableOpacity>
+                       
 
                         <Text style={styles.logo}>Mi Perfil</Text>
 
                         {/* Espacio vacío para mantener el título centrado */}
-                        <View style={styles.backButtonPlaceholder} />
                     </View>
+                    <BotonVolver destino="/" />
 
                     <View style={styles.contentContainer}>
                         <View style={styles.profileImageContainer}>

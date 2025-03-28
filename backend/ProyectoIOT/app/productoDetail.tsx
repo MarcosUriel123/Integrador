@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import BotonVolver from '../componentes/BotonVolver';
 import {
     SafeAreaView,
     ScrollView,
@@ -77,7 +78,7 @@ export default function ProductDetail() {
             // Usuario con sesión iniciada
             // Mostrar mensaje de compra exitosa
             Alert.alert(
-                "¡Compra Exitosa!",
+                "¡Compra Exitosa, ahora puedes dar de alta tu dispositivo!",
                 `Has comprado ${product?.name} correctamente.`,
                 [
                     {
@@ -89,7 +90,7 @@ export default function ProductDetail() {
                     }
                 ]
             );
-            router.push('/registroDispositivo');
+            
         } else {
             // Usuario sin sesión iniciada
             Alert.alert(
@@ -113,10 +114,7 @@ export default function ProductDetail() {
                     }
                 ]
             );
-            router.push({
-                pathname: '/Login1',
-                params: { returnTo: currentPath, productParam: productParam }
-            });
+
         }
     };
 
@@ -148,6 +146,8 @@ export default function ProductDetail() {
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
                     </View>
+                    <BotonVolver destino="/empresa" />
+
                     <View style={styles.contentContainer}>
                         <Text style={styles.title}>Detalle de {product.name}</Text>
                         <Image source={{ uri: product.image }} style={styles.image} />

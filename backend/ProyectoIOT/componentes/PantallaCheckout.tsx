@@ -64,7 +64,7 @@ export default function PantallaCheckout() {
                     if (userId) {
                         try {
                             const token = await AsyncStorage.getItem('userToken');
-                            const response = await axios.get(`http://192.168.8.3:8082/api/users/${userId}`, {
+                            const response = await axios.get(`http://192.168.8.6:8082/api/users/${userId}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
                             const userData = response.data as { email?: string };

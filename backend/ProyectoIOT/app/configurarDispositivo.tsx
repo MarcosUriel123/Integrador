@@ -1,7 +1,7 @@
 // app/puerta.tsx
 import React from 'react';
-import PantallaConfigurarDispositivo2 from '../componentes/PantallaConfigurarDispositivo2';
+import PantallaConfigurarDispositivo from '../componentes/PantallaConfigurarDispositivo';
 
 export default function ConfigurarDispositivoScreen() {
-    return <PantallaConfigurarDispositivo2 />;
+    return <PantallaConfigurarDispositivo />;
 }

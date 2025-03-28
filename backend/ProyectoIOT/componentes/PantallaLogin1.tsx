@@ -12,6 +12,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+import BotonVolver from '../componentes/BotonVolver';
+import input from './Inputapp'; // Asegúrate de que la ruta sea correcta
 
 // Define la interfaz para la respuesta del login
 interface LoginResponse {
@@ -30,7 +32,7 @@ export default function PantallaLogin1() {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post<LoginResponse>('http://192.168.8.3:8082/api/users/login', {
+            const response = await axios.post<LoginResponse>('http://192.168.8.6:8082/api/users/login', {
                 email,
                 password,
             });
@@ -40,9 +42,17 @@ export default function PantallaLogin1() {
                 if (response.data && response.data.token) {
                     await AsyncStorage.setItem('userToken', response.data.token);
                     await AsyncStorage.setItem('userId', response.data._id);
+
+                    // NUEVO: Inicializar el valor userHasDevice como 'false' por defecto
+                    // Esto evita problemas cuando Header intenta leer este valor
+                    await AsyncStorage.setItem('userHasDevice', 'false');
+
                     console.log('Token guardado:', response.data.token);
+                    console.log('Estado de dispositivo inicializado como: false');
                 } else {
                     console.error('No se recibió un token del servidor');
+                    setErrorMessage("Error en la respuesta del servidor");
+                    return; // Detener la ejecución si no hay token
                 }
 
                 // Redirige a la pantalla principal usando expo-router
@@ -50,9 +60,7 @@ export default function PantallaLogin1() {
             }
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
-            setErrorMessage("Credenciales inválidas");
         }
-
     };
 
     const handleSuccessfulLogin = async () => {
@@ -74,6 +82,7 @@ export default function PantallaLogin1() {
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
                     </View>
+                    <BotonVolver destino="/" />
                     <View style={styles.contentContainer}>
                         <Feather name="lock" size={80} color="black" style={styles.icon} />
                         <Text style={styles.title}>Iniciar Sesión</Text>
@@ -94,6 +103,7 @@ export default function PantallaLogin1() {
                             value={password}
                             onChangeText={setPassword}
                         />
+                        
                         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
                         <TouchableOpacity style={styles.button} onPress={handleLogin}>
                             <Text style={styles.buttonText}>Iniciar Sesión</Text>
@@ -107,12 +117,7 @@ export default function PantallaLogin1() {
                     </View>
                 </View>
             </ScrollView>
-            <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-            >
-                <Feather name="arrow-left" size={24} color="#007bff" />
-            </TouchableOpacity>
+
         </SafeAreaView>
     );
 }

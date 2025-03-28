@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
 
 export default function PantallaRegistroDispositivo() {
     const router = useRouter();
@@ -35,7 +36,7 @@ export default function PantallaRegistroDispositivo() {
             // Intentar obtener la IP del Arduino de AsyncStorage
             let arduinoIP = await AsyncStorage.getItem('arduinoIP');
             if (!arduinoIP) {
-                arduinoIP = '192.168.8.3'; // IP por defecto
+                arduinoIP = '192.168.8.8'; // IP por defecto
             }
 
             const response = await axios.get<DeviceInfo>(`http://${arduinoIP}/api/arduino/info`, {
@@ -99,7 +100,7 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
-            const baseUrl = 'http://192.168.8.3:8082';
+            const baseUrl = 'http://192.168.8.6:8082';
 
             // Realizar la solicitud al backend
             const response = await axios.post(
@@ -117,7 +118,7 @@ export default function PantallaRegistroDispositivo() {
                 try {
                     let arduinoIP = await AsyncStorage.getItem('arduinoIP');
                     if (!arduinoIP) {
-                        arduinoIP = '192.168.8.3'; // IP por defecto
+                        arduinoIP = '192.168.8.6'; // IP por defecto
                     }
 
                     await axios.post(`http://${arduinoIP}/api/arduino/register-complete`);
@@ -168,6 +169,7 @@ export default function PantallaRegistroDispositivo() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
                     <Text style={styles.title}>Registrar Dispositivo IoT</Text>
+                    <BotonVolver destino="/CatalogoProductosScreen" />
 
                     {isFetchingMac ? (
                         <View style={styles.loadingContainer}>

@@ -11,6 +11,7 @@ import {
 import DropDownPicker from 'react-native-dropdown-picker';
 import Feather from '@expo/vector-icons/Feather';
 import axios from 'axios';
+import BotonVolver from '../componentes/BotonVolver';
 
 interface PantallaRegistro1Props {
     onNext: (email: string, password: string) => void;
@@ -46,14 +47,15 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
             try {
                 setIsLoadingQuestions(true);
                 // Añadir el tipo genérico para la respuesta
-                const response = await axios.get<SecretQuestion[]>('http://192.168.8.3:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>('http://192.168.8.6:8082/api/secretQuestions');
                 if (response.status === 200) {
                     setSecretQuestions(response.data);
 
                     // Convertir las preguntas al formato que necesita DropDownPicker
                     const dropdownItems = response.data.map(question => ({
                         label: question.pregunta,
-                        value: question._id
+                        value: question._id,
+                        key: `question_${question._id.toString()}` // Añadir key única
                     }));
                     setItems(dropdownItems);
 
@@ -81,7 +83,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
 
         try {
             setIsRegistering(true);
-            const response = await axios.post('http://192.168.8.3:8082/api/users/register', {
+            const response = await axios.post('http://192.168.8.6:8082/api/users/register', {
                 name,
                 lastName,
                 surname,
@@ -108,6 +110,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
+                    <BotonVolver destino="/Login1" />
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
                     </View>
