@@ -147,7 +147,6 @@ const handlePayment = async () => {
         return;
     }
 
-<<<<<<< HEAD
     // Verificar que hay un email
     if (!userEmail) {
         Alert.alert('Error', 'No se encontró un correo electrónico');
@@ -172,11 +171,6 @@ const handlePayment = async () => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-=======
-        try {
-            // Enviar solicitud al backend
-            const response = await axios.post('http://192.168.8.2:8082/api/purchase/send-purchase-email', {
->>>>>>> 43fee436ec09fcd1c6cd1db9f3824293b6ad876c
                 email: userEmail,
                 cart: cartItems
             })
