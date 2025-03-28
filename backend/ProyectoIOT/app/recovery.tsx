@@ -1,4 +1,3 @@
-// app/recovery.tsx
 import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
@@ -180,6 +179,11 @@ export default function RecoveryScreen() {
                     "Tu contraseña ha sido actualizada. Ya puedes iniciar sesión con tu nueva contraseña.",
                     [{ text: "Ir a iniciar sesión", onPress: () => router.push('/Login1') }]
                 );
+
+                // Pequeño retraso antes de redirigir para que el usuario pueda ver el mensaje de éxito
+                setTimeout(() => {
+                    router.push('/Login1');
+                }, 1500); // 1.5 segundos de retraso para que el usuario pueda ver el mensaje
             }
         } catch (error: any) {
             console.error('Error al actualizar contraseña:', error);
