@@ -20,6 +20,7 @@ import { useCart } from './CartContext';
 // Importación faltante de ProductCard
 import ProductCard from './ProductCard ';
 import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener esta dependencia
+import BotonVolver from '../componentes/BotonVolver';
 
 // Tipos existentes...
 type Product = {
@@ -145,6 +146,7 @@ export default function PantallaCatalogoProductos() {
             >
                 <View style={styles.cardContainer}>
                     <Header title="Catálogo de Productos" />
+                    <BotonVolver destino="/" />
 
                     {loading ? (
                         <View style={styles.contentContainer}>

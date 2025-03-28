@@ -19,6 +19,7 @@ import Header from './Header';
 import Footer from './Footer';
 import RFIDControlModal from './RFIDControlModal';
 import FingerprintRegistrationModal from './FingerprintRegistrationModal';
+import BotonVolver from './BotonVolver'; // Importar el componente de botón volver
 
 interface SubUser {
     _id: string;
@@ -471,7 +472,14 @@ export default function PantallaRegistroUsuarios() {
             ]);
 
             // Luego procede con el registro normal
-            const response = await axios.post('http://192.168.8.6:8082/api/users/register', {
+            interface RegisterResponse {
+                token: string;
+                _id: string;
+                name: string;
+                email: string;
+            }
+
+            const response = await axios.post<RegisterResponse>('http://192.168.8.6:8082/api/users/register', {
                 // datos de registro
             });
 
@@ -499,13 +507,8 @@ export default function PantallaRegistroUsuarios() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
                     {/* Botón Volver - similar al de PantallaLogin1 */}
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={handleVolver}
-                    >
-                        <FontAwesome5 name="arrow-left" size={20} color="#007BFF" />
-                        <Text style={styles.backButtonText}>Volver</Text>
-                    </TouchableOpacity>
+            <BotonVolver destino="/puerta" />
+
 
                     <Text style={styles.title}>Registro de Usuarios</Text>
                     <Text style={styles.subtitle}>Agregue usuarios que pueden acceder a su puerta</Text>

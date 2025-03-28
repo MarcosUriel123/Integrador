@@ -6,6 +6,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logout } from '../utils/authUtils';
 import { useFocusEffect } from '@react-navigation/native';
+import BotonVolver from '../componentes/BotonVolver';
 
 // Define la interfaz para el objeto Usuario
 interface User {
@@ -173,18 +174,13 @@ export default function PantallaPerfil({ userId }: Props) {
                 <View style={styles.cardContainer}>
                     <View style={styles.topBar}>
                         {/* Añadimos el botón de volver */}
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => router.back()}
-                        >
-                            <Feather name="arrow-left" size={24} color="#007bff" />
-                        </TouchableOpacity>
+                       
 
                         <Text style={styles.logo}>Mi Perfil</Text>
 
                         {/* Espacio vacío para mantener el título centrado */}
-                        <View style={styles.backButtonPlaceholder} />
                     </View>
+                    <BotonVolver destino="/" />
 
                     <View style={styles.contentContainer}>
                         <View style={styles.profileImageContainer}>

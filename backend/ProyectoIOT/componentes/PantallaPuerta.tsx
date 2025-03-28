@@ -3,6 +3,7 @@ import { SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity, Ani
 import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import { router } from 'expo-router';
+import BotonVolver from '../componentes/BotonVolver';
 
 export default function PantallaPuerta() {
     // Estado para saber si la puerta está abierta (true) o cerrada (false)
@@ -119,6 +120,7 @@ export default function PantallaPuerta() {
                             <Text style={styles.logo}>Segurix</Text>
                         </TouchableOpacity>
                     </View>
+                    <BotonVolver destino="/devices" />
 
                     {/* Contenido principal */}
                     <View style={styles.contentContainer}>

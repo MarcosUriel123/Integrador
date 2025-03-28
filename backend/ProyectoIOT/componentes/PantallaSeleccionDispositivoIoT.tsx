@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import Header from './Header';
 import Footer from './Footer';
+import BotonVolver from '../componentes/BotonVolver';
 
 // Actualizar la interfaz para usar macAddress en lugar de mac
 interface DeviceItem {
@@ -146,6 +147,7 @@ export default function PantallaSeleccionDispositivoIoT() {
     return (
         <SafeAreaView style={styles.container}>
             <Header title="Mis Dispositivos IoT" />
+            <BotonVolver destino="/" />
 
             <View style={styles.content}>
                 <Text style={styles.title}>Selecciona un dispositivo</Text>

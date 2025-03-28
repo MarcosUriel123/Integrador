@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import Header from '../componentes/Header';
 import Footer from '../componentes/Footer';
+import BotonVolver from '../componentes/BotonVolver';
 
 export default function EmpresaScreen() {
     const router = useRouter();
@@ -44,6 +45,7 @@ export default function EmpresaScreen() {
                 <View style={styles.cardContainer}>
                     {/* Usar el componente Header */}
                     <Header title="Empresa" showProfileIcon={true} />
+                    <BotonVolver destino="/" />
 
                     {/* Sección Hero con imagen */}
                     <View style={styles.heroSection}>

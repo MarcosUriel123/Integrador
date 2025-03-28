@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import BotonVolver from '../componentes/BotonVolver';
 import {
     SafeAreaView,
     ScrollView,
@@ -145,6 +146,8 @@ export default function ProductDetail() {
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
                     </View>
+                    <BotonVolver destino="/empresa" />
+
                     <View style={styles.contentContainer}>
                         <Text style={styles.title}>Detalle de {product.name}</Text>
                         <Image source={{ uri: product.image }} style={styles.image} />

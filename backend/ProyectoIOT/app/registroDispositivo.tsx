@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
 
 export default function PantallaRegistroDispositivo() {
     const router = useRouter();
@@ -168,6 +169,7 @@ export default function PantallaRegistroDispositivo() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
                     <Text style={styles.title}>Registrar Dispositivo IoT</Text>
+                    <BotonVolver destino="/CatalogoProductosScreen" />
 
                     {isFetchingMac ? (
                         <View style={styles.loadingContainer}>
