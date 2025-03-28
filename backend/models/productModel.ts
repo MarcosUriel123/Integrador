@@ -1,3 +1,4 @@
+// Ruta: Integrator/backend/models/productModel.ts
 import mongoose from 'mongoose';
 
 const productSchema = new mongoose.Schema({

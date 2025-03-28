@@ -1,3 +1,5 @@
+// Ruta: Integrador/backend/controllers/deviceController.ts
+
 /// <reference path="../ProyectoIOT/src/express/index.d.ts" />
 
 import { Request, Response } from 'express';
@@ -119,36 +121,5 @@ export const getDevicePin = async (req: Request, res: Response) => {
             message: 'Error al obtener PIN',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
-    }
-};
-
-/**
- * Obtener todos los dispositivos asociados a un usuario autenticado
- */
-export const getUserDevices = async (req: Request & { user?: { _id: string } }, res: Response) => {
-    try {
-        const userId = req.user?._id;
-
-        if (!userId) {
-            return res.status(401).json({ message: 'Usuario no autenticado' });
-        }
-
-        // Buscar dispositivos asociados al usuario
-        const devices = await Device.find({ userId });
-
-        // Transformar los datos para incluir isConfigured basado en campos existentes
-        const transformedDevices = devices.map(device => {
-            const deviceObj = device.toObject() as typeof device & { isConfigured: boolean };
-
-            // Un dispositivo está configurado si tiene pin Y nombre
-            deviceObj.isConfigured = !!(deviceObj.name);
-
-            return deviceObj;
-        });
-
-        res.json(transformedDevices);
-    } catch (error) {
-        console.error('Error al obtener dispositivos:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
     }
 };

@@ -1,3 +1,4 @@
+// Ruata: Integrator/backend/models/Device.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IDevice extends Document {

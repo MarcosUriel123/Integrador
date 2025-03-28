@@ -1,3 +1,4 @@
+// Ruta: Integrador/backend/routes/productRoutes.ts
 import express, { Router, RequestHandler } from 'express';
 import { addProduct, getProducts } from '../controllers/productController';
 

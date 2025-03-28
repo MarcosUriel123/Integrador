@@ -1,22 +1,20 @@
+// 
 import React, { useState, useEffect } from 'react';
 import {
     SafeAreaView,
-    ScrollView,
     View,
     Text,
-    TextInput,
-    TouchableOpacity,
-    Switch,
     StyleSheet,
+    TouchableOpacity,
     Modal,
+    TextInput,
     ActivityIndicator,
     Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, Feather, FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BotonVolver from '../componentes/BotonVolver';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 export default function PantallaConfigurarDispositivo() {
     const router = useRouter();
@@ -25,14 +23,6 @@ export default function PantallaConfigurarDispositivo() {
     const [modalVisible, setModalVisible] = useState(false);
     const [newPin, setNewPin] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
-
-    // Estado para los switches
-    const [seguroActivo, setSeguroActivo] = useState(false);
-    const [alarmaActiva, setAlarmaActiva] = useState(false);
-
-    // Funciones para manejar el cambio de estado
-    const toggleSeguro = () => setSeguroActivo(!seguroActivo);
-    const toggleAlarma = () => setAlarmaActiva(!alarmaActiva);
 
     // Obtener la información del dispositivo al cargar la pantalla
     useEffect(() => {
@@ -46,12 +36,12 @@ export default function PantallaConfigurarDispositivo() {
 
             if (!token) {
                 Alert.alert('Error', 'No se encontró sesión. Inicie sesión nuevamente.');
-                router.push('/Login1');
+                router.push('/login' as any);
                 return;
             }
 
             const response = await axios.get(
-                'http://192.168.8.6:8082/api/devices/info',
+                'http://192.168.8.5:8082/api/devices/info',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -86,32 +76,23 @@ export default function PantallaConfigurarDispositivo() {
 
             if (!token) {
                 Alert.alert('Error', 'No se encontró sesión. Inicie sesión nuevamente.');
-                router.push('/Login1');
+                router.push('/login' as any);
                 return;
             }
 
             const response = await axios.post(
-                'http://192.168.8.6:8082/api/devices/update-pin',
+                'http://192.168.8.5:8082/api/devices/update-pin',
                 { devicePin: newPin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (response.status === 200) {
-                // Modificar la alerta para navegar a PantallaPuerta después de cerrar el modal
                 Alert.alert(
                     'Éxito',
                     'El PIN del dispositivo ha sido actualizado correctamente.',
-                    [{
-                        text: 'OK',
-                        onPress: () => {
-                            setModalVisible(false); // Cerrar el modal
-                            setNewPin(''); // Limpiar el campo
-
-                            // Navegar a la pantalla de puerta
-                            router.push('/puerta');
-                        }
-                    }]
+                    [{ text: 'OK', onPress: () => setModalVisible(false) }]
                 );
+                setNewPin('');
             }
         } catch (error) {
             console.error('Error actualizando PIN:', error);
@@ -120,6 +101,7 @@ export default function PantallaConfigurarDispositivo() {
             if ((error as any).response?.data?.message) {
                 message = (error as any).response.data.message;
             }
+
             setErrorMsg(message);
         } finally {
             setIsLoading(false);
@@ -127,59 +109,64 @@ export default function PantallaConfigurarDispositivo() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
-            {/* Botón para volver */}
-            <BotonVolver destino="/puerta" />
+        <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Configuración del Dispositivo</Text>
+            </View>
 
-            <ScrollView style={{ flex: 1 }}>
-                {/* Tarjeta principal */}
-                <View style={styles.cardContainer}>
-                    {/* Contenido principal */}
-                    <View style={styles.mainContent}>
-                        <Text style={styles.title}>Configuración de mi dispositivo</Text>
-
-                        {/* ID del dispositivo */}
-                        <View style={styles.inputRow}>
-                            <Text style={styles.label}>ID del dispositivo</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={deviceInfo?.macAddress || "Cargando..."}
-                                editable={false}
-                                placeholderTextColor="#999"
-                            />
-                        </View>
-
-                        {/* Desactivar todos los seguros */}
-                        <View style={styles.toggleRow}>
-                            <Text style={styles.toggleLabel}>Desactivar todos los seguros</Text>
-                            <Switch
-                                value={seguroActivo}
-                                onValueChange={toggleSeguro}
-                                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                                thumbColor={seguroActivo ? "#4CAF50" : "#f4f3f4"}
-                            />
-                        </View>
-
-                        {/* Desactivar alarma sonora */}
-                        <View style={styles.toggleRow}>
-                            <Text style={styles.toggleLabel}>Desactivar alarma sonora</Text>
-                            <Switch
-                                value={alarmaActiva}
-                                onValueChange={toggleAlarma}
-                                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                                thumbColor={alarmaActiva ? "#4CAF50" : "#f4f3f4"}
-                            />
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.optionRow}
-                            onPress={() => setModalVisible(true)}>
-                            <Text style={styles.optionText}>Cambiar PIN de seguridad del dispositivo</Text>
-                            <Ionicons name="chevron-forward-outline" size={20} color="#1E1E1E" />
-                        </TouchableOpacity>
-                    </View>
+            {isLoading && !modalVisible ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007bff" />
+                    <Text style={styles.loadingText}>Cargando información...</Text>
                 </View>
-            </ScrollView>
+            ) : (
+                <View style={styles.content}>
+                    {deviceInfo ? (
+                        <>
+                            <View style={styles.infoCard}>
+                                <Text style={styles.infoTitle}>Información del Dispositivo</Text>
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Nombre:</Text>
+                                    <Text style={styles.infoValue}>{deviceInfo.name}</Text>
+                                </View>
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Dirección MAC:</Text>
+                                    <Text style={styles.infoValue}>{deviceInfo.macAddress}</Text>
+                                </View>
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Estado:</Text>
+                                    <View style={styles.statusContainer}>
+                                        <View style={[
+                                            styles.statusDot,
+                                            { backgroundColor: deviceInfo.isOnline ? '#4CAF50' : '#F44336' }
+                                        ]} />
+                                        <Text style={styles.infoValue}>
+                                            {deviceInfo.isOnline ? 'En línea' : 'Desconectado'}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={styles.optionsContainer}>
+                                <Text style={styles.sectionTitle}>Seguridad</Text>
+                                <TouchableOpacity
+                                    style={styles.optionButton}
+                                    onPress={() => setModalVisible(true)}
+                                >
+                                    <FontAwesome5 name="key" size={20} color="#fff" />
+                                    <Text style={styles.optionButtonText}>
+                                        Cambiar PIN del Dispositivo
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    ) : (
+                        <Text style={styles.noDeviceText}>
+                            No se encontró información del dispositivo.
+                        </Text>
+                    )}
+                </View>
+            )}
 
             {/* Modal para cambiar PIN */}
             <Modal
@@ -247,88 +234,113 @@ export default function PantallaConfigurarDispositivo() {
 }
 
 const styles = StyleSheet.create({
-    /* Fondo azul suave */
-    screen: {
+    container: {
         flex: 1,
-        backgroundColor: '#CFE2FF',
-        paddingTop: 50, // Dar espacio para el botón de volver
+        backgroundColor: '#f5f5f5',
     },
-    cardContainer: {
-        margin: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
+    header: {
+        backgroundColor: '#3F51B5',
         padding: 20,
-        // Sombra en iOS
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        // Sombra en Android
-        elevation: 6,
-    },
-    /* Contenido principal */
-    mainContent: {
-        marginTop: 10,
+        alignItems: 'center',
     },
     title: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#1E1E1E',
-        marginBottom: 20,
+        color: 'white',
     },
-    /* Fila con etiqueta e input */
-    inputRow: {
-        marginBottom: 20,
+    content: {
+        flex: 1,
+        padding: 16,
     },
-    label: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginBottom: 6,
-    },
-    input: {
-        backgroundColor: '#F9F9F9',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        fontSize: 16,
-        color: '#1E1E1E',
-    },
-    /* Fila con etiqueta y toggle */
-    toggleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#666',
+    },
+    infoCard: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 16,
         marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 1.41,
+        elevation: 2,
     },
-    toggleLabel: {
-        fontSize: 16,
-        color: '#1E1E1E',
+    infoTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 12,
+        color: '#333',
     },
-    /* Opciones extra (con flecha a la derecha) */
-    optionRow: {
+    infoRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        marginBottom: 8,
         alignItems: 'center',
-        backgroundColor: '#F9F9F9',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 14,
-        marginBottom: 10,
     },
-    optionText: {
+    infoLabel: {
         fontSize: 16,
-        color: '#1E1E1E',
+        fontWeight: '500',
+        width: 120,
+        color: '#555',
     },
-    backButton: {
-        position: 'absolute',
-        top: 40,
-        left: 20,
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        zIndex: 10,
+    infoValue: {
+        fontSize: 16,
+        color: '#333',
+        flex: 1,
     },
-    // Estilos del modal
+    statusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statusDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 8,
+    },
+    optionsContainer: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 1.41,
+        elevation: 2,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 16,
+        color: '#333',
+    },
+    optionButton: {
+        backgroundColor: '#3F51B5',
+        padding: 16,
+        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    optionButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 10,
+    },
+    noDeviceText: {
+        fontSize: 18,
+        textAlign: 'center',
+        color: '#666',
+        marginTop: 40,
+    },
     modalBackground: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',

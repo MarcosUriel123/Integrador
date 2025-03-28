@@ -1,3 +1,4 @@
+// Ruta: Integrador/backend/ProyectoIOT/componentes/PantallaCatalogoProductos.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
     SafeAreaView,
@@ -17,12 +18,8 @@ import Header from './Header';
 import Footer from './Footer';
 import { useCart } from './CartContext';
 import ProductCard from './ProductCard ';
-<<<<<<< HEAD
 import { Ionicons } from '@expo/vector-icons';
-=======
-import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener esta dependencia
 import BotonVolver from '../componentes/BotonVolver';
->>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
 
 type Product = {
     id: string;
@@ -48,12 +45,9 @@ export default function PantallaCatalogoProductos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { addToCart } = useCart();
-<<<<<<< HEAD
     
-=======
 
     // Estados para paginación
->>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
     const [currentPage, setCurrentPage] = useState(1);
     const [productsPerPage] = useState(6);
     const [totalPages, setTotalPages] = useState(0);
@@ -61,7 +55,7 @@ export default function PantallaCatalogoProductos() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.8.6:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://192.168.8.5:8082/api/products/get');
                 if (response.status === 200) {
                     const formattedProducts = response.data.map(product => ({
                         id: product._id,
@@ -72,11 +66,8 @@ export default function PantallaCatalogoProductos() {
                         image: product.image
                     }));
                     setProducts(formattedProducts);
-<<<<<<< HEAD
-=======
 
                     // Calcular el número total de páginas
->>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
                     setTotalPages(Math.ceil(formattedProducts.length / productsPerPage));
                 }
             } catch (err) {
@@ -171,12 +162,9 @@ export default function PantallaCatalogoProductos() {
                                         scrollEnabled={false}
                                         contentContainerStyle={styles.listContent}
                                     />
-<<<<<<< HEAD
                                     
-=======
 
                                     {/* Controles de paginación */}
->>>>>>> 89fc5613cf4d9ff0e281f0217e078ebf3b78a8a7
                                     <View style={styles.paginationContainer}>
                                         <TouchableOpacity
                                             style={[
