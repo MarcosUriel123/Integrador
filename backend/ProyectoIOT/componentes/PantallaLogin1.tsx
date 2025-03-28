@@ -32,7 +32,7 @@ export default function PantallaLogin1() {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post<LoginResponse>('http://192.168.8.6:8082/api/users/login', {
+            const response = await axios.post<LoginResponse>('http://192.168.8.2:8082/api/users/login', {
                 email,
                 password,
             });
@@ -103,7 +103,7 @@ export default function PantallaLogin1() {
                             value={password}
                             onChangeText={setPassword}
                         />
-                        
+
                         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
                         <TouchableOpacity style={styles.button} onPress={handleLogin}>
                             <Text style={styles.buttonText}>Iniciar Sesión</Text>

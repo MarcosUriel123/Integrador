@@ -31,7 +31,7 @@ export default function PantallaRegistros() {
         try {
             console.log("Obteniendo registros...");
             setLoading(true);
-            const response = await axios.get<Registro[]>('http://192.168.8.6:8082/api/registros/get');
+            const response = await axios.get<Registro[]>('http://192.168.8.2:8082/api/registros/get');
             if (response.status === 200) {
                 const registrosData = response.data as Registro[];
                 console.log(`Registros recibidos: ${registrosData.length}`);

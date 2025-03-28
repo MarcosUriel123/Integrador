@@ -2,7 +2,7 @@ import express from 'express';
 import axios from 'axios';
 
 const router = express.Router();
-const ESP32_IP = "http://192.168.8.8"; // Cambia por la IP real de tu ESP32
+const ESP32_IP = "http://192.168.8.4"; // Cambia por la IP real de tu ESP32
 
 // Ruta para registrar huella
 router.get('/registrar', async (req, res) => {

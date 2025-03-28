@@ -53,7 +53,7 @@ export default function PantallaSeleccionDispositivoIoT() {
                 return;
             }
 
-            const response = await fetch('http://192.168.8.6:8082/api/devices/user-devices', {
+            const response = await fetch('http://192.168.8.2:8082/api/devices/user-devices', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
