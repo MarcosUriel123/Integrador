@@ -50,7 +50,7 @@ export default function PantallaLogin1() {
         setErrorMessage('');
 
         try {
-            const response = await axios.post<LoginResponse>('http://192.168.8.2:8082/api/users/login', {
+            const response = await axios.post<LoginResponse>('http://192.168.8.7:8082/api/users/login', {
                 email,
                 password,
             });

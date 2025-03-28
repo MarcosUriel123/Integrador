@@ -100,7 +100,7 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
-            const baseUrl = 'http://192.168.8.2:8082';
+            const baseUrl = 'http://192.168.8.7:8082';
 
             // Realizar la solicitud al backend
             const response = await axios.post(
@@ -118,7 +118,7 @@ export default function PantallaRegistroDispositivo() {
                 try {
                     let arduinoIP = await AsyncStorage.getItem('arduinoIP');
                     if (!arduinoIP) {
-                        arduinoIP = '192.168.8.2'; // IP por defecto
+                        arduinoIP = '192.168.8.7'; // IP por defecto
                     }
 
                     await axios.post(`http://${arduinoIP}/api/arduino/register-complete`);

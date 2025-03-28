@@ -59,7 +59,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
             // Código existente para cargar preguntas...
             try {
                 setIsLoadingQuestions(true);
-                const response = await axios.get<SecretQuestion[]>('http://192.168.8.2:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>('http://192.168.8.7:8082/api/secretQuestions');
 
                 if (response.status === 200) {
                     console.log('Datos recibidos:', response.data);
@@ -125,7 +125,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
 
         try {
             setIsRegistering(true);
-            const response = await axios.post('http://192.168.8.2:8082/api/users/register', {
+            const response = await axios.post('http://192.168.8.7:8082/api/users/register', {
                 name,
                 lastName,
                 surname,

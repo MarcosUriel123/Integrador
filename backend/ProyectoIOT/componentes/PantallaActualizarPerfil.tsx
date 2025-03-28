@@ -76,7 +76,7 @@ export default function PantallaPerfil({ userId }: Props) {
         try {
             console.log(`Intentando obtener datos para userId: ${localUserId}`);
             // Usar la interfaz User como tipo genérico
-            const response = await axios.get<User>(`http://192.168.8.2:8082/api/users/${localUserId}`);
+            const response = await axios.get<User>(`http://192.168.8.7:8082/api/users/${localUserId}`);
             const user = response.data;  // Ahora user tiene el tipo User
 
             setName(user.name || '');
@@ -111,7 +111,7 @@ export default function PantallaPerfil({ userId }: Props) {
         }
 
         try {
-            const response = await axios.put(`http://192.168.8.2:8082/api/users/update/${localUserId}`, updateData);
+            const response = await axios.put(`http://192.168.8.7:8082/api/users/update/${localUserId}`, updateData);
             if (response.status === 200) {
                 // Modificado: Mostrar Alert con opción para ir al perfil
                 Alert.alert(

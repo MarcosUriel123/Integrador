@@ -54,7 +54,7 @@ export default function PantallaPuerta() {
             obtenerEstadoRealPuerta();
 
             // Siempre intentamos abrir la puerta, sin importar el estado actual
-            const url = 'http://192.168.8.2:8082/api/door/abrir';
+            const url = 'http://192.168.8.7:8082/api/door/abrir';
 
             const response = await axios.get(url);
 

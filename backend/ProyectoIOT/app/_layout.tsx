@@ -12,7 +12,7 @@ const verifyToken = async (): Promise<boolean> => {
     if (!token) return false;
 
     // Intentar verificar el token con el backend
-    const response = await axios.post('http://192.168.8.2:8082/api/users/verify-token', {}, {
+    const response = await axios.post('http://192.168.8.7:8082/api/users/verify-token', {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
 

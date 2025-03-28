@@ -83,7 +83,7 @@ export default function PantallaPerfil({ userId }: Props) {
             const token = await AsyncStorage.getItem('userToken');
 
             const response = await axios.get<User>(
-                `http://192.168.8.2:8082/api/users/${localUserId}`,
+                `http://192.168.8.7:8082/api/users/${localUserId}`,
                 {
                     headers: token ? { Authorization: `Bearer ${token}` } : {}
                 }

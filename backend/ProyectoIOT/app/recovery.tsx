@@ -50,7 +50,7 @@ export default function RecoveryScreen() {
             try {
                 setIsLoadingQuestions(true);
                 // Aquí usamos la misma API que en PantallaRegistro1
-                const response = await axios.get<SecretQuestion[]>('http://192.168.8.2:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>('http://192.168.8.7:8082/api/secretQuestions');
 
                 if (response.status === 200) {
                     setSecretQuestions(response.data);
@@ -123,7 +123,7 @@ export default function RecoveryScreen() {
             setMessage('');
 
             // Hacer la solicitud para verificar las credenciales
-            const response = await axios.post('http://192.168.8.2:8082/api/users/verify-recovery', {
+            const response = await axios.post('http://192.168.8.7:8082/api/users/verify-recovery', {
                 email,
                 secretQuestion: selectedQuestion,
                 secretAnswer
@@ -169,7 +169,7 @@ export default function RecoveryScreen() {
             setMessage('');
 
             // Hacer la solicitud para actualizar la contraseña
-            const response = await axios.post('http://192.168.8.2:8082/api/users/reset-password', {
+            const response = await axios.post('http://192.168.8.7:8082/api/users/reset-password', {
                 email,
                 secretQuestion: selectedQuestion,
                 secretAnswer,

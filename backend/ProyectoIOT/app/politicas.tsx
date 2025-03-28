@@ -16,7 +16,7 @@ import BotonVolver from '../componentes/BotonVolver';
 
 export default function PoliticasScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.8.2:8082/api'; // Update with your actual IP address (use ipconfig)
+    const API_BASE = 'http://192.168.8.7:8082/api'; // Update with your actual IP address (use ipconfig)
     const [politica, setPolitica] = useState('');
 
     // useEffect para cargar la última política desde el backend
