@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import DropDownPicker from 'react-native-dropdown-picker';
+import BotonVolver from '../componentes/BotonVolver';
 import axios from 'axios';
 
 interface SecretQuestion {
@@ -58,7 +59,8 @@ export default function RecoveryScreen() {
                     // Convertir las preguntas al formato que necesita DropDownPicker
                     const dropdownItems = response.data.map(question => ({
                         label: question.pregunta,
-                        value: question._id
+                        value: question._id,
+                        key: `question_${String(question._id || '')}`
                     }));
 
                     setItems(dropdownItems);
@@ -81,7 +83,11 @@ export default function RecoveryScreen() {
                 ];
 
                 setSecretQuestions(mockData);
-                const dropdownItems = mockData.map(q => ({ label: q.pregunta, value: q._id }));
+                const dropdownItems = mockData.map(q => ({
+                    label: q.pregunta,
+                    value: q._id,
+                    key: `fallback_${String(q._id)}`
+                }));
                 setItems(dropdownItems);
                 setSelectedQuestion(mockData[0]._id);
             } finally {
@@ -180,11 +186,6 @@ export default function RecoveryScreen() {
                     "Tu contraseña ha sido actualizada. Ya puedes iniciar sesión con tu nueva contraseña.",
                     [{ text: "Ir a iniciar sesión", onPress: () => router.push('/Login1') }]
                 );
-
-                // Pequeño retraso antes de redirigir para que el usuario pueda ver el mensaje de éxito
-                setTimeout(() => {
-                    router.push('/Login1');
-                }, 1500); // 1.5 segundos de retraso para que el usuario pueda ver el mensaje
             }
         } catch (error: any) {
             console.error('Error al actualizar contraseña:', error);
@@ -204,10 +205,8 @@ export default function RecoveryScreen() {
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Segurix</Text>
                         {/* Botón de regreso */}
-                        <TouchableOpacity onPress={() => router.push('/')}>
-                            <Text style={styles.backText}>←</Text>
-                        </TouchableOpacity>
                     </View>
+                    <BotonVolver destino="/Login1" />
 
                     {/* Contenido principal */}
                     <View style={styles.contentContainer}>
@@ -259,7 +258,17 @@ export default function RecoveryScreen() {
                                                 placeholder="Selecciona una pregunta secreta"
                                                 style={styles.dropdown}
                                                 dropDownContainerStyle={styles.dropdownList}
-                                                listMode="SCROLLVIEW"
+                                                listMode="MODAL" // Cambiar de SCROLLVIEW a MODAL
+                                                modalProps={{
+                                                    animationType: "slide"
+                                                }}
+                                                schema={{
+                                                    label: 'label',
+                                                    value: 'value',
+                                                    icon: 'icon',
+                                                    parent: 'parent',
+                                                    selectable: 'selectable'
+                                                }}
                                                 zIndex={3000}
                                                 zIndexInverse={1000}
                                             />
