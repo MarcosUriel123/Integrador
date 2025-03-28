@@ -1,3 +1,4 @@
+// Ruta: Integrador/backend/server.ts
 import dotenv from 'dotenv';
 dotenv.config(); // Agregar esto al principio
 
@@ -72,7 +73,7 @@ app.use('/api/subusers', subUserRoutes); // Agregamos la ruta de subusuarios
 app.use('/api/preguntasFrecuentes', preguntasFrecuentesRoutes); // Usando el router
 app.use('/api/rfids', rfidRoutes); // Agregamos la ruta de RFID
 
-app.use('/api/purchase', purchaseRoutes); // Agregamos la ruta de purchase
+app.use('/api/purchases', purchaseRoutes); // Plural "purchases"
 
 app.use('/api/pins', pinRoutes);
 // Iniciar servidor

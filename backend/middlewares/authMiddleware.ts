@@ -14,7 +14,7 @@ interface JwtPayload {
 }
 
 // Middleware para proteger rutas
-export const protect = async (req: Request, res: Response, next: NextFunction) => {
+const protect = async (req: Request, res: Response, next: NextFunction) => {
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -54,3 +54,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
         return;
     }
 };
+
+// Exportamos el middleware para ser usado en las rutas
+export default protect;
+export { protect };

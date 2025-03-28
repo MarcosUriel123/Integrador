@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Header from './Header';
 import Footer from './Footer';
+import { useCart } from './CartContext';
 
 type CartProduct = {
     id: string;
@@ -27,6 +28,7 @@ export default function PantallaCarrito() {
     const router = useRouter();
     const [cartItems, setCartItems] = useState<CartProduct[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { updateCartCount } = useCart(); // Usar el contexto del carrito
 
     // Cargar items del carrito cuando la pantalla se monta
     useEffect(() => {
@@ -59,6 +61,7 @@ export default function PantallaCarrito() {
         const updatedCart = cartItems.filter(item => item.id !== productId);
         setCartItems(updatedCart);
         saveCartItems(updatedCart);
+        updateCartCount(); // Actualizar contador en Header
     };
 
     const updateQuantity = (productId: string, newQuantity: number) => {
@@ -70,6 +73,7 @@ export default function PantallaCarrito() {
 
         setCartItems(updatedCart);
         saveCartItems(updatedCart);
+        updateCartCount(); // Actualizar contador en Header
     };
 
     const calculateTotal = () => {
@@ -84,6 +88,7 @@ export default function PantallaCarrito() {
 
         // Verificar si el usuario ha iniciado sesión
         const token = await AsyncStorage.getItem('userToken');
+        const userEmail = await AsyncStorage.getItem('userEmail');
         
         if (!token) {
             Alert.alert(
@@ -102,6 +107,13 @@ export default function PantallaCarrito() {
             );
             return;
         }
+        
+        // Guardar información del carrito para usar en checkout
+        await AsyncStorage.setItem('checkoutCart', JSON.stringify({
+            items: cartItems,
+            total: calculateTotal(),
+            email: userEmail
+        }));
         
         // Navegar a la pantalla de checkout
         router.push('/checkout' as any);
@@ -185,6 +197,17 @@ export default function PantallaCarrito() {
         </SafeAreaView>
     );
 }
+
+// Esta función puede ser exportada para usarla en PantallaCheckout
+export const clearCart = async () => {
+    try {
+        await AsyncStorage.setItem('userCart', JSON.stringify([]));
+        return true;
+    } catch (error) {
+        console.error('Error al vaciar el carrito:', error);
+        return false;
+    }
+};
 
 const styles = StyleSheet.create({
     screen: {

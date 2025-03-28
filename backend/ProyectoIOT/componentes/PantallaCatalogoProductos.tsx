@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -15,15 +15,12 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import Header from './Header';
 import Footer from './Footer';
-// Importación corregida - asumiendo que CartContext está en la raíz del proyecto
 import { useCart } from './CartContext';
-// Importación faltante de ProductCard
 import ProductCard from './ProductCard ';
-import { Ionicons } from '@expo/vector-icons'; // Asegúrate de tener esta dependencia
+import { Ionicons } from '@expo/vector-icons';
 
-// Tipos existentes...
 type Product = {
-    id: string; // Cambiado de _id a id
+    id: string;
     name: string;
     description: string;
     price: number;
@@ -31,7 +28,6 @@ type Product = {
     image: string;
 };
 
-// Tipo para la respuesta de la API
 type ProductResponse = {
     _id: string;
     name: string;
@@ -45,22 +41,20 @@ export default function PantallaCatalogoProductos() {
     const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<string | null>(null);
     const { addToCart } = useCart();
     
-    // Estados para paginación
     const [currentPage, setCurrentPage] = useState(1);
-    const [productsPerPage] = useState(10);
-    const [totalPages, setTotalPages] = useState(1);
+    const [productsPerPage] = useState(6);
+    const [totalPages, setTotalPages] = useState(0);
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 const response = await axios.get<ProductResponse[]>('http://192.168.8.3:8082/api/products/get');
                 if (response.status === 200) {
-                    // Mapear la respuesta para convertir _id a id
                     const formattedProducts = response.data.map(product => ({
-                        id: product._id, // Convertir _id a id
+                        id: product._id,
                         name: product.name,
                         description: product.description,
                         price: product.price,
@@ -68,8 +62,6 @@ export default function PantallaCatalogoProductos() {
                         image: product.image
                     }));
                     setProducts(formattedProducts);
-                    
-                    // Calcular el número total de páginas
                     setTotalPages(Math.ceil(formattedProducts.length / productsPerPage));
                 }
             } catch (err) {
@@ -84,36 +76,30 @@ export default function PantallaCatalogoProductos() {
     }, [productsPerPage]);
 
     const handleProductPress = (product: Product) => {
-        // Navegar a la pantalla de detalles y pasar los datos del producto
         router.push({
             pathname: '/productoDetail',
             params: { product: JSON.stringify(product) },
         });
     };
 
-    // Función para ir a la página anterior
     const goToPreviousPage = () => {
         if (currentPage > 1) {
             setCurrentPage(currentPage - 1);
-            // Desplazar hacia arriba al cambiar de página
             if (scrollViewRef.current) {
                 scrollViewRef.current.scrollTo({ y: 0, animated: true });
             }
         }
     };
 
-    // Función para ir a la página siguiente
     const goToNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage(currentPage + 1);
-            // Desplazar hacia arriba al cambiar de página
             if (scrollViewRef.current) {
                 scrollViewRef.current.scrollTo({ y: 0, animated: true });
             }
         }
     };
 
-    // Obtener los productos para la página actual
     const getCurrentPageProducts = () => {
         const indexOfLastProduct = currentPage * productsPerPage;
         const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -131,8 +117,7 @@ export default function PantallaCatalogoProductos() {
         />
     );
 
-    // Referencia para el ScrollView
-    const scrollViewRef = React.useRef<ScrollView>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -168,7 +153,6 @@ export default function PantallaCatalogoProductos() {
                                         contentContainerStyle={styles.listContent}
                                     />
                                     
-                                    {/* Controles de paginación */}
                                     <View style={styles.paginationContainer}>
                                         <TouchableOpacity 
                                             style={[
@@ -216,7 +200,6 @@ export default function PantallaCatalogoProductos() {
     );
 }
 
-// Estilos existentes más los nuevos...
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
@@ -253,7 +236,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 20,
     },
-    // Estilos existentes...
     loadingText: {
         marginTop: 15,
         fontSize: 16,
@@ -267,7 +249,6 @@ const styles = StyleSheet.create({
     listContent: {
         width: '100%',
     },
-    // Nuevos estilos para paginación
     paginationContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -298,7 +279,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#555',
     },
-    // Mantén el resto de estilos aquí...
     productCard: {
         backgroundColor: '#f8f9fa',
         borderRadius: 8,

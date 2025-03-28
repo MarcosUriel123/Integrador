@@ -20,7 +20,7 @@
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@types/bcrypt": "^5.0.2",
-    "axios": "^1.8.2",
+    "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "expo": "~52.0.37",

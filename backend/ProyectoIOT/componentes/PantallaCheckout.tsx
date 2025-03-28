@@ -13,8 +13,10 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
+
 import Header from './Header';
 import Footer from './Footer';
+import { useCart } from './CartContext';
 
 type CartProduct = {
     id: string;
@@ -25,6 +27,7 @@ type CartProduct = {
 };
 
 export default function PantallaCheckout() {
+    const { resetCart } = useCart();
     const router = useRouter();
     const [cartItems, setCartItems] = useState<CartProduct[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -64,9 +67,10 @@ export default function PantallaCheckout() {
                             const response = await axios.get(`http://192.168.8.3:8082/api/users/${userId}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
-                            if (response.data && response.data.email) {
-                                setUserEmail(response.data.email);
-                                await AsyncStorage.setItem('userEmail', response.data.email);
+                            const userData = response.data as { email?: string };
+                            if (userData && userData.email) {
+                                setUserEmail(userData.email);
+                                await AsyncStorage.setItem('userEmail', userData.email);
                             }
                         } catch (error) {
                             console.error('Error al obtener datos del usuario:', error);
@@ -110,81 +114,101 @@ export default function PantallaCheckout() {
         return /^\d{3,4}$/.test(cvv);
     };
 
-    // Procesar el pago
-    const handlePayment = async () => {
-        // Validar que todos los campos estén completos
-        if (Object.values(paymentInfo).some(value => !value)) {
-            Alert.alert('Campos incompletos', 'Por favor, completa todos los campos de pago.');
-            return;
-        }
+    // Reemplaza tu función handlePayment actual con esta versión corregida:
 
-        // Validar formato de los datos de la tarjeta
-        if (!validateCardNumber(paymentInfo.cardNumber)) {
-            Alert.alert('Número de tarjeta inválido', 'Ingresa un número de tarjeta válido de 16 dígitos.');
-            return;
-        }
+const handlePayment = async () => {
+    // Validaciones básicas de campos 
+    if (!paymentInfo.name || !paymentInfo.cardNumber || !paymentInfo.expirationDate || !paymentInfo.cvv) {
+        Alert.alert('Error', 'Todos los campos son obligatorios');
+        return;
+    }
 
-        if (!validateExpirationDate(paymentInfo.expirationDate)) {
-            Alert.alert('Fecha inválida', 'El formato debe ser MM/AA (ej: 12/25).');
-            return;
-        }
+    // Validación de formato de tarjeta
+    if (paymentInfo.cardNumber.replace(/\s/g, '').length !== 16) {
+        Alert.alert('Error', 'El número de tarjeta debe tener 16 dígitos');
+        return;
+    }
 
-        if (!validateCVV(paymentInfo.cvv)) {
-            Alert.alert('CVV inválido', 'El CVV debe tener 3 o 4 dígitos.');
-            return;
-        }
+    // Validación de fecha de expiración
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(paymentInfo.expirationDate)) {
+        Alert.alert('Error', 'El formato de fecha debe ser MM/YY');
+        return;
+    }
 
-        // Verificar que haya un email
-        if (!userEmail) {
-            Alert.alert('Correo no disponible', 'No se encontró un correo electrónico para enviar la confirmación.');
-            return;
-        }
+    // Validación de CVV
+    if (!/^\d{3,4}$/.test(paymentInfo.cvv)) {
+        Alert.alert('Error', 'El CVV debe tener 3 o 4 dígitos');
+        return;
+    }
 
-        setIsSending(true);
+    // Verificar que hay productos en el carrito
+    if (cartItems.length === 0) {
+        Alert.alert('Error', 'No hay productos en el carrito');
+        return;
+    }
 
-        try {
-            // Enviar solicitud al backend
-            const response = await axios.post('http://192.168.8.3:8082/api/purchase/send-purchase-email', {
+    // Verificar que hay un email
+    if (!userEmail) {
+        Alert.alert('Error', 'No se encontró un correo electrónico');
+        return;
+    }
+
+    // Mostrar loading
+    setIsSending(true);
+
+    try {
+        // IMPORTANTE: NO mostramos la alerta de procesamiento aquí porque
+        // bloqueará la ejecución hasta que el usuario la cierre
+        
+        console.log('Iniciando proceso de pago');
+        console.log('Enviando correo a:', userEmail);
+        console.log('Productos:', cartItems.length);
+        
+        // Enviar solicitud directamente - usamos la IP local
+        const response = await fetch('http://192.168.8.5:8082/api/purchases/send-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
                 email: userEmail,
-                cart: cartItems.map(item => ({
-                    product: {
-                        name: item.name,
-                        price: item.price,
-                        _id: item.id
-                    },
-                    quantity: item.quantity
-                }))
-            });
-
-            if (response.status === 200) {
-                // Limpieza del carrito
-                await AsyncStorage.removeItem('userCart');
-
-                // Mostrar confirmación
-                Alert.alert(
-                    'Compra Exitosa',
-                    'Gracias por tu compra. Hemos enviado un correo con la confirmación de tu pedido.',
-                    [
-                        {
-                            text: 'OK',
-                            onPress: () => {
-                                // Redirigir a la pantalla principal
-                                router.push('/Principal');
-                            }
-                        }
-                    ]
-                );
-            }
-        } catch (error) {
-            console.error('Error al procesar la compra:', error);
+                cart: cartItems
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Respuesta:', response.status, data);
+        
+        // Verificar respuesta
+        if (response.ok) {
+            console.log('Proceso completado exitosamente');
+            
+            // Limpiar carrito
+            await resetCart();
+            await AsyncStorage.removeItem('userCart');
+            
+            // Mostrar mensaje de éxito
             Alert.alert(
-                'Error al procesar la compra',
-                'Hubo un problema al procesar tu compra. Por favor, intenta nuevamente.'
+                '¡Compra realizada con éxito!',
+                `Se ha enviado un correo de confirmación a ${userEmail}`,
+                [{ text: 'OK', onPress: () => router.push('/') }]
             );
-        } finally {
-            setIsSending(false);
+        } else {
+            throw new Error(`Error del servidor: ${data.message || response.status}`);
         }
-    };
+    } catch (error) {
+        console.error('Error en el proceso de pago:', error);
+        
+        // Mensaje de error simplificado
+        Alert.alert(
+            'Error en la compra',
+            'No se pudo completar la compra. Por favor, intenta nuevamente más tarde.',
+            [{ text: 'Entendido' }]
+        );
+    } finally {
+        setIsSending(false);
+    }
+};
 
     if (isLoading) {
         return (
@@ -303,11 +327,12 @@ export default function PantallaCheckout() {
                             style={[styles.confirmButton, isSending && styles.disabledButton]}
                             onPress={handlePayment}
                             disabled={isSending}
+                            activeOpacity={0.7}
                         >
                             {isSending ? (
                                 <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
-                                <Text style={styles.confirmButtonText}>Confirmar Pago</Text>
+                                <Text style={styles.confirmButtonText}>CONFIRMAR PAGO</Text>
                             )}
                         </TouchableOpacity>
 

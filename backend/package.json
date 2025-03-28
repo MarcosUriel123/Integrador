@@ -13,11 +13,13 @@
   "dependencies": {
     "@react-native-picker/picker": "^2.11.0",
     "@types/bcrypt": "^5.0.2",
-    "axios": "^1.8.2",
+    "@types/nodemailer": "^6.4.17",
+    "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.10.0",
     "react-native-vector-icons": "^10.2.0",
     "react-router-dom": "^7.3.0",
     "serialport": "^13.0.0"

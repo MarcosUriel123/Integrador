@@ -1,8 +1,14 @@
-import express, { Router, RequestHandler } from 'express';
-import { sendPurchaseEmail } from '../controllers/purchaseController';
+// filepath: c:\Users\delfi\Documents\GitHub\Integrador\backend\routes\newPurchaseRoutes.ts
+import express from 'express';
+import { protect } from '../middlewares/authMiddleware';
+import { checkout, sendPurchaseEmail } from '../controllers/purchaseController';
 
-const router: Router = express.Router();
+const router = express.Router();
 
-router.post('/send-purchase-email', sendPurchaseEmail as RequestHandler);
+// Ruta para procesar compra (requiere autenticación) - DESACTIVADA TEMPORALMENTE
+// router.post('/checkout', protect, checkout);
+
+// Ruta para enviar correo de confirmación - SIN PROTECCIÓN TEMPORAL
+router.post('/send-email', sendPurchaseEmail);
 
 export default router;
