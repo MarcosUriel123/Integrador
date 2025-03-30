@@ -23,7 +23,7 @@ const { width } = Dimensions.get('window');
 
 export default function MisionScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.1.133:8082/api';
+    const API_BASE = 'http://192.168.1.68:8082/api';
     const [mision, setMision] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');

@@ -77,5 +77,6 @@ app.use('/api/purchase', purchaseRoutes); // Agregamos la ruta de purchase
 app.use('/api/pins', pinRoutes);
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://192.168.1.133:${PORT}`);
+  const loc = process.env.LOCAL_IP || 'localhost';
+  console.log(`Servidor corriendo en http://${loc}:${PORT}`);
 });

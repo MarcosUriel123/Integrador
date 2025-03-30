@@ -78,7 +78,7 @@ export default function PantallaCatalogoProductos() {
 
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.1.133:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>('http://192.168.1.68:8082/api/products/get');
                 if (response.status === 200) {
                     // Mapear la respuesta para convertir _id a id
                     const formattedProducts = response.data.map(product => ({

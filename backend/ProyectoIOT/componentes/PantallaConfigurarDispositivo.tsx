@@ -130,7 +130,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.get(
-                'http://192.168.0.75:8082/api/devices/info',
+                'http://192.168.1.68:8082/api/devices/info',
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -170,7 +170,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.post(
-                'http://192.168.0.75:8082/api/devices/update-pin',
+                'http://192.168.1.68:8082/api/devices/update-pin',
                 { devicePin: newPin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

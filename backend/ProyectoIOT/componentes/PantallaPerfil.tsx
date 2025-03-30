@@ -81,8 +81,8 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
 
             // Si no tenemos userId, intentamos obtener el perfil del usuario actual
             const endpoint = userId
-                ? `http://192.168.1.133:8082/api/users/${userId}`
-                : 'http://192.168.1.133:8082/api/users/me';
+                ? `http://192.168.1.68:8082/api/users/${userId}`
+                : 'http://192.168.1.68:8082/api/users/me';
 
             const response = await fetch(endpoint, {
                 headers: {
@@ -150,8 +150,8 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
             }
 
             const endpoint = userId
-                ? `http://192.168.1.133:8082/api/users/${userId}`
-                : 'http://192.168.1.133:8082/api/users/me';
+                ? `http://192.168.1.68:8082/api/users/${userId}`
+                : 'http://192.168.1.68:8082/api/users/me';
 
             const response = await fetch(endpoint, {
                 method: 'PUT',

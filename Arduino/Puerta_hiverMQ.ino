@@ -18,7 +18,7 @@ const char* ssid = "Telcel-A2C3";
 const char* password = "A810YHTMGRD";
 
 // Configuración del servidor
-const char* ipServer = "192.168.1.133:8082";
+const char* ipServer = "192.168.1.68:8082";
 
 // Configuración del servidor web
 WebServer server(80);

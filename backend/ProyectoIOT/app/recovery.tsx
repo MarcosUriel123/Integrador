@@ -83,7 +83,7 @@ export default function RecoveryScreen() {
         const loadSecretQuestions = async () => {
             try {
                 setIsLoadingQuestions(true);
-                const response = await axios.get<SecretQuestion[]>('http://192.168.0.75:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>('http://192.168.1.68:8082/api/secretQuestions');
 
                 if (response.status === 200) {
                     const validQuestions = response.data.filter(q => q && q._id !== undefined);
@@ -155,7 +155,7 @@ export default function RecoveryScreen() {
             setMessage('');
 
             // Hacer la solicitud para verificar las credenciales
-            const response = await axios.post('http://192.168.0.75:8082/api/users/verify-recovery', {
+            const response = await axios.post('http://192.168.1.68:8082/api/users/verify-recovery', {
                 email,
                 secretQuestion: selectedQuestion,
                 secretAnswer
@@ -215,7 +215,7 @@ export default function RecoveryScreen() {
             setMessage('');
 
             // Hacer la solicitud para actualizar la contraseña
-            const response = await axios.post('http://192.168.0.75:8082/api/users/reset-password', {
+            const response = await axios.post('http://192.168.1.68:8082/api/users/reset-password', {
                 email,
                 secretQuestion: selectedQuestion,
                 secretAnswer,

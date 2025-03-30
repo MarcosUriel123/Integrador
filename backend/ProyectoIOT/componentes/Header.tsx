@@ -76,7 +76,7 @@ const Header = ({
 
             console.log('[Header] Solicitando estado del dispositivo al servidor...');
 
-            const response = await fetch('http://192.168.1.133:8082/api/users/check-device', {
+            const response = await fetch('http://192.168.1.68:8082/api/users/check-device', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

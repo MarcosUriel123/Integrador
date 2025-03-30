@@ -21,7 +21,7 @@ export default function Registro1Screen() {
             // Paso 1: Registro exitoso (asumimos que ya se completó en PantallaRegistro1)
 
             // Paso 2: Iniciar sesión automáticamente
-            const loginResponse = await axios.post<LoginResponse>('http://192.168.1.133:8082/api/users/login', {
+            const loginResponse = await axios.post<LoginResponse>('http://192.168.1.68:8082/api/users/login', {
                 email,
                 password
             });
@@ -29,6 +29,7 @@ export default function Registro1Screen() {
             // Paso 3: Si el login es exitoso, guardar el token
             if (loginResponse.data && loginResponse.data.token) {
                 await AsyncStorage.setItem('userToken', loginResponse.data.token);
+                await AsyncStorage.setItem('userId', loginResponse.data._id); // Añadir esta línea
                 console.log('Sesión iniciada automáticamente después del registro');
 
                 // Paso 4: Redirigir a la pantalla principal
