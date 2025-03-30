@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
 import DropDownPicker from 'react-native-dropdown-picker';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Define la interfaz para el objeto Usuario
 interface User {
@@ -89,7 +90,7 @@ export default function PantallaPerfil({ userId }: Props) {
         try {
             console.log(`Intentando obtener datos para userId: ${localUserId}`);
             // Usar la interfaz User como tipo genérico
-            const response = await axios.get<User>(`http://192.168.1.68:8082/api/users/${localUserId}`);
+            const response = await axios.get<User>(`${IPS.SERVER_URL}/api/users/${localUserId}`);
             const user = response.data;  // Ahora user tiene el tipo User
 
             setName(user.name || '');
@@ -129,7 +130,7 @@ export default function PantallaPerfil({ userId }: Props) {
 
         try {
             // Usar la ruta correcta con /update/
-            const response = await axios.put(`http://192.168.1.68:8082/api/users/update/${localUserId}`, updateData);
+            const response = await axios.put(`${IPS.SERVER_URL}/api/users/update/${localUserId}`, updateData);
 
             if (response.status === 200) {
                 Alert.alert(

@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Header from '../componentes/Header';
 import Footer from '../componentes/Footer';
 import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -49,7 +50,7 @@ export default function PantallaPuerta() {
     const obtenerEstadoRealPuerta = async () => {
         try {
             // Verificar IP del Arduino en la consola del ESP32
-            const response = await axios.get<{ status: string }>('http://192.168.1.68:8082/api/arduino/doorstatus');
+            const response = await axios.get<{ status: string }>(`${IPS.ESP32_URL}/api/arduino/doorstatus`);
 
             // Depurar la respuesta
             console.log('Respuesta del sensor:', response.data);
@@ -82,7 +83,7 @@ export default function PantallaPuerta() {
             obtenerEstadoRealPuerta();
 
             // Siempre intentamos abrir la puerta, sin importar el estado actual
-            const url = 'http://192.168.1.68:8082/api/door/abrir';
+            const url = `${IPS.SERVER_URL}/api/door/abrir`;
 
             const response = await axios.get(url);
             console.log('Respuesta al abrir puerta:', response.data);

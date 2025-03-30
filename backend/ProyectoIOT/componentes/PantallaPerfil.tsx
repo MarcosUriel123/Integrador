@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Header from './Header';
 import Footer from './Footer';
 import BotonVolver from './BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -81,8 +82,8 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
 
             // Si no tenemos userId, intentamos obtener el perfil del usuario actual
             const endpoint = userId
-                ? `http://192.168.1.68:8082/api/users/${userId}`
-                : 'http://192.168.1.68:8082/api/users/me';
+                ? `${IPS.SERVER_URL}/api/users/${userId}`
+                : `${IPS.SERVER_URL}/api/users/me`;
 
             const response = await fetch(endpoint, {
                 headers: {
@@ -150,8 +151,8 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
             }
 
             const endpoint = userId
-                ? `http://192.168.1.68:8082/api/users/${userId}`
-                : 'http://192.168.1.68:8082/api/users/me';
+                ? `${IPS.SERVER_URL}/api/users/${userId}`
+                : `${IPS.SERVER_URL}/api/users/me`;
 
             const response = await fetch(endpoint, {
                 method: 'PUT',

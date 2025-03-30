@@ -14,11 +14,13 @@
 #include <WiFiClientSecure.h>
 
 // Configuración del WiFi
-const char* ssid = "Telcel-A2C3";
-const char* password = "A810YHTMGRD";
+// const char* ssid = "Telcel-A2C3";
+// const char* password = "A810YHTMGRD";
+const char* ssid = "INFINITUMDCB0";
+const char* password = "C3X7cdy99W";
 
 // Configuración del servidor
-const char* ipServer = "192.168.1.68:8082";
+const char* ipServer = "192.168.1.68:8082"; 
 
 // Configuración del servidor web
 WebServer server(80);

@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Header from './Header';
 import Footer from './Footer';
 import BotonVolver from './BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -71,7 +72,7 @@ export default function PantallaRegistros() {
             console.log("Obteniendo registros...");
             setLoading(true);
             setError('');
-            const response = await axios.get<Registro[]>('http://192.168.1.68:8082/api/registros/get');
+            const response = await axios.get<Registro[]>(`${IPS.SERVER_URL}/api/registros/get`);
 
             if (response.status === 200) {
                 const registrosData = response.data as Registro[];

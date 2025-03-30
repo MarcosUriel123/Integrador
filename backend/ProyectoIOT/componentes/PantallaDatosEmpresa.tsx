@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 export default function PantallaDatosEmpresa() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.1.68:8082/api'; //(IPCONFIG)
+    // Usamos la configuración centralizada en lugar de hardcodear la URL
+    const API_BASE = `${IPS.SERVER_URL}/api`;
 
     // Estado para almacenar los datos del formulario
     const [formData, setFormData] = useState({

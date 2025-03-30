@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
+import IPS from '../ProyectoIOT/config/IPS'; // Importamos la configuración centralizada
 
 export const registrarHuella = async (req: Request, res: Response) => {
     try {
-        const arduinoUrl = "http://192.168.8.10/registrar-huella"; // IP del ESP32
+        // Usamos la URL del ESP32 desde la configuración centralizada
+        const arduinoUrl = `${IPS.ESP32_URL}/registrar-huella`;
 
         // Enviar solicitud a Arduino
         const response = await axios.get(arduinoUrl);
@@ -14,6 +16,7 @@ export const registrarHuella = async (req: Request, res: Response) => {
             return res.status(500).json({ error: "Error en Arduino" });
         }
     } catch (error) {
+        console.error("Error de conexión con Arduino:", error);
         return res.status(500).json({ error: "Error de conexión con Arduino" });
     }
 };

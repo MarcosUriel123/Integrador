@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const arduinoIP = '192.168.8.10'; // Cambia esto por la IP de tu Arduino ESP32
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Interfaces para las respuestas de la API
 interface FingerprintRegisterResponse {
@@ -74,7 +74,7 @@ const FingerprintRegistrationModal = ({
     const checkDeviceConnection = async () => {
         try {
             const response = await axios.get<DeviceStatusResponse>(
-                `http://${arduinoIP}/api/arduino/status`
+                `${IPS.ESP32_URL}/api/arduino/status`
             );
 
             // Ahora TypeScript sabe que response.data tiene una propiedad connected
@@ -120,7 +120,7 @@ const FingerprintRegistrationModal = ({
 
             // Tipar correctamente la respuesta
             const response = await axios.post<FingerprintRegisterResponse>(
-                `http://${arduinoIP}/api/arduino/fingerprint/register`,
+                `${IPS.ESP32_URL}/api/arduino/fingerprint/register`,
                 { userName },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -142,7 +142,7 @@ const FingerprintRegistrationModal = ({
                 try {
                     // Tipar correctamente la respuesta del polling
                     const pollResponse = await axios.get<FingerprintStatusResponse>(
-                        `http://${arduinoIP}/api/arduino/fingerprint/status`,
+                        `${IPS.ESP32_URL}/api/arduino/fingerprint/status`,
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
 

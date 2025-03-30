@@ -2,11 +2,12 @@ import React from 'react';
 import { SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 export default function PantallaHuella() {
     const handleRegistrarHuella = async () => {
         try {
-            const response = await axios.get('http://192.168.1.68:8082/api/huella/registrar'); //(IPCONFIG)
+            const response = await axios.get(`${IPS.SERVER_URL}/huella/registrar`); //(IPCONFIG)
             alert(response.data);
         } catch (error) {
             console.error("Error al registrar huella:", error);

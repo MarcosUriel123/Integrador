@@ -21,6 +21,7 @@ import Footer from './Footer';
 import { useCart } from './CartContext';
 import ProductCard from './ProductCard ';
 import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Tipos existentes...
 type Product = {
@@ -78,7 +79,7 @@ export default function PantallaCatalogoProductos() {
 
         const fetchProducts = async () => {
             try {
-                const response = await axios.get<ProductResponse[]>('http://192.168.1.68:8082/api/products/get');
+                const response = await axios.get<ProductResponse[]>(`${IPS.SERVER_URL}/api/products/get`);
                 if (response.status === 200) {
                     // Mapear la respuesta para convertir _id a id
                     const formattedProducts = response.data.map(product => ({

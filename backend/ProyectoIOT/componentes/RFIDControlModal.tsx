@@ -5,9 +5,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Configuración del Arduino - Reemplaza con la IP real de tu Arduino
-const arduinoIP = '192.168.8.10'; // Cambia esto por la IP de tu Arduino ESP32
+import IPS from '../config/IPS'; // Importa la configuración de IPs
 
 // Interfaces para las respuestas de la API
 interface DeviceStatusResponse {
@@ -69,9 +67,9 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
 
     const checkDeviceConnection = async () => {
         try {
-            // Actualización: Usar la IP del Arduino directamente
+            // Usar la configuración centralizada
             const response = await axios.get<DeviceStatusResponse>(
-                `http://${arduinoIP}/api/arduino/status`
+                `${IPS.ESP32_URL}/api/arduino/status`
             );
 
             setIsConnected(response.data.connected);
@@ -87,18 +85,18 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
 
     const verifyArduinoIP = async () => {
         try {
-            // Mostrar la IP actual que estamos usando
-            setArduinoIPStatus(`Usando IP: ${arduinoIP}`);
+            // Mostrar la IP que estamos usando desde la configuración centralizada
+            setArduinoIPStatus(`Usando IP: ${IPS.ESP32_URL}`);
 
             // Verificar si podemos acceder al ESP32
-            const response = await axios.get(`http://${arduinoIP}/api/arduino/ping`, { timeout: 3000 });
+            const response = await axios.get(`${IPS.ESP32_URL}/api/arduino/ping`, { timeout: 3000 });
             if (response.status === 200) {
-                setArduinoIPStatus(`Conectado a IP: ${arduinoIP}`);
+                setArduinoIPStatus(`Conectado a IP: ${IPS.ESP32_URL}`);
                 setIsConnected(true);
             }
         } catch (error) {
             console.error('Error verificando IP del Arduino:', error);
-            setArduinoIPStatus(`Error conectando a ${arduinoIP}. Verifique la IP correcta.`);
+            setArduinoIPStatus(`Error conectando a ${IPS.ESP32_URL}. Verifique la IP correcta.`);
             setIsConnected(false);
         }
     };
@@ -127,9 +125,9 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
 
             const token = await AsyncStorage.getItem('userToken');
 
-            // 1. Agregar un timeout más largo para la operación de reset
+            // 1. Reset
             await axios.post(
-                `http://${arduinoIP}/api/arduino/rfid/reset`,
+                `${IPS.ESP32_URL}/api/arduino/rfid/reset`,
                 {},
                 {
                     timeout: 5000,
@@ -143,9 +141,9 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
             // 2. Esperar un poco más para que el reset se complete
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            // 3. Hacer la solicitud de lectura con un timeout más generoso
+            // 3. Lectura
             const readResponse = await axios.post(
-                `http://${arduinoIP}/api/arduino/rfid/read`,
+                `${IPS.ESP32_URL}/api/arduino/rfid/read`,
                 {},
                 {
                     timeout: 8000,
@@ -162,9 +160,9 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
 
             pollIntervalRef.current = setInterval(async () => {
                 try {
-                    // 4. Agregar timeout también en la solicitud de estado
+                    // 4. Status polling
                     const pollResponse = await axios.get(
-                        `http://${arduinoIP}/api/arduino/rfid/status`,
+                        `${IPS.ESP32_URL}/api/arduino/rfid/status`,
                         {
                             timeout: 3000,
                             headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -237,8 +235,8 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
                     setMessage('Tiempo de espera agotado. Intente nuevamente.');
                     setIsReading(false);
 
-                    // 6. Intentar reiniciar el estado del dispositivo en timeout
-                    axios.post(`http://${arduinoIP}/api/arduino/rfid/reset`).catch(console.warn);
+                    // 6. Reset en timeout
+                    axios.post(`${IPS.ESP32_URL}/api/arduino/rfid/reset`).catch(console.warn);
                 }
             }, 30000); // 30 segundos de timeout
 
@@ -257,7 +255,7 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
                 errorMessage = 'Ya hay una operación RFID en progreso. Espere unos momentos e intente nuevamente.';
 
                 // Intentar reiniciar el estado
-                axios.post(`http://${arduinoIP}/api/arduino/rfid/reset`).catch(console.warn);
+                axios.post(`${IPS.ESP32_URL}/api/arduino/rfid/reset`).catch(console.warn);
             }
             // Timeout
             else if (error.code === 'ECONNABORTED') {
@@ -271,6 +269,9 @@ const RFIDControlModal = ({ onCaptureComplete, onCancel }: RFIDControlModalProps
             setStatus('error');
             setMessage(errorMessage);
             setIsReading(false);
+
+            // Intento de reinicio en catch
+            axios.post(`${IPS.ESP32_URL}/api/arduino/rfid/reset`).catch(console.warn);
         }
     };
 

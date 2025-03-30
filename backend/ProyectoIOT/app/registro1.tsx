@@ -4,6 +4,7 @@ import PantallaRegistro1 from '@/componentes/PantallaRegistro1';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 interface LoginResponse {
     token: string;
@@ -21,7 +22,7 @@ export default function Registro1Screen() {
             // Paso 1: Registro exitoso (asumimos que ya se completó en PantallaRegistro1)
 
             // Paso 2: Iniciar sesión automáticamente
-            const loginResponse = await axios.post<LoginResponse>('http://192.168.1.68:8082/api/users/login', {
+            const loginResponse = await axios.post<LoginResponse>(`${IPS.SERVER_URL}/api/users/login`, {
                 email,
                 password
             });

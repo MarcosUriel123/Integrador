@@ -16,7 +16,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Añadir AsyncStorage
 import Header from './Header';
 import Footer from './Footer';
-import IPSCONFIG from '../../../backend/config/IPsConfig'; // Importamos la configuración de IPs
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Interfaz para las FAQs
 interface FAQ {
@@ -38,7 +38,7 @@ export default function PantallaPrincipal() {
         const fetchFAQs = async () => {
             try {
                 setLoadingFaqs(true);
-                const response = await axios.get<FAQ[]>(`${IPSCONFIG.SERVER_URL}/api/preguntasFrecuentes`);
+                const response = await axios.get<FAQ[]>(`${IPS.SERVER_URL}/api/preguntasFrecuentes`);
                 setFaqs(response.data);
                 setError('');
             } catch (err) {

@@ -16,13 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import Header from '../componentes/Header';
 import Footer from '../componentes/Footer';
 import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
 export default function ValoresScreen() {
     const router = useRouter();
-    const API_BASE = 'http://192.168.1.68:8082/api';
+    const API_BASE = `${IPS.SERVER_URL}/api`;
     const [valor, setValor] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');

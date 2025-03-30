@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 export const verifyToken = async (): Promise<boolean> => {
     try {
         const token = await AsyncStorage.getItem('userToken');
         if (!token) return false;
 
-        const response = await axios.post('http://192.168.1.68:8082/api/users/verify-token', {}, {
+        const response = await axios.post(`${IPS.SERVER_URL}/api/users/verify-token`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -27,7 +28,7 @@ export const logout = async (): Promise<void> => {
         if (token) {
             try {
                 // Llamar al endpoint de logout para invalidar el token en el servidor
-                await axios.post('http://192.168.1.68:8082/api/users/logout', {}, {
+                await axios.post(`${IPS.SERVER_URL}/api/users/logout`, {}, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 console.log('Token invalidado en el servidor');

@@ -14,6 +14,7 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 export default function PantallaRegistroDispositivo() {
     const router = useRouter();
@@ -33,20 +34,29 @@ export default function PantallaRegistroDispositivo() {
         }
 
         try {
-            // Intentar obtener la IP del Arduino de AsyncStorage
-            let arduinoIP = await AsyncStorage.getItem('arduinoIP');
-            if (!arduinoIP) {
-                arduinoIP = '192.168.8.10'; // IP por defecto
+            // Verificar si tenemos una IP guardada en AsyncStorage
+            let endpoint;
+            const savedArduinoIP = await AsyncStorage.getItem('arduinoIP');
+
+            if (savedArduinoIP) {
+                // Si tenemos una IP guardada, formamos la URL completa
+                endpoint = `http://${savedArduinoIP}/api/arduino/info`;
+            } else {
+                // Si no tenemos IP guardada, usamos directamente la URL de IPS
+                // que ya incluye el protocolo http://
+                endpoint = `${IPS.ESP32_URL}/api/arduino/info`;
             }
 
-            const response = await axios.get<DeviceInfo>(`http://${arduinoIP}/api/arduino/info`, {
+            console.log('Intentando conectar a:', endpoint);
+
+            const response = await axios.get<DeviceInfo>(endpoint, {
                 timeout: 5000
             });
 
             if (response.data && response.data.mac) {
                 setMacAddress(response.data.mac);
 
-                // Opcionalmente guardar la IP si ha cambiado
+                // Guardar la IP si ha cambiado y viene en la respuesta
                 if (response.data.ip) {
                     await AsyncStorage.setItem('arduinoIP', response.data.ip);
                 }
@@ -100,7 +110,8 @@ export default function PantallaRegistroDispositivo() {
                 return;
             }
 
-            const baseUrl = 'http://192.168.1.68:8082';
+            // Usar la configuración centralizada para la URL del servidor
+            const baseUrl = IPS.SERVER_URL;
 
             // Realizar la solicitud al backend
             const response = await axios.post(
@@ -116,12 +127,16 @@ export default function PantallaRegistroDispositivo() {
 
                 // Notificar al Arduino que el registro se completó
                 try {
-                    let arduinoIP = await AsyncStorage.getItem('arduinoIP');
-                    if (!arduinoIP) {
-                        arduinoIP = '192.168.1.68'; // IP por defecto
+                    let endpoint;
+                    const savedArduinoIP = await AsyncStorage.getItem('arduinoIP');
+
+                    if (savedArduinoIP) {
+                        endpoint = `http://${savedArduinoIP}/api/arduino/register-complete`;
+                    } else {
+                        endpoint = `${IPS.ESP32_URL}/api/arduino/register-complete`;
                     }
 
-                    await axios.post(`http://${arduinoIP}/api/arduino/register-complete`);
+                    await axios.post(endpoint);
                 } catch (notifyError) {
                     console.warn('Error notificando al dispositivo:', notifyError);
                     // No bloquear la navegación si esto falla

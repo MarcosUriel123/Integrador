@@ -13,6 +13,7 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Entypo, Feather } from '@expo/vector-icons'; // Añadí Feather para el ícono de flecha
 import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 interface Registro {
     _id: string;
@@ -30,12 +31,13 @@ export default function PantallaRegistros() {
     useEffect(() => {
         const fetchRegistros = async () => {
             try {
-                const response = await axios.get('http://192.168.1.68:8082/api/registros/get'); //(ipconfig)
+                const response = await axios.get(`${IPS.SERVER_URL}/api/registros/get`);
                 if (response.status === 200) {
                     setRegistros(response.data as Registro[]);
                 }
-            } catch (err) {
-                setError('Error al cargar los registros');
+            } catch (err: any) {
+                console.error('Error al cargar registros:', err.message);
+                setError('Error al cargar los registros. Verifica tu conexión.');
             } finally {
                 setLoading(false);
             }

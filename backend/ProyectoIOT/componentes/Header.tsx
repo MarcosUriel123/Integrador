@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart } from './CartContext';
 import { useFocusEffect } from '@react-navigation/native';
-
+import IPS from '../config/IPS'; // Asegúrate de que la ruta sea correcta
 // Obtener dimensiones de pantalla
 const { width, height } = Dimensions.get('window');
 
@@ -76,7 +76,7 @@ const Header = ({
 
             console.log('[Header] Solicitando estado del dispositivo al servidor...');
 
-            const response = await fetch('http://192.168.1.68:8082/api/users/check-device', {
+            const response = await fetch(`${IPS.SERVER_URL}/api/users/check-device`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

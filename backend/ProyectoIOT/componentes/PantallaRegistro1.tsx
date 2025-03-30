@@ -19,6 +19,7 @@ import BotonVolver from '../componentes/BotonVolver';
 import InputApp from './Inputapp';
 import Header from './Header';
 import Footer from './Footer';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -87,7 +88,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
         const loadSecretQuestions = async () => {
             try {
                 setIsLoadingQuestions(true);
-                const response = await axios.get<SecretQuestion[]>('http://192.168.1.68:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>(`${IPS.SERVER_URL}/api/secretQuestions`);
 
                 if (response.status === 200) {
                     console.log('Datos recibidos:', response.data);
@@ -153,7 +154,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
 
         try {
             setIsRegistering(true);
-            const response = await axios.post('http://192.168.1.68:8082/api/users/register', {
+            const response = await axios.post(`${IPS.SERVER_URL}/api/users/register`, {
                 name,
                 lastName,
                 surname,

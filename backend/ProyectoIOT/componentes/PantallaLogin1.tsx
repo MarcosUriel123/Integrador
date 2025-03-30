@@ -19,6 +19,7 @@ import BotonVolver from '../componentes/BotonVolver';
 import InputApp from './Inputapp';
 import Header from './Header';
 import Footer from './Footer';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -81,7 +82,7 @@ export default function PantallaLogin1() {
         setIsLoggingIn(true);
 
         try {
-            const response = await axios.post<LoginResponse>('http://192.168.1.68:8082/api/users/login', {
+            const response = await axios.post<LoginResponse>(`${IPS.SERVER_URL}/api/users/login`, {
                 email,
                 password,
             });

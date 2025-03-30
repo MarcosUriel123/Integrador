@@ -1,18 +1,18 @@
 // Server configuration
 export const SERVER = {
-    // PORT: process.env.PORT || 8082,
-    // LOCAL_IP: process.env.LOCAL_IP || '192.168.1.68',
+    PORT: process.env.PORT || 8082,
+    LOCAL_IP: process.env.LOCAL_IP || '192.168.1.68',
     get URL() {
-        return `http://192.168.1.68:8082`;
+        return `http://${this.LOCAL_IP}:${this.PORT}`;
     }
 };
 
 // ESP32 configuration
 export const ESP32 = {
-    // IP: process.env.ESP32_IP || '192.168.1.100',
-    // PORT: process.env.ESP32_PORT || 80,
+    IP: process.env.ESP32_IP || '192.168.1.77',
+    PORT: process.env.ESP32_PORT || 80,
     get URL() {
-        return `http://192.168.1.100:80`;
+        return `http://${this.IP}:${this.PORT}`;
     }
 };
 
@@ -38,10 +38,10 @@ export const API = {
 };
 
 // Exportación por defecto con todas las configuraciones
-const IPSCONFIG = {
+const IPS = {
     SERVER_URL: SERVER.URL,
     ESP32_URL: ESP32.URL,
     API
 };
 
-export default IPSCONFIG;
+export default IPS;

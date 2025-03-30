@@ -22,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BotonVolver from '../componentes/BotonVolver';
 import Header from '../componentes/Header';
 import Footer from '../componentes/Footer';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -130,7 +131,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.get(
-                'http://192.168.1.68:8082/api/devices/info',
+                `${IPS.SERVER_URL}/api/devices/info`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -170,7 +171,7 @@ export default function PantallaConfigurarDispositivo() {
             }
 
             const response = await axios.post(
-                'http://192.168.1.68:8082/api/devices/update-pin',
+                `${IPS.SERVER_URL}/api/devices/update-pin`,
                 { devicePin: newPin },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

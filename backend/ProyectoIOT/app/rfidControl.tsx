@@ -10,6 +10,7 @@ import {
     Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 export default function RFIDControlScreen() {
     const [rfidUID, setRfidUID] = useState<string | null>(null);
@@ -17,15 +18,13 @@ export default function RFIDControlScreen() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    const ESP32_IP = "http://192.168.8.10"; // Cambia por la IP real de tu ESP32
-
     const handleScanRFID = async () => {
         setLoading(true);
         setRfidUID(null); // Limpiar el UID anterior
         setAccessGranted(null); // Limpiar el estado de acceso anterior
 
         try {
-            const response = await fetch(`${ESP32_IP}/leerRFID`);
+            const response = await fetch(`${IPS.ESP32_URL}/leerRFID`);
             const text = await response.text();
 
             if (response.status === 200) {

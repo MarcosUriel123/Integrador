@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import axios from 'axios';
 import Header from './Header';
 import Footer from './Footer';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 type CartProduct = {
     id: string;
@@ -65,7 +66,7 @@ export default function PantallaCheckout() {
                                 email: string;
                             }
 
-                            const response = await axios.get<UserResponse>(`http://192.168.1.68:8082/api/users/${userId}`, {
+                            const response = await axios.get<UserResponse>(`${IPS.SERVER_URL}/api/users/${userId}`, {
                                 headers: { Authorization: `Bearer ${token}` }
                             });
                             if (response.data && response.data.email) {
@@ -148,7 +149,7 @@ export default function PantallaCheckout() {
 
         try {
             // Enviar solicitud al backend
-            const response = await axios.post('http://192.168.1.68:8082/api/purchase/send-purchase-email', {
+            const response = await axios.post(`${IPS.SERVER_URL}/api/purchase/send-purchase-email`, {
                 email: userEmail,
                 cart: cartItems.map(item => ({
                     product: {

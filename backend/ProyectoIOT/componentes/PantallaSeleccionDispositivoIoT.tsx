@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Header from './Header';
 import Footer from './Footer';
 import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS'; // Importar la configuración de IPs
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -154,7 +155,7 @@ export default function PantallaSeleccionDispositivoIoT() {
                 return;
             }
 
-            const response = await fetch('http://192.168.1.68:8082/api/devices/user-devices', {
+            const response = await fetch(`${IPS.SERVER_URL}/api/devices/user-devices`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

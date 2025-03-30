@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import axios from 'axios';
+import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 export default function PantallaAgregarProducto() {
     const [name, setName] = useState('');
@@ -11,7 +12,7 @@ export default function PantallaAgregarProducto() {
 
     const handleAddProduct = async () => {
         try {
-            const response = await axios.post('http://192.168.1.68:8082/api/products/add', {
+            const response = await axios.post(`${IPS.SERVER_URL}/api/products/add`, {
                 name,
                 description,
                 price,
