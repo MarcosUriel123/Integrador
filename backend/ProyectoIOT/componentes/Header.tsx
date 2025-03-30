@@ -344,12 +344,7 @@ const Header = ({
                             )}
                         </View>
 
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={closeMenu}
-                        >
-                            <Text style={styles.closeButtonText}>Cerrar</Text>
-                        </TouchableOpacity>
+
                     </Animated.View>
                 </>
             )}
@@ -411,7 +406,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0,
         right: 0,
-        width: '70%',
+        width: '100%',
         height: '100%',
         backgroundColor: '#FFFFFF',
         zIndex: 11,

@@ -5,6 +5,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
+import DropDownPicker from 'react-native-dropdown-picker';
 
 // Define la interfaz para el objeto Usuario
 interface User {
@@ -14,6 +15,8 @@ interface User {
     surname?: string;
     phone?: string;
     email: string;
+    secretQuestion?: number;
+    secretAnswer?: string;
     // Otros campos que pueda tener tu usuario
 }
 
@@ -34,6 +37,16 @@ export default function PantallaPerfil({ userId }: Props) {
     const [localUserId, setLocalUserId] = useState<string | null>(userId || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [secretQuestion, setSecretQuestion] = useState<number>(1);
+    const [secretAnswer, setSecretAnswer] = useState('');
+    const [open, setOpen] = useState(false);
+    const [items, setItems] = useState([
+        { label: '¿Cuál es tu comida favorita?', value: 1 },
+        { label: '¿Nombre de tu primera mascota?', value: 2 },
+        { label: '¿Ciudad donde naciste?', value: 3 },
+        { label: '¿Nombre de tu escuela primaria?', value: 4 },
+        { label: '¿Cuál es tu película favorita?', value: 5 },
+    ]);
 
     // Obtener el userId desde AsyncStorage si no se proporcionó como prop
     useEffect(() => {
@@ -84,6 +97,8 @@ export default function PantallaPerfil({ userId }: Props) {
             setSurname(user.surname || '');
             setPhone(user.phone || '');
             setEmail(user.email || '');
+            setSecretQuestion(user.secretQuestion || 1);
+            setSecretAnswer(user.secretAnswer || '');
             setError(''); // Limpiar cualquier error anterior
         } catch (error) {
             console.error('Error al obtener datos del usuario:', error);
@@ -104,6 +119,8 @@ export default function PantallaPerfil({ userId }: Props) {
             surname,
             phone,
             email,
+            secretQuestion,
+            secretAnswer,
         };
 
         if (password) {
@@ -111,9 +128,10 @@ export default function PantallaPerfil({ userId }: Props) {
         }
 
         try {
+            // Usar la ruta correcta con /update/
             const response = await axios.put(`http://192.168.1.68:8082/api/users/update/${localUserId}`, updateData);
+
             if (response.status === 200) {
-                // Modificado: Mostrar Alert con opción para ir al perfil
                 Alert.alert(
                     'Éxito',
                     'Datos actualizados correctamente',
@@ -125,13 +143,19 @@ export default function PantallaPerfil({ userId }: Props) {
                     ]
                 );
                 setPassword('');
-
-                // Redirigir a la pantalla de perfil
                 router.replace('/Datosperfil');
             }
         } catch (error) {
-            Alert.alert('Error', 'No se pudo actualizar la información');
             console.error('Error al actualizar:', error);
+
+            // Descomentar este bloque para obtener más detalles sobre el error
+            // if (axios.isAxiosError(error)) {
+            //     console.error('Estado HTTP:', error.response?.status);
+            //     console.error('Mensaje del servidor:', error.response?.data);
+            //     Alert.alert('Error', `No se pudo actualizar: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`);
+            // } else {
+            //     Alert.alert('Error', 'No se pudo actualizar la información');
+            // }
         }
     };
 
@@ -201,6 +225,30 @@ export default function PantallaPerfil({ userId }: Props) {
                             style={styles.input}
                             value={email}
                             onChangeText={setEmail}
+                        />
+
+                        <Text style={styles.label}>Pregunta de seguridad</Text>
+                        <View style={styles.dropdownContainer}>
+                            <DropDownPicker
+                                open={open}
+                                value={secretQuestion}
+                                items={items}
+                                setOpen={setOpen}
+                                setValue={setSecretQuestion}
+                                setItems={setItems}
+                                style={styles.dropdown}
+                                dropDownContainerStyle={styles.dropdownList}
+                                zIndex={3000}
+                                zIndexInverse={1000}
+                            />
+                        </View>
+
+                        <Text style={styles.label}>Respuesta secreta</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={secretAnswer}
+                            onChangeText={setSecretAnswer}
+                            placeholder="Respuesta a tu pregunta de seguridad"
                         />
 
                         <Text style={styles.label}>Nueva Contraseña</Text>
@@ -309,5 +357,21 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 0,
         padding: 10,
+    },
+    dropdownContainer: {
+        width: '100%',
+        marginBottom: 15,
+        zIndex: 3000,
+    },
+    dropdown: {
+        backgroundColor: '#fff',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 5,
+    },
+    dropdownList: {
+        backgroundColor: '#fff',
+        borderColor: '#ccc',
+        borderWidth: 1,
     },
 });
