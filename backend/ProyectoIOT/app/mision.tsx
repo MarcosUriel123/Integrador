@@ -132,7 +132,7 @@ export default function MisionScreen() {
                                 >
                                     <View style={styles.misionCard}>
                                         <View style={styles.quoteContainer}>
-                                            <Ionicons name="tex" size={32} color="#3182CE" />
+                                            <Ionicons name="albums" size={32} color="#3182CE" />
                                         </View>
                                         <Text style={styles.misionText}>{mision}</Text>
                                     </View>

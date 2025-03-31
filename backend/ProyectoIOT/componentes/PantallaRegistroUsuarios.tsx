@@ -176,58 +176,73 @@ export default function PantallaRegistroUsuarios() {
                                 return;
                             }
 
-                            // Si es RFID, eliminar de la colección rfids primero
+                            // 1. Primero intentamos eliminar del dispositivo físico
+                            let deviceDeletionSuccess = false;
+
+                            try {
+                                if (accessMethod === 'fingerprint') {
+                                    // Eliminar huella del sensor
+                                    const deleteFingerprintResponse = await axios.delete(
+                                        `${IPS.ESP32_URL}/api/arduino/fingerprint/${accessId}`,
+                                        { timeout: 8000 }
+                                    );
+
+                                    if (deleteFingerprintResponse.status === 200) {
+                                        deviceDeletionSuccess = true;
+                                        console.log('Huella eliminada del sensor correctamente');
+                                    }
+                                } else if (accessMethod === 'rfid') {
+                                    // Eliminar RFID del sistema
+                                    const deleteRfidResponse = await axios.delete(
+                                        `${IPS.ESP32_URL}/api/arduino/rfid/${accessId}`,
+                                        { timeout: 8000 }
+                                    );
+
+                                    if (deleteRfidResponse.status === 200) {
+                                        deviceDeletionSuccess = true;
+                                        console.log('RFID eliminado del sistema correctamente');
+                                    }
+                                }
+                            } catch (deviceError) {
+                                console.warn(`Error al eliminar del dispositivo físico: ${accessMethod}`, deviceError);
+                                // Continuamos con el proceso aunque falle la eliminación del dispositivo
+                            }
+
+                            // 2. Si es RFID, eliminar de la colección rfids
                             if (accessMethod === 'rfid') {
                                 try {
                                     await axios.delete(
                                         `${IPS.SERVER_URL}/api/rfids/${accessId}`,
                                         { headers: { Authorization: `Bearer ${token}` } }
                                     );
-                                    console.log('RFID eliminado de la colección');
+                                    console.log('RFID eliminado de la colección correctamente');
                                 } catch (rfidError) {
                                     console.warn('Error al eliminar RFID de colección:', rfidError);
-                                    // Continuamos aunque falle
+                                    // Continuamos aunque falle esta eliminación
                                 }
                             }
 
-                            // 1. Eliminar de la base de datos
+                            // 3. Eliminar el subusuario de la base de datos
                             const deleteResponse = await axios.delete(
                                 `${IPS.SERVER_URL}/api/subusers/${id}`,
                                 { headers: { Authorization: `Bearer ${token}` } }
                             );
 
-                            // 2. Si se elimina correctamente, eliminar del dispositivo físico
                             if (deleteResponse.status === 200) {
-                                // El resto del código se mantiene igual
-                                if (accessMethod === 'fingerprint') {
-                                    try {
-                                        await axios.delete(
-                                            `${IPS.ESP32_URL}/api/arduino/fingerprint/${accessId}`,
-                                            { timeout: 5000 }
-                                        );
-                                        console.log('Huella eliminada del sensor');
-                                    } catch (error) {
-                                        console.warn('No se pudo eliminar la huella del sensor:', error);
-                                    }
-                                } else if (accessMethod === 'rfid') {
-                                    try {
-                                        await axios.delete(
-                                            `${IPS.ESP32_URL}/api/arduino/rfid/${accessId}`,
-                                            { timeout: 5000 }
-                                        );
-                                        console.log('RFID eliminado del sistema');
-                                    } catch (error) {
-                                        console.warn('No se pudo eliminar el RFID del sistema:', error);
-                                    }
-                                }
-
+                                // Actualizar la lista de usuarios
                                 await loadSubUsers();
-                                setMessage(`${userName} ha sido eliminado correctamente`);
-                                setMessageType('success');
+
+                                // Mostrar mensaje adecuado según si se eliminó también del dispositivo
+                                if (deviceDeletionSuccess) {
+                                    setMessage(`${userName} ha sido eliminado completamente del sistema`);
+                                } else {
+                                    setMessage(`${userName} ha sido eliminado de la base de datos`);
+                                }
+                                setMessageType('success'); // Aseguramos que el tipo sea 'success' para que aparezca en verde
                             }
-                        } catch (error) {
+                        } catch (error: any) {
                             console.error('Error al eliminar usuario:', error);
-                            setMessage('Error al eliminar el usuario');
+                            setMessage(error.response?.data?.message || 'Error al eliminar el usuario');
                             setMessageType('error');
                         } finally {
                             setIsLoading(false);
@@ -272,7 +287,7 @@ export default function PantallaRegistroUsuarios() {
 
         try {
             const token = await AsyncStorage.getItem('userToken');
-            const userId = await AsyncStorage.getItem('userId'); // Asegurarse de tener esto almacenado
+            const userId = await AsyncStorage.getItem('userId');
 
             if (!token) {
                 setMessage('No se encontró el token de autenticación');
@@ -284,10 +299,10 @@ export default function PantallaRegistroUsuarios() {
             // Si es RFID, guardarlo en la colección rfids
             if (accessMethod === 'rfid') {
                 try {
-                    // Verificar si el RFID ya existe
+                    // Verificar si el RFID ya existe - Corregir parámetro
                     const checkResponse = await axios.post(
                         `${IPS.SERVER_URL}/api/rfids/check`,
-                        { rfidValue: capturedId },  // Usar rfidValue consistentemente
+                        { rfid: capturedId },  // ← Corregido para usar consistentemente rfid
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
 
@@ -299,44 +314,62 @@ export default function PantallaRegistroUsuarios() {
                         return;
                     }
 
-                    // Registrar el RFID
+                    // Registrar el RFID con parámetros consistentes
                     await axios.post(
                         `${IPS.SERVER_URL}/api/rfids/register`,
                         {
-                            rfidValue: capturedId,
+                            rfid: capturedId,  // ← Corregido para usar consistentemente rfid
                             userId,
                             userName: name
                         },
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
                 } catch (rfidError: any) {
-                    if (rfidError.response?.status === 400) {
-                        setMessage('Este RFID ya está registrado');
+                    // Si es error 400 de duplicado, continuamos con el registro del subuser
+                    // ya que puede ser que el RFID ya esté registrado pero no como subuser
+                    if (rfidError.response?.status === 400 &&
+                        rfidError.response?.data?.message?.includes('ya está registrado')) {
+                        console.warn('RFID ya registrado en colección, continuando con registro de usuario');
+                        // Continuamos con el registro del usuario
+                    } else {
+                        // Para otros errores, detenemos el proceso
+                        console.error('Error al registrar RFID:', rfidError);
+                        setMessage(rfidError.response?.data?.message || 'Error al registrar RFID');
                         setMessageType('error');
                         setIsLoading(false);
                         return;
                     }
-                    console.warn('Error al registrar RFID en colección:', rfidError);
                 }
             }
 
             // Crear el subusuario con el método de acceso
-            const response = await axios.post<SubUserResponse>(
-                `${IPS.SERVER_URL}/api/subusers/register`,
-                {
-                    name,
-                    accessMethod,
-                    accessId: capturedId
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            try {
+                const response = await axios.post(
+                    `${IPS.SERVER_URL}/api/subusers/register`,
+                    {
+                        name,
+                        accessMethod,
+                        accessId: capturedId
+                    },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
 
-            if (response.status === 201) {
-                setMessage('Usuario registrado exitosamente');
-                setMessageType('success');
-                setName('');
-                setAccessId('');
-                loadSubUsers();
+                if (response.status === 201) {
+                    setMessage('Usuario registrado exitosamente');
+                    setMessageType('success');
+                    setName('');
+                    setAccessId('');
+                    loadSubUsers();
+                }
+            } catch (subUserError: any) {
+                // Si ya existe el subuser pero el registro del RFID fue exitoso,
+                // mostramos un mensaje específico para este caso
+                if (subUserError.response?.status === 400 &&
+                    subUserError.response?.data?.message?.includes('Ya existe un usuario')) {
+                } else {
+                    setMessage(subUserError.response?.data?.message || 'Error al registrar el usuario');
+                }
+                setMessageType('error');
             }
         } catch (error: any) {
             console.error('Error al registrar usuario:', error);

@@ -289,71 +289,6 @@ void setup() {
     }
   });
 
-  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_DELETE, [](){
-    sendCORSHeaders();
-    
-    String uri = server.uri();
-    int lastSlash = uri.lastIndexOf('/');
-    String idStr = uri.substring(lastSlash + 1);
-    int id = idStr.toInt();
-    
-    if (id < 1 || id > 127) {
-      server.send(400, "application/json", "{\"success\":false,\"message\":\"ID de huella inválido\"}");
-      return;
-    }
-    
-    uint8_t p = finger.deleteModel(id);
-    if (p == FINGERPRINT_OK) {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Huella eliminada");
-      lcd.setCursor(0, 1);
-      lcd.print("ID: " + String(id));
-      delay(2000);
-      mostrarMenuPrincipal();
-      
-      server.send(200, "application/json", "{\"success\":true,\"message\":\"Huella eliminada correctamente\"}");
-    } else {
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Error al eliminar");
-      lcd.setCursor(0, 1);
-      lcd.print("huella");
-      delay(2000);
-      mostrarMenuPrincipal();
-      
-      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al eliminar huella\"}");
-    }
-  });
-
-  server.on("/api/arduino/rfid/([^/]+)", HTTP_DELETE, [](){
-    sendCORSHeaders();
-    
-    String uri = server.uri();
-    int lastSlash = uri.lastIndexOf('/');
-    String rfidId = uri.substring(lastSlash + 1);
-    
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Tarjeta RFID");
-    lcd.setCursor(0, 1);
-    lcd.print("eliminada");
-    delay(2000);
-    mostrarMenuPrincipal();
-    
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"RFID eliminado correctamente\"}");
-  });
-
-  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_OPTIONS, [](){
-    sendCORSHeaders();
-    server.send(200, "text/plain", "");
-  });
-
-  server.on("/api/arduino/rfid/([^/]+)", HTTP_OPTIONS, [](){
-    sendCORSHeaders();
-    server.send(200, "text/plain", "");
-  });
-
   server.on("/api/arduino/rfid/reset", HTTP_POST, []() {
     sendCORSHeaders();
     
@@ -420,22 +355,47 @@ void setup() {
   // Endpoint para borrar todas las huellas
   server.on("/api/arduino/fingerprint/delete-all", HTTP_POST, []() {
     // Establecer encabezados CORS
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    sendCORSHeaders();
     
     // Comprobar si el sensor está disponible
     if (!finger.verifyPassword()) {
-      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error: Sensor de huellas no encontrado\"}");
+      server.send(503, "application/json", "{\"success\":false,\"message\":\"Error: Sensor de huellas no encontrado\"}");
       return;
     }
     
-    // Intenta borrar todas las huellas
-    if (finger.emptyDatabase() == FINGERPRINT_OK) {
+    // Intentar borrar todas las huellas varias veces
+    bool eliminacionExitosa = false;
+    for (int intento = 1; intento <= 3; intento++) {
+      uint8_t p = finger.emptyDatabase();
+      if (p == FINGERPRINT_OK) {
+        eliminacionExitosa = true;
+        break;
+      }
+      delay(500); // Esperar medio segundo entre intentos
+    }
+    
+    if (eliminacionExitosa) {
+      // Informar en el LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Todas las huellas");
+      lcd.setCursor(0, 1);
+      lcd.print("eliminadas");
+      delay(2000);
+      mostrarMenuPrincipal();
+      
       // Si se han borrado correctamente, enviar respuesta de éxito
       server.send(200, "application/json", "{\"success\":true,\"message\":\"Todas las huellas han sido eliminadas correctamente\"}");
-      
     } else {
+      // Informar en el LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error al eliminar");
+      lcd.setCursor(0, 1);
+      lcd.print("huellas");
+      delay(2000);
+      mostrarMenuPrincipal();
+      
       // Si hay un error, enviar respuesta de error
       server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al borrar las huellas\"}");
     }
@@ -443,12 +403,123 @@ void setup() {
 
   // Endpoint para manejo de opciones pre-vuelo CORS
   server.on("/api/arduino/fingerprint/delete-all", HTTP_OPTIONS, []() {
-    server.sendHeader("Access-Control-Allow-Origin", "*");
-    server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    sendCORSHeaders();
     server.send(200);
   });
 
+  // Mejora del endpoint para eliminar una huella específica por su ID
+  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_DELETE, [](){
+    sendCORSHeaders();
+    
+    String uri = server.uri();
+    int lastSlash = uri.lastIndexOf('/');
+    String idStr = uri.substring(lastSlash + 1);
+    int id = idStr.toInt();
+    
+    if (id < 1 || id > 127) {
+      server.send(400, "application/json", "{\"success\":false,\"message\":\"ID de huella inválido (debe estar entre 1 y 127)\"}");
+      return;
+    }
+  
+    // Verificar que el sensor esté disponible
+    if (!finger.verifyPassword()) {
+      server.send(503, "application/json", "{\"success\":false,\"message\":\"Sensor de huella no disponible\"}");
+      return;
+    }
+    
+    // Intentar eliminar varias veces (hasta 3 intentos)
+    bool eliminacionExitosa = false;
+    String mensajeError = "";
+    
+    for (int intento = 1; intento <= 3; intento++) {
+      delay(100); // Pequeña pausa entre intentos
+      uint8_t p = finger.deleteModel(id);
+      
+      if (p == FINGERPRINT_OK) {
+        eliminacionExitosa = true;
+        break;
+      } else {
+        // Guardar el mensaje de error según el código recibido
+        switch (p) {
+          case FINGERPRINT_PACKETRECIEVEERR:
+            mensajeError = "Error de comunicación con el sensor";
+            break;
+          case FINGERPRINT_BADLOCATION:
+            mensajeError = "ID de huella fuera de rango";
+            break;
+          case FINGERPRINT_FLASHERR:
+            mensajeError = "Error en la memoria flash del sensor";
+            break;
+          default:
+            mensajeError = "Error desconocido: " + String(p);
+        }
+      }
+    }
+    
+    if (eliminacionExitosa) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Huella eliminada");
+      lcd.setCursor(0, 1);
+      lcd.print("ID: " + String(id));
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"Huella eliminada correctamente\"}");
+    } else {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error al eliminar");
+      lcd.setCursor(0, 1);
+      lcd.print("huella " + String(id));
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"" + mensajeError + "\"}");
+    }
+  });
+  
+  // Mejora del endpoint para eliminar un RFID
+  server.on("/api/arduino/rfid/([^/]+)", HTTP_DELETE, [](){
+    sendCORSHeaders();
+    
+    String uri = server.uri();
+    int lastSlash = uri.lastIndexOf('/');
+    String rfidId = uri.substring(lastSlash + 1);
+    
+    // Para RFID, necesitamos asegurarnos de eliminar su registro
+    // Como no tenemos un almacenamiento local de RFIDs, informamos que
+    // se debe eliminar del servidor (lo que ya se hace en el frontend)
+    
+    // Verificar si es una ID válida (formato hexadecimal)
+    bool idValido = true;
+    for (int i = 0; i < rfidId.length(); i++) {
+      char c = rfidId.charAt(i);
+      if (!isHexadecimalDigit(c)) {
+        idValido = false;
+        break;
+      }
+    }
+    
+    if (!idValido) {
+      server.send(400, "application/json", "{\"success\":false,\"message\":\"ID de RFID no válido\"}");
+      return;
+    }
+    
+    // Como no tenemos memoria persistente para RFID en el ESP32, 
+    // simplemente confirmamos que se ha procesado correctamente
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Tarjeta RFID");
+    lcd.setCursor(0, 1);
+    lcd.print("eliminada");
+    delay(2000);
+    mostrarMenuPrincipal();
+    
+    server.send(200, "application/json", 
+      "{\"success\":true,\"message\":\"RFID " + rfidId + " eliminado correctamente\"}");
+  });
+  
   server.begin();
   Serial.println("Servidor web iniciado"); 
 
@@ -1196,7 +1267,7 @@ void enviarCambioEstadoPuerta() {
       http.addHeader("X-API-Key", "IntegradorIOTKey2025");
       
       String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
-      httpResponseCode = http.POST(registroData);
+      int httpResponseCode = http.POST(registroData);
       
       if(httpResponseCode > 0) {
         Serial.println("Registro de apertura creado correctamente");
