@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Añadir useEffect
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import {
     SafeAreaView,
@@ -9,12 +9,12 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
-    ActivityIndicator // Añadir para indicador de carga
+    ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import BotonVolver from '../componentes/BotonVolver'; // Asegúrate de que la ruta sea correcta
-import IPS from '../config/IPS'; // Importamos la configuración centralizada
+import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS';
 
 export default function PantallaRegistroDispositivo() {
     const router = useRouter();
@@ -23,7 +23,7 @@ export default function PantallaRegistroDispositivo() {
     const [pin, setPin] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isFetchingMac, setIsFetchingMac] = useState(true); // Nuevo estado
+    const [isFetchingMac, setIsFetchingMac] = useState(true);
 
     // Nueva función para obtener MAC del dispositivo
     const fetchDeviceInfo = async () => {
@@ -69,9 +69,36 @@ export default function PantallaRegistroDispositivo() {
         }
     };
 
-    // Llamar a la función cuando se monte el componente
+    // Función para notificar al ESP32 que el proceso de registro ha terminado
+    const notifyRegistrationCompleted = async () => {
+        try {
+            let endpoint;
+            const savedArduinoIP = await AsyncStorage.getItem('arduinoIP');
+
+            if (savedArduinoIP) {
+                endpoint = `http://${savedArduinoIP}/api/arduino/register-complete`;
+            } else {
+                endpoint = `${IPS.ESP32_URL}/api/arduino/register-complete`;
+            }
+
+            console.log('Notificando al ESP32 que se completó el registro:', endpoint);
+            await axios.post(endpoint);
+            console.log('ESP32 notificado exitosamente');
+        } catch (error) {
+            console.warn('Error notificando al ESP32:', error);
+            // No bloquear el flujo si esto falla
+        }
+    };
+
+    // Llamar a la función cuando se monte el componente y limpiar cuando se desmonte
     useEffect(() => {
         fetchDeviceInfo();
+
+        // Cleanup function: notificar al ESP32 cuando el usuario abandone la pantalla
+        return () => {
+            console.log('Componente desmontado - notificando al ESP32');
+            notifyRegistrationCompleted();
+        };
     }, []);
 
     // Validar que el PIN solo contiene números
@@ -126,21 +153,7 @@ export default function PantallaRegistroDispositivo() {
                 setMessage('Dispositivo registrado con éxito');
 
                 // Notificar al Arduino que el registro se completó
-                try {
-                    let endpoint;
-                    const savedArduinoIP = await AsyncStorage.getItem('arduinoIP');
-
-                    if (savedArduinoIP) {
-                        endpoint = `http://${savedArduinoIP}/api/arduino/register-complete`;
-                    } else {
-                        endpoint = `${IPS.ESP32_URL}/api/arduino/register-complete`;
-                    }
-
-                    await axios.post(endpoint);
-                } catch (notifyError) {
-                    console.warn('Error notificando al dispositivo:', notifyError);
-                    // No bloquear la navegación si esto falla
-                }
+                await notifyRegistrationCompleted();
 
                 // Mostrar mensaje de éxito y luego navegar a la pantalla puerta
                 Alert.alert(
@@ -251,7 +264,7 @@ export default function PantallaRegistroDispositivo() {
     );
 }
 
-// Agregar nuevos estilos
+// Estilos sin cambios
 const styles = StyleSheet.create({
     screen: {
         flex: 1,

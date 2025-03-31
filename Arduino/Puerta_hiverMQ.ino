@@ -114,6 +114,11 @@ PubSubClient mqttClient(espClient);
 unsigned long lastMqttPublish = 0;
 const unsigned long MQTT_PUBLISH_INTERVAL = 2000;
 
+// Agregar estas variables globales cerca del inicio del archivo, con las demás variables globales
+bool modoRegistroDispositivo = false;
+unsigned long tiempoInicioRegistro = 0;
+const unsigned long TIMEOUT_REGISTRO = 300000; // 5 minutos de timeout
+
 void setupMQTT() {
   espClient.setInsecure();
   mqttClient.setServer(mqtt_server, mqtt_port);
@@ -136,6 +141,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       digitalWrite(RELAY_PIN, LOW);
       Serial.println("Puerta abierta por comando MQTT");
       mqttClient.publish(mqtt_status_topic, "open", true);
+      pitidoExito(); // Agregar esta línea
       delay(5000);
       digitalWrite(RELAY_PIN, HIGH);
       mqttClient.publish(mqtt_status_topic, "closed", true);
@@ -147,6 +153,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+// En la función reconnectMQTT(), actualizamos para asegurar que la MAC se publique siempre al reconectar
 void reconnectMQTT() {
   String clientId = mqtt_client_id;
   String macAddress = WiFi.macAddress();
@@ -157,10 +164,21 @@ void reconnectMQTT() {
     
     if (mqttClient.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
       Serial.println("conectado");
+      
+      // Suscripción a tópicos
       mqttClient.subscribe(mqtt_command_topic);
+      
+      // Publicar estado online
       mqttClient.publish("valoresPuerta/status", "online", true);
-      // Publicar la dirección MAC en el tópico correspondiente
+      
+      // Publicar la dirección MAC con flag retained=true para que persista
       mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+      
+      // Adicionalmente publicamos el estado actual de la puerta
+      const char* doorStatus = doorState == HIGH ? "open" : "closed";
+      mqttClient.publish(mqtt_status_topic, doorStatus, true);
+      
+      Serial.println("Dirección MAC publicada en HiveMQ: " + macAddress);
     } else {
       Serial.print("falló, rc=");
       Serial.print(mqttClient.state());
@@ -191,6 +209,7 @@ void pitidoError() {
   digitalWrite(pinBuzzer, LOW);
 }
 
+// Modificamos setup() para publicar la MAC inmediatamente después de la conexión WiFi
 void setup() {
   Serial.begin(115200);
   lcd.init();
@@ -216,7 +235,13 @@ void setup() {
   }
   Serial.println("Conectado a WiFi");
   Serial.println(WiFi.localIP());
-
+  
+  // Publicar la MAC tan pronto como tengamos WiFi (por si ya hay clientes escuchando)
+  String macAddress = WiFi.macAddress();
+  Serial.println("Dirección MAC: " + macAddress);
+  
+  // Resto del código del setup...
+  
   // Configurar rutas del servidor web
   server.on("/leerRFID", handleLeerRFID);
   server.on("/controlPuerta", handleControlPuerta);
@@ -392,11 +417,48 @@ void setup() {
     server.send(200, "text/plain", "");
   });
 
+  // Endpoint para borrar todas las huellas
+  server.on("/api/arduino/fingerprint/delete-all", HTTP_POST, []() {
+    // Establecer encabezados CORS
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    
+    // Comprobar si el sensor está disponible
+    if (!finger.verifyPassword()) {
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error: Sensor de huellas no encontrado\"}");
+      return;
+    }
+    
+    // Intenta borrar todas las huellas
+    if (finger.emptyDatabase() == FINGERPRINT_OK) {
+      // Si se han borrado correctamente, enviar respuesta de éxito
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"Todas las huellas han sido eliminadas correctamente\"}");
+      
+    } else {
+      // Si hay un error, enviar respuesta de error
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al borrar las huellas\"}");
+    }
+  });
+
+  // Endpoint para manejo de opciones pre-vuelo CORS
+  server.on("/api/arduino/fingerprint/delete-all", HTTP_OPTIONS, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    server.send(200);
+  });
+
   server.begin();
-  Serial.println("Servidor web iniciado");
+  Serial.println("Servidor web iniciado"); 
 
   setupMQTT();
-
+  
+  // Intentamos una publicación inicial de la MAC aunque es posible que aún no estemos conectados a MQTT
+  if (mqttClient.connected()) {
+    mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+  }
+  
   mostrarMenuPrincipal();
 }
 
@@ -439,6 +501,7 @@ void handleControlPuerta() {
 
     if (action == "abrir") {
       digitalWrite(RELAY_PIN, LOW);
+      pitidoExito(); // Agregar esta línea 
       server.send(200, "text/plain", "Puerta abierta");
       delay(5000);
       digitalWrite(RELAY_PIN, HIGH);
@@ -615,9 +678,14 @@ void actualizarClave() {
   }
 }
 
+// Modificar la función ingresarClave para verificar primero el modo registro
 void ingresarClave(char tecla) {
+  // Si estamos en modo registro, no procesar entrada de PIN
+  if (modoRegistroDispositivo) return;
+  
   pitidoCorto();
   
+  // Resto del código sin cambios...
   if (tecla == 'D' && indiceClave > 0) {
     indiceClave--;
     actualizarClave();
@@ -725,9 +793,12 @@ void verificarPINEnServidor() {
   mostrarMenuPrincipal();
 }
 
+// Modificar la función verificarRFID() para verificar primero el modo registro
 void verificarRFID() {
-  if (registroRfidActivo || isRFIDOperationActive) return;
+  // Si estamos en modo registro, no procesar RFID
+  if (modoRegistroDispositivo || registroRfidActivo || isRFIDOperationActive) return;
   
+  // Resto del código sin cambios...
   mfrc522.PCD_Init();
   delay(50);
   
@@ -877,19 +948,19 @@ void verificarSensorPIR() {
     }
   }
   
-  if (alarmaActivada && contadorPitidos < 6) {
-    if (tiempoActual - tiempoUltimoPitido > 500) {
+  if (alarmaActivada && contadorPitidos < 10) {
+    if (tiempoActual - tiempoUltimoPitido > 300) {
       digitalWrite(pinBuzzer, HIGH);
-      delay(300);
+      delay(150);
       digitalWrite(pinBuzzer, LOW);
       
       contadorPitidos++;
       tiempoUltimoPitido = tiempoActual;
       
-      if (contadorPitidos >= 6) {
+      if (contadorPitidos >= 15) {
         alarmaActivada = false;
         alarmaCicloCompletado = true;
-        Serial.println("Alarma desactivada después de 6 pitidos");
+        Serial.println("Alarma desactivada después de 10 pitidos");
       }
     }
   } else {
@@ -903,9 +974,12 @@ void mostrarMensajeHuella(const char* mensaje) {
   lcd.print(mensaje);
 }
 
+// Modificar la función verificarHuella para verificar primero el modo registro
 void verificarHuella() {
-  if (registroRemotoActivo) return;
+  // Si estamos en modo registro, no procesar huella
+  if (modoRegistroDispositivo || registroRemotoActivo) return;
   
+  // Resto del código sin cambios...
   int p = finger.getImage();
   if (p == FINGERPRINT_OK) {
     p = finger.image2Tz(1);
@@ -1168,7 +1242,78 @@ void enviarAlertaApertura() {
   }
 }
 
+// Modificar la función handleInfo para activar el modo de registro
+void handleDeviceInfo() {
+  sendCORSHeaders();
+  
+  String mac = WiFi.macAddress();
+  
+  // Activar el modo registro de dispositivo
+  modoRegistroDispositivo = true;
+  tiempoInicioRegistro = millis();
+  
+  // Mostrar MAC en la LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("MAC Address:");
+  lcd.setCursor(0, 1);
+  lcd.print(mac);
+  
+  DynamicJsonDocument doc(200);
+  doc["mac"] = mac;
+  doc["ip"] = WiFi.localIP().toString();
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+// Implementar endpoint register-complete para desactivar el modo registro
+void handleRegisterComplete() {
+  sendCORSHeaders();
+  
+  // Desactivar el modo registro y volver al modo normal
+  modoRegistroDispositivo = false;
+  
+  // Volver a mostrar el menú principal
+  mostrarMenuPrincipal();
+  
+  server.send(200, "application/json", "{\"success\":true}");
+}
+
+// En el loop, aumentamos la frecuencia de publicación de la MAC
+// Modificar la función loop() para verificar el timeout del modo registro
 void loop() {
+  // Verificar timeout del modo registro
+  if (modoRegistroDispositivo && millis() - tiempoInicioRegistro > TIMEOUT_REGISTRO) {
+    modoRegistroDispositivo = false;
+    mostrarMenuPrincipal();
+  }
+  
+  // Si estamos en modo registro, solo procesar server.handleClient y MQTT
+  if (modoRegistroDispositivo) {
+    server.handleClient();
+    
+    if (!mqttClient.connected()) {
+      reconnectMQTT();
+    }
+    mqttClient.loop();
+    
+    // Publicar periódicamente la MAC durante el modo registro
+    unsigned long currentMillis = millis();
+    static unsigned long lastMacPublish = 0;
+    if (currentMillis - lastMacPublish >= 5000) { // Cada 5 segundos en modo registro
+      lastMacPublish = currentMillis;
+      if (mqttClient.connected()) {
+        String macAddress = WiFi.macAddress();
+        mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+      }
+    }
+    
+    return; // Salir temprano y no procesar el resto del loop
+  }
+  
+  // Código original del loop que sólo ejecutamos si NO estamos en modo registro
   if (reemplazarCaracter && millis() - tiempoUltimaTecla >= 400) {
     lcd.setCursor(5 + posicionTeclaActual, 1);
     lcd.print("*");
@@ -1206,6 +1351,7 @@ void loop() {
   if (currentMillis - lastMqttPublish >= MQTT_PUBLISH_INTERVAL) {
     lastMqttPublish = currentMillis;
     
+    // Publicaciones existentes
     char pirMsg[10];
     sprintf(pirMsg, "%d", contadorDetecciones);
     mqttClient.publish(mqtt_pir_topic, pirMsg, true);
@@ -1214,8 +1360,19 @@ void loop() {
     sprintf(doorMsg, "%d", doorState);
     mqttClient.publish(mqtt_magnetic_topic, doorMsg, true);
     
-    // Publicar la dirección MAC periódicamente
+    // Publicar la dirección MAC periódicamente con flag retained
     String macAddress = WiFi.macAddress();
     mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+  }
+  
+  // Agregar una publicación adicional cada 30 segundos para asegurar que la MAC siempre esté disponible
+  static unsigned long lastMacPublish = 0;
+  if (currentMillis - lastMacPublish >= 30000) { // Cada 30 segundos
+    lastMacPublish = currentMillis;
+    if (mqttClient.connected()) {
+      String macAddress = WiFi.macAddress();
+      mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
+      Serial.println("MAC refrescada en HiveMQ: " + macAddress);
+    }
   }
 }

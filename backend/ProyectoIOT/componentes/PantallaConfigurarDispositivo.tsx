@@ -34,6 +34,7 @@ export default function PantallaConfigurarDispositivo() {
     const [modalVisible, setModalVisible] = useState(false);
     const [newPin, setNewPin] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [deviceConnected, setDeviceConnected] = useState(false);
 
     // Estado para los switches
     const [seguroActivo, setSeguroActivo] = useState(false);
@@ -117,7 +118,25 @@ export default function PantallaConfigurarDispositivo() {
     // Obtener la información del dispositivo al cargar la pantalla
     useEffect(() => {
         fetchDeviceInfo();
+        // Verificar estado de conexión desde la API del ESP32
+        checkDeviceConnection();
     }, []);
+
+    // Función para verificar la conexión con el dispositivo (ESP32)
+    const checkDeviceConnection = async () => {
+        try {
+            // Verificar si el dispositivo está conectado intentando obtener el status de la puerta
+            const response = await axios.get(`${IPS.ESP32_URL}/api/arduino/doorstatus`, { timeout: 3000 });
+            if (response.data && response.status === 200) {
+                setDeviceConnected(true);
+            } else {
+                setDeviceConnected(false);
+            }
+        } catch (error) {
+            console.log("Error al verificar la conexión con el dispositivo:", error);
+            setDeviceConnected(false);
+        }
+    };
 
     const fetchDeviceInfo = async () => {
         setIsLoading(true);
@@ -206,6 +225,37 @@ export default function PantallaConfigurarDispositivo() {
         }
     };
 
+    const handleDeleteAllFingerprints = async () => {
+        setIsLoading(true);
+        try {
+            // Hacer la solicitud al ESP32 para borrar todas las huellas
+            const response = await axios.post(
+                `${IPS.ESP32_URL}/api/arduino/fingerprint/delete-all`,
+                {},
+                { timeout: 5000 }
+            );
+
+            if (response.status === 200) {
+                Alert.alert(
+                    "Éxito",
+                    "Todas las huellas han sido eliminadas correctamente del dispositivo.",
+                    [{ text: "OK" }]
+                );
+            } else {
+                throw new Error("No se pudo completar la operación");
+            }
+        } catch (error) {
+            console.error("Error al borrar huellas:", error);
+            Alert.alert(
+                "Error",
+                "No se pudieron eliminar las huellas. Verifica que el dispositivo esté conectado.",
+                [{ text: "OK" }]
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Función para abrir el modal con animación
     const openModal = () => {
         setModalVisible(true);
@@ -281,10 +331,10 @@ export default function PantallaConfigurarDispositivo() {
                                 <View style={styles.statusIndicatorContainer}>
                                     <View style={[
                                         styles.statusDot,
-                                        { backgroundColor: deviceInfo?.isOnline ? '#38A169' : '#E53E3E' }
+                                        { backgroundColor: deviceConnected ? '#38A169' : '#E53E3E' }
                                     ]} />
                                     <Text style={styles.statusText}>
-                                        {deviceInfo?.isOnline ? 'En línea' : 'Desconectado'}
+                                        {deviceConnected ? 'Conectado' : 'Sin conexión'}
                                     </Text>
                                 </View>
                             </View>
@@ -384,39 +434,19 @@ export default function PantallaConfigurarDispositivo() {
                                 <Ionicons name="chevron-forward" size={20} color="#718096" />
                             </TouchableOpacity>
 
-                            {/* Vincular otro dispositivo */}
-                            <TouchableOpacity
-                                style={styles.optionButton}
-                                onPress={() => router.push('/registroDispositivo')}
-                                activeOpacity={0.7}
-                                disabled={isLoading}
-                            >
-                                <View style={styles.optionContent}>
-                                    <View style={styles.optionIconContainer}>
-                                        <Ionicons name="add-circle-outline" size={20} color="#3182CE" />
-                                    </View>
-                                    <View style={styles.optionTextContainer}>
-                                        <Text style={styles.optionTitle}>Vincular otro dispositivo</Text>
-                                        <Text style={styles.optionDescription}>
-                                            Agregar un nuevo dispositivo a tu cuenta
-                                        </Text>
-                                    </View>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color="#718096" />
-                            </TouchableOpacity>
 
-                            {/* Desvincular este dispositivo */}
+                            {/* Borrar todas las huellas */}
                             <TouchableOpacity
                                 style={[styles.optionButton, styles.dangerButton]}
                                 onPress={() => Alert.alert(
-                                    "Desvincular Dispositivo",
-                                    "¿Está seguro que desea desvincular este dispositivo de su cuenta?",
+                                    "Borrar Todas las Huellas",
+                                    "¿Está seguro que desea eliminar todas las huellas dactilares registradas en este dispositivo? Esta acción no se puede deshacer.",
                                     [
                                         { text: "Cancelar", style: "cancel" },
                                         {
-                                            text: "Desvincular",
+                                            text: "Eliminar",
                                             style: "destructive",
-                                            onPress: () => router.push('/')
+                                            onPress: handleDeleteAllFingerprints
                                         }
                                     ]
                                 )}
@@ -425,12 +455,12 @@ export default function PantallaConfigurarDispositivo() {
                             >
                                 <View style={styles.optionContent}>
                                     <View style={[styles.optionIconContainer, styles.dangerIcon]}>
-                                        <Ionicons name="trash-outline" size={20} color="#E53E3E" />
+                                        <Ionicons name="finger-print" size={20} color="#E53E3E" />
                                     </View>
                                     <View style={styles.optionTextContainer}>
-                                        <Text style={[styles.optionTitle, styles.dangerText]}>Desvincular este dispositivo</Text>
+                                        <Text style={[styles.optionTitle, styles.dangerText]}>Borrar todas las huellas</Text>
                                         <Text style={styles.optionDescription}>
-                                            Eliminar la asociación con tu cuenta
+                                            Eliminar todos los registros de huellas dactilares
                                         </Text>
                                     </View>
                                 </View>

@@ -20,3 +20,12 @@ export const addRegistro = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Error al agregar el registro', error });
     }
 };
+
+export const deleteAllRegistros = async (req: Request, res: Response) => {
+    try {
+        await Registro.deleteMany({});
+        res.status(200).json({ message: 'Todos los registros han sido eliminados' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al eliminar los registros', error });
+    }
+};

@@ -49,7 +49,6 @@ const styles = StyleSheet.create({
     contenedor: {
         width: '100%',
         paddingHorizontal: 20,
-        paddingVertical: 10,
         backgroundColor: 'transparent',
         marginTop: 10,
     },

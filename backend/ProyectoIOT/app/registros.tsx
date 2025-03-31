@@ -7,13 +7,13 @@ import {
     StyleSheet,
     FlatList,
     ActivityIndicator,
-    TouchableOpacity
+    TouchableOpacity,
+    Alert
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { Entypo, Feather } from '@expo/vector-icons'; // Añadí Feather para el ícono de flecha
+import { Entypo, Feather, MaterialIcons } from '@expo/vector-icons';
 import BotonVolver from '../componentes/BotonVolver';
-import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 interface Registro {
     _id: string;
@@ -27,27 +27,56 @@ export default function PantallaRegistros() {
     const [registros, setRegistros] = useState<Registro[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [eliminando, setEliminando] = useState(false);
+
+    const fetchRegistros = async () => {
+        try {
+            const response = await axios.get('http://192.168.1.68:8082/api/registros/get');
+            if (response.status === 200) {
+                setRegistros(response.data as Registro[]);
+            }
+        } catch (err) {
+            setError('Error al cargar los registros');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchRegistros = async () => {
-            try {
-                const response = await axios.get(`${IPS.SERVER_URL}/api/registros/get`);
-                if (response.status === 200) {
-                    setRegistros(response.data as Registro[]);
-                }
-            } catch (err: any) {
-                console.error('Error al cargar registros:', err.message);
-                setError('Error al cargar los registros. Verifica tu conexión.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchRegistros();
         // Actualizar cada 5 segundos
         const interval = setInterval(fetchRegistros, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    // Función para eliminar todos los registros
+    const handleEliminarRegistros = () => {
+        Alert.alert(
+            "Confirmar eliminación",
+            "¿Estás seguro de que deseas eliminar todos los registros?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setEliminando(true);
+                            const response = await axios.delete('http://192.168.1.68:8082/api/registros/deleteAll');
+                            if (response.status === 200) {
+                                setRegistros([]);
+                                Alert.alert("Éxito", "Todos los registros han sido eliminados");
+                            }
+                        } catch (err) {
+                            Alert.alert("Error", "No se pudieron eliminar los registros");
+                        } finally {
+                            setEliminando(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const renderRegistroItem = ({ item }: { item: Registro }) => (
         <View style={styles.registroCard}>
@@ -80,17 +109,43 @@ export default function PantallaRegistros() {
             {/* Botón para volver */}
             <BotonVolver destino="/puerta" />
 
-
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Text style={styles.title}>Registros de Alertas</Text>
-                    <FlatList
-                        data={registros}
-                        renderItem={renderRegistroItem}
-                        keyExtractor={(item) => item._id}
-                        scrollEnabled={false}
-                        contentContainerStyle={styles.listContent}
-                    />
+                    <View style={styles.headerContainer}>
+                        <Text style={styles.title}>Registros de Alertas</Text>
+
+                        {/* Botón para eliminar todos los registros */}
+                        {registros.length > 0 && (
+                            <TouchableOpacity
+                                style={styles.deleteButton}
+                                onPress={handleEliminarRegistros}
+                                disabled={eliminando}
+                            >
+                                {eliminando ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <>
+                                        <MaterialIcons name="delete" size={20} color="#fff" />
+                                        <Text style={styles.deleteButtonText}>Eliminar todo</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {registros.length === 0 ? (
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyText}>No hay registros disponibles</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={registros}
+                            renderItem={renderRegistroItem}
+                            keyExtractor={(item) => item._id}
+                            scrollEnabled={false}
+                            contentContainerStyle={styles.listContent}
+                        />
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -113,34 +168,31 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 6,
     },
-    topBar: {
+    headerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1E1E1E',
-    },
-    nav: {
-        flexDirection: 'row',
-    },
-    navText: {
-        fontSize: 16,
-        color: '#1E1E1E',
-        marginLeft: 20,
+        marginBottom: 20,
     },
     title: {
         fontSize: 22,
         fontWeight: 'bold',
         color: '#1E1E1E',
-        marginVertical: 15,
-        textAlign: 'center',
+        flex: 1,
+    },
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#dc3545',
+        borderRadius: 8,
+        padding: 8,
+        paddingHorizontal: 12,
+    },
+    deleteButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 14,
+        marginLeft: 5,
     },
     registroCard: {
         backgroundColor: '#f8f9fa',
@@ -180,6 +232,16 @@ const styles = StyleSheet.create({
     },
     listContent: {
         width: '100%',
+    },
+    emptyContainer: {
+        padding: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#6c757d',
+        textAlign: 'center',
     },
     backButton: {
         position: 'absolute',
