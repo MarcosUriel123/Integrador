@@ -24,10 +24,13 @@ import IPS from '../config/IPS'; // Importamos la configuración de IPs
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
+// Actualizar la interfaz Registro para incluir los nuevos campos
 interface Registro {
     _id: string;
     mensaje: string;
     descripcion: string;
+    metodoAcceso?: string;
+    valorMetodo?: string;
     fecha: string;
 }
 
@@ -67,6 +70,8 @@ export default function PantallaRegistros() {
         ]).start();
     }, []);
 
+    // Añadir logs detallados al fetch de registros
+
     const fetchRegistros = async () => {
         try {
             console.log("Obteniendo registros...");
@@ -77,6 +82,19 @@ export default function PantallaRegistros() {
             if (response.status === 200) {
                 const registrosData = response.data as Registro[];
                 console.log(`Registros recibidos: ${registrosData.length}`);
+
+                // Verificar qué datos contienen
+                registrosData.forEach((item, idx) => {
+                    if (idx < 5) { // Solo mostrar los primeros 5 para no saturar la consola
+                        console.log(
+                            `Registro #${idx + 1}: 
+                        id=${item._id}, 
+                        mensaje=${item.mensaje}, 
+                        método=${item.metodoAcceso || 'ninguno'}, 
+                        valor=${item.valorMetodo || 'ninguno'}`
+                        );
+                    }
+                });
 
                 // Crear animaciones para nuevos items
                 registrosData.forEach(item => {
@@ -150,6 +168,8 @@ export default function PantallaRegistros() {
         }
     };
 
+    // Actualizar el renderRegistroItem para mostrar el método de acceso completo y el valor enmascarado
+
     const renderRegistroItem = ({ item, index }: { item: Registro; index: number }) => {
         const style = getRegistroStyle(item.mensaje);
         const opacity = itemAnimations[item._id] || new Animated.Value(1);
@@ -169,6 +189,19 @@ export default function PantallaRegistros() {
                 fechaFormateada = `Ayer a las ${fecha.toLocaleTimeString()}`;
             } else {
                 fechaFormateada = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`;
+            }
+        }
+
+        // SIMPLIFICACIÓN: Mostrar directamente el método y su valor sin formateo adicional
+        // Formatear el texto del método de acceso de manera simple y directa
+        let metodoAccesoText = '';
+
+        if (item.metodoAcceso && item.metodoAcceso !== 'desconocido') {
+            if (item.valorMetodo) {
+                // Mostrar método y valor de manera clara
+                metodoAccesoText = `Método: ${item.metodoAcceso} | Valor: ${item.valorMetodo}`;
+            } else {
+                metodoAccesoText = `Método: ${item.metodoAcceso}`;
             }
         }
 
@@ -203,6 +236,16 @@ export default function PantallaRegistros() {
                 <Text style={styles.registroDescripcion}>
                     {item.descripcion}
                 </Text>
+
+                {metodoAccesoText ? (
+                    <View style={styles.metodoContainer}>
+                        <Text style={styles.registroMetodo}>
+                            {metodoAccesoText}
+                        </Text>
+                    </View>
+                ) : null}
+
+                {/* Eliminar cualquier otro contenedor o formato para los valores */}
 
                 <View style={styles.registroFooter}>
                     <View style={styles.timeContainer}>
@@ -453,6 +496,19 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         lineHeight: 20,
     },
+    registroMetodo: {
+        fontSize: 14,
+        color: '#92400E',
+        fontWeight: '500',
+    },
+    metodoContainer: {
+        backgroundColor: '#FFFBEB',
+        borderRadius: 8,
+        padding: 10,
+        marginVertical: 8,
+        borderWidth: 1,
+        borderColor: '#FCD34D',
+    },
     registroFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -560,5 +616,20 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
+    },
+    valorRealContainer: {
+        marginTop: 5,
+        marginBottom: 10,
+        backgroundColor: '#FEF9C3', // Fondo amarillo suave para destacar
+        borderRadius: 4,
+        padding: 8,
+        borderLeftWidth: 3,
+        borderColor: '#EAB308',
+    },
+    valorRealText: {
+        fontSize: 13,
+        fontFamily: 'monospace', // Fuente monoespaciada para datos técnicos
+        color: '#854D0E',
+        fontWeight: '500',
     },
 });

@@ -141,7 +141,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       digitalWrite(RELAY_PIN, LOW);
       Serial.println("Puerta abierta por comando MQTT");
       mqttClient.publish(mqtt_status_topic, "open", true);
-      pitidoExito(); // Agregar esta línea
+      pitidoExito();
+      
+      // Registrar apertura con método MQTT
+      registrarAcceso("app web", "");
+      
       delay(5000);
       digitalWrite(RELAY_PIN, HIGH);
       mqttClient.publish(mqtt_status_topic, "closed", true);
@@ -289,6 +293,71 @@ void setup() {
     }
   });
 
+  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_DELETE, [](){
+    sendCORSHeaders();
+    
+    String uri = server.uri();
+    int lastSlash = uri.lastIndexOf('/');
+    String idStr = uri.substring(lastSlash + 1);
+    int id = idStr.toInt();
+    
+    if (id < 1 || id > 127) {
+      server.send(400, "application/json", "{\"success\":false,\"message\":\"ID de huella inválido\"}");
+      return;
+    }
+    
+    uint8_t p = finger.deleteModel(id);
+    if (p == FINGERPRINT_OK) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Huella eliminada");
+      lcd.setCursor(0, 1);
+      lcd.print("ID: " + String(id));
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"Huella eliminada correctamente\"}");
+    } else {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error al eliminar");
+      lcd.setCursor(0, 1);
+      lcd.print("huella");
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al eliminar huella\"}");
+    }
+  });
+
+  server.on("/api/arduino/rfid/([^/]+)", HTTP_DELETE, [](){
+    sendCORSHeaders();
+    
+    String uri = server.uri();
+    int lastSlash = uri.lastIndexOf('/');
+    String rfidId = uri.substring(lastSlash + 1);
+    
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Tarjeta RFID");
+    lcd.setCursor(0, 1);
+    lcd.print("eliminada");
+    delay(2000);
+    mostrarMenuPrincipal();
+    
+    server.send(200, "application/json", "{\"success\":true,\"message\":\"RFID eliminado correctamente\"}");
+  });
+
+  server.on("/api/arduino/fingerprint/([0-9]+)", HTTP_OPTIONS, [](){
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
+  server.on("/api/arduino/rfid/([^/]+)", HTTP_OPTIONS, [](){
+    sendCORSHeaders();
+    server.send(200, "text/plain", "");
+  });
+
   server.on("/api/arduino/rfid/reset", HTTP_POST, []() {
     sendCORSHeaders();
     
@@ -355,47 +424,22 @@ void setup() {
   // Endpoint para borrar todas las huellas
   server.on("/api/arduino/fingerprint/delete-all", HTTP_POST, []() {
     // Establecer encabezados CORS
-    sendCORSHeaders();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
     
     // Comprobar si el sensor está disponible
     if (!finger.verifyPassword()) {
-      server.send(503, "application/json", "{\"success\":false,\"message\":\"Error: Sensor de huellas no encontrado\"}");
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error: Sensor de huellas no encontrado\"}");
       return;
     }
     
-    // Intentar borrar todas las huellas varias veces
-    bool eliminacionExitosa = false;
-    for (int intento = 1; intento <= 3; intento++) {
-      uint8_t p = finger.emptyDatabase();
-      if (p == FINGERPRINT_OK) {
-        eliminacionExitosa = true;
-        break;
-      }
-      delay(500); // Esperar medio segundo entre intentos
-    }
-    
-    if (eliminacionExitosa) {
-      // Informar en el LCD
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Todas las huellas");
-      lcd.setCursor(0, 1);
-      lcd.print("eliminadas");
-      delay(2000);
-      mostrarMenuPrincipal();
-      
+    // Intenta borrar todas las huellas
+    if (finger.emptyDatabase() == FINGERPRINT_OK) {
       // Si se han borrado correctamente, enviar respuesta de éxito
       server.send(200, "application/json", "{\"success\":true,\"message\":\"Todas las huellas han sido eliminadas correctamente\"}");
-    } else {
-      // Informar en el LCD
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Error al eliminar");
-      lcd.setCursor(0, 1);
-      lcd.print("huellas");
-      delay(2000);
-      mostrarMenuPrincipal();
       
+    } else {
       // Si hay un error, enviar respuesta de error
       server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al borrar las huellas\"}");
     }
@@ -403,7 +447,9 @@ void setup() {
 
   // Endpoint para manejo de opciones pre-vuelo CORS
   server.on("/api/arduino/fingerprint/delete-all", HTTP_OPTIONS, []() {
-    sendCORSHeaders();
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.sendHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
     server.send(200);
   });
 
@@ -520,6 +566,55 @@ void setup() {
       "{\"success\":true,\"message\":\"RFID " + rfidId + " eliminado correctamente\"}");
   });
   
+  // Mejora del endpoint para eliminar todas las huellas (es más confiable)
+  server.on("/api/arduino/fingerprint/delete-all", HTTP_POST, []() {
+    // Establecer encabezados CORS
+    sendCORSHeaders();
+    
+    // Comprobar si el sensor está disponible
+    if (!finger.verifyPassword()) {
+      server.send(503, "application/json", "{\"success\":false,\"message\":\"Error: Sensor de huellas no encontrado\"}");
+      return;
+    }
+    
+    // Intentar borrar todas las huellas varias veces
+    bool eliminacionExitosa = false;
+    for (int intento = 1; intento <= 3; intento++) {
+      uint8_t p = finger.emptyDatabase();
+      if (p == FINGERPRINT_OK) {
+        eliminacionExitosa = true;
+        break;
+      }
+      delay(500); // Esperar medio segundo entre intentos
+    }
+    
+    if (eliminacionExitosa) {
+      // Informar en el LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Todas las huellas");
+      lcd.setCursor(0, 1);
+      lcd.print("eliminadas");
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      // Si se han borrado correctamente, enviar respuesta de éxito
+      server.send(200, "application/json", "{\"success\":true,\"message\":\"Todas las huellas han sido eliminadas correctamente\"}");
+    } else {
+      // Informar en el LCD
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error al eliminar");
+      lcd.setCursor(0, 1);
+      lcd.print("huellas");
+      delay(2000);
+      mostrarMenuPrincipal();
+      
+      // Si hay un error, enviar respuesta de error
+      server.send(500, "application/json", "{\"success\":false,\"message\":\"Error al borrar las huellas\"}");
+    }
+  });
+
   server.begin();
   Serial.println("Servidor web iniciado"); 
 
@@ -572,7 +667,11 @@ void handleControlPuerta() {
 
     if (action == "abrir") {
       digitalWrite(RELAY_PIN, LOW);
-      pitidoExito(); // Agregar esta línea 
+      pitidoExito();
+      
+      // Registrar apertura con método API
+      registrarAcceso("app movil", " ");
+      
       server.send(200, "text/plain", "Puerta abierta");
       delay(5000);
       digitalWrite(RELAY_PIN, HIGH);
@@ -821,6 +920,9 @@ void verificarPINEnServidor() {
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
         
+        // Registrar apertura con método PIN
+        registrarAcceso("PIN", String(claveIngresada));
+        
         contadorDetecciones = 0;
         alarmaActivada = false;
         alarmaCicloCompletado = false;
@@ -916,19 +1018,22 @@ void verificarRFID() {
       
       if (doc["authorized"].as<bool>()) {
         lcd.clear();
-        lcd.print("Acceso Concedido");
+        lcd.setCursor(0, 0);
+        lcd.print("Acceso");
         lcd.setCursor(0, 1);
-        lcd.print("RFID: " + tagID.substring(0, 8) + "...");
+        lcd.print("Concedido");
+        
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
         
-        contadorDetecciones = 0;
-        alarmaActivada = false;
-        alarmaCicloCompletado = false;
+        // Registrar apertura con método RFID
+        registrarAcceso("RFID", tagID);
         
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
+        estaBloqueado = true;
         intentosFallidos = 0;
+        estadoMenu = 0;
       } else {
         lcd.clear();
         lcd.print("RFID no");
@@ -1058,17 +1163,22 @@ void verificarHuella() {
       p = finger.fingerFastSearch();
       if (p == FINGERPRINT_OK) {
         lcd.clear();
-        lcd.print("Acceso Concedido");
+        lcd.setCursor(0, 0);
+        lcd.print("Acceso");
+        lcd.setCursor(0, 1);
+        lcd.print("Concedido");
+        
         pitidoExito();
         digitalWrite(RELAY_PIN, LOW);
         
-        contadorDetecciones = 0;
-        alarmaActivada = false;
-        alarmaCicloCompletado = false;
+        // Registrar apertura con método HUELLA
+        registrarAcceso("HUELLA con ID", String(finger.fingerID));
         
         delay(5000);
         digitalWrite(RELAY_PIN, HIGH);
+        estaBloqueado = true;
         intentosFallidos = 0;
+        estadoMenu = 0;
       } else {
         lcd.clear();
         lcd.print("Huella invalida");
@@ -1234,6 +1344,8 @@ void verificarSensorMagnetico() {
   }
 }
 
+// Modificar la función enviarCambioEstadoPuerta() para que registre el método de acceso
+
 void enviarCambioEstadoPuerta() {
   if(WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -1261,13 +1373,16 @@ void enviarCambioEstadoPuerta() {
       Serial.println("Estado de puerta publicado en HiveMQ: " + estadoActual);
     }
     
+    // IMPORTANTE: Eliminar esta sección para que no cree un registro separado sin método
+    // cuando se abre la puerta, ya que ahora lo manejamos con la función registrarAcceso
+    /*
     if(estadoActual == "open") {
       http.begin("http://" + String(ipServer) + "/api/registros/add");
       http.addHeader("Content-Type", "application/json");
       http.addHeader("X-API-Key", "IntegradorIOTKey2025");
       
       String registroData = "{\"mensaje\":\"Apertura de puerta\",\"descripcion\":\"La puerta ha sido abierta\"}";
-      int httpResponseCode = http.POST(registroData);
+      httpResponseCode = http.POST(registroData);
       
       if(httpResponseCode > 0) {
         Serial.println("Registro de apertura creado correctamente");
@@ -1276,6 +1391,7 @@ void enviarCambioEstadoPuerta() {
       }
       http.end();
     }
+    */
   }
 }
 
@@ -1445,5 +1561,37 @@ void loop() {
       mqttClient.publish(mqtt_mac_topic, macAddress.c_str(), true);
       Serial.println("MAC refrescada en HiveMQ: " + macAddress);
     }
+  }
+}
+
+void registrarAcceso(String metodo, String valor) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String serverUrl = "http://" + String(ipServer) + "/api/registros/add";
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    
+    // Crear texto descriptivo
+    String mensaje = "Puerta abierta";
+    String descripcion = "Acceso concedido utilizando " + metodo + ": " + valor;
+    
+    // Crear JSON con toda la información
+    String jsonData = "{\"mensaje\":\"" + mensaje + 
+                      "\",\"descripcion\":\"" + descripcion + 
+                      "\",\"metodoAcceso\":\"" + metodo + 
+                      "\",\"valorMetodo\":\"" + valor + "\"}";
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Registro de acceso enviado: " + response);
+    } else {
+      Serial.println("Error al registrar acceso: " + http.errorToString(httpResponseCode));
+    }
+    
+    http.end();
+  } else {
+    Serial.println("No se pudo registrar el acceso: sin conexión WiFi");
   }
 }
