@@ -107,30 +107,48 @@ export default function PantallaPerfil({ userId }: Props) {
         }
     };
 
-    // Función handleSubmit modificada para incluir la redirección
+    // Función handleSubmit corregida
     const handleSubmit = async () => {
         if (!localUserId) {
             Alert.alert('Error', 'No se pudo identificar el usuario para actualizar');
             return;
         }
 
-        const updateData: any = {
+        // Validar que haya datos para actualizar
+        if (!name || !lastName || !email) {
+            Alert.alert('Error', 'Los campos Nombre, Apellido Paterno y Correo son obligatorios');
+            return;
+        }
+
+        // Incluir todos los campos que podrían ser actualizados en la base de datos
+        const updateData = {
             name,
             lastName,
             surname,
-            phone,
             email,
-            secretQuestion,
-            secretAnswer,
+            phone
         };
 
-        if (password) {
-            updateData.password = password;
-        }
-
         try {
-            // Usar la ruta correcta con /update/
-            const response = await axios.put(`${IPS.SERVER_URL}/api/users/update/${localUserId}`, updateData);
+            // Obtener el token de autenticación
+            const token = await AsyncStorage.getItem('userToken');
+
+            if (!token) {
+                Alert.alert('Error', 'No hay sesión activa. Por favor, inicia sesión nuevamente.');
+                return;
+            }
+
+            // CORRECCIÓN: Usar exactamente la ruta definida en userRoutes.ts
+            const response = await axios.put(
+                `${IPS.SERVER_URL}/api/users/update/${localUserId}`,
+                updateData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
             if (response.status === 200) {
                 Alert.alert(
@@ -143,20 +161,11 @@ export default function PantallaPerfil({ userId }: Props) {
                         }
                     ]
                 );
-                setPassword('');
-                router.replace('/Datosperfil');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error al actualizar:', error);
-
-            // Descomentar este bloque para obtener más detalles sobre el error
-            // if (axios.isAxiosError(error)) {
-            //     console.error('Estado HTTP:', error.response?.status);
-            //     console.error('Mensaje del servidor:', error.response?.data);
-            //     Alert.alert('Error', `No se pudo actualizar: ${error.response?.status} - ${JSON.stringify(error.response?.data)}`);
-            // } else {
-            //     Alert.alert('Error', 'No se pudo actualizar la información');
-            // }
+            const errorMessage = error.response?.data?.error || 'No se pudo actualizar la información';
+            Alert.alert('Error', errorMessage);
         }
     };
 
@@ -185,10 +194,7 @@ export default function PantallaPerfil({ userId }: Props) {
                 <View style={styles.cardContainer}>
                     <View style={styles.topBar}>
                         <Text style={styles.logo}>Mi Perfil</Text>
-                        {/* Botón para volver al perfil sin guardar cambios */}
-
                         <BotonVolver destino="/Datosperfil" />
-
                     </View>
                     <View style={styles.contentContainer}>
                         <Feather name="user" size={80} color="black" style={styles.icon} />
@@ -214,51 +220,11 @@ export default function PantallaPerfil({ userId }: Props) {
                             onChangeText={setSurname}
                         />
 
-                        <Text style={styles.label}>Teléfono</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={phone}
-                            onChangeText={setPhone}
-                        />
-
                         <Text style={styles.label}>Correo electrónico</Text>
                         <TextInput
                             style={styles.input}
                             value={email}
                             onChangeText={setEmail}
-                        />
-
-                        <Text style={styles.label}>Pregunta de seguridad</Text>
-                        <View style={styles.dropdownContainer}>
-                            <DropDownPicker
-                                open={open}
-                                value={secretQuestion}
-                                items={items}
-                                setOpen={setOpen}
-                                setValue={setSecretQuestion}
-                                setItems={setItems}
-                                style={styles.dropdown}
-                                dropDownContainerStyle={styles.dropdownList}
-                                zIndex={3000}
-                                zIndexInverse={1000}
-                            />
-                        </View>
-
-                        <Text style={styles.label}>Respuesta secreta</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={secretAnswer}
-                            onChangeText={setSecretAnswer}
-                            placeholder="Respuesta a tu pregunta de seguridad"
-                        />
-
-                        <Text style={styles.label}>Nueva Contraseña</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Dejar en blanco para no cambiar"
-                            secureTextEntry
-                            value={password}
-                            onChangeText={setPassword}
                         />
 
                         <TouchableOpacity style={styles.button} onPress={handleSubmit}>

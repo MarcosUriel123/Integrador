@@ -25,14 +25,19 @@ import IPS from '../config/IPS'; // Importamos la configuración de IPs
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
-// Tipo para los datos del usuario
+// Tipo para los datos del usuario - Corrige la interfaz
 interface UserData {
     _id: string;
     name: string;
+    lastName: string;
+    surname: string;
+    phone: string;
     email: string;
-    phoneNumber?: string;
-    address?: string;
-    createdAt: string;
+    secretQuestion?: number;
+    secretAnswer?: string;
+    createdAt?: string;
+    devicePin?: string;
+    // Elimina phoneNumber y address que no existen en tu BD
 }
 
 interface PantallaPerfilProps {
@@ -101,8 +106,7 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
             setEditedData({
                 name: data.name,
                 email: data.email,
-                phoneNumber: data.phoneNumber || '',
-                address: data.address || ''
+                phone: data.phone || ''
             });
             setError('');
         } catch (error) {
@@ -224,14 +228,7 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
                                     <Text style={styles.userName}>{userData?.name}</Text>
                                     <Text style={styles.userEmail}>{userData?.email}</Text>
 
-                                    <View style={styles.memberSinceContainer}>
-                                        <Text style={styles.memberSinceText}>
-                                            Miembro desde: {userData?.createdAt
-                                                ? new Date(userData.createdAt).toLocaleDateString()
-                                                : 'Fecha no disponible'
-                                            }
-                                        </Text>
-                                    </View>
+
                                 </View>
 
                                 <View style={styles.divider} />
@@ -254,6 +251,26 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
 
                                             <View style={styles.infoItem}>
                                                 <View style={styles.infoIconContainer}>
+                                                    <Ionicons name="people" size={18} color="#3182CE" />
+                                                </View>
+                                                <View style={styles.infoContent}>
+                                                    <Text style={styles.infoLabel}>Apellido Paterno</Text>
+                                                    <Text style={styles.infoValue}>{userData?.lastName || 'No especificado'}</Text>
+                                                </View>
+                                            </View>
+
+                                            <View style={styles.infoItem}>
+                                                <View style={styles.infoIconContainer}>
+                                                    <Ionicons name="people-outline" size={18} color="#3182CE" />
+                                                </View>
+                                                <View style={styles.infoContent}>
+                                                    <Text style={styles.infoLabel}>Apellido Materno</Text>
+                                                    <Text style={styles.infoValue}>{userData?.surname || 'No especificado'}</Text>
+                                                </View>
+                                            </View>
+
+                                            <View style={styles.infoItem}>
+                                                <View style={styles.infoIconContainer}>
                                                     <Ionicons name="mail" size={18} color="#3182CE" />
                                                 </View>
                                                 <View style={styles.infoContent}>
@@ -268,21 +285,7 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
                                                 </View>
                                                 <View style={styles.infoContent}>
                                                     <Text style={styles.infoLabel}>Teléfono</Text>
-                                                    <Text style={styles.infoValue}>
-                                                        {userData?.phoneNumber || 'No especificado'}
-                                                    </Text>
-                                                </View>
-                                            </View>
-
-                                            <View style={styles.infoItem}>
-                                                <View style={styles.infoIconContainer}>
-                                                    <Ionicons name="location" size={18} color="#3182CE" />
-                                                </View>
-                                                <View style={styles.infoContent}>
-                                                    <Text style={styles.infoLabel}>Dirección</Text>
-                                                    <Text style={styles.infoValue}>
-                                                        {userData?.address || 'No especificada'}
-                                                    </Text>
+                                                    <Text style={styles.infoValue}>{userData?.phone || 'No especificado'}</Text>
                                                 </View>
                                             </View>
                                         </>
@@ -313,20 +316,10 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
                                                 <Text style={styles.editLabel}>Teléfono</Text>
                                                 <TextInput
                                                     style={styles.editInput}
-                                                    value={editedData.phoneNumber}
-                                                    onChangeText={(text) => setEditedData({ ...editedData, phoneNumber: text })}
+                                                    value={editedData.phone}
+                                                    onChangeText={(text) => setEditedData({ ...editedData, phone: text })}
                                                     placeholder="Tu número de teléfono"
                                                     keyboardType="phone-pad"
-                                                />
-                                            </View>
-
-                                            <View style={styles.editField}>
-                                                <Text style={styles.editLabel}>Dirección</Text>
-                                                <TextInput
-                                                    style={styles.editInput}
-                                                    value={editedData.address}
-                                                    onChangeText={(text) => setEditedData({ ...editedData, address: text })}
-                                                    placeholder="Tu dirección"
                                                 />
                                             </View>
                                         </>
@@ -335,7 +328,7 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
 
                                 {/* Botones de acción */}
                                 <View style={styles.actionButtonsContainer}>
-                                    {!editMode ? (
+                                    {/* {!editMode ? (
                                         <TouchableOpacity
                                             style={styles.editButton}
                                             onPress={() => setEditMode(true)}
@@ -355,8 +348,7 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
                                                         setEditedData({
                                                             name: userData.name,
                                                             email: userData.email,
-                                                            phoneNumber: userData.phoneNumber || '',
-                                                            address: userData.address || ''
+                                                            phone: userData.phone || '',
                                                         });
                                                     }
                                                 }}
@@ -373,7 +365,7 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
                                                 <Text style={styles.saveButtonText}>Guardar</Text>
                                             </TouchableOpacity>
                                         </View>
-                                    )}
+                                    )} */}
 
                                     <TouchableOpacity
                                         style={styles.logoutButton}
