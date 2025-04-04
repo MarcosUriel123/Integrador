@@ -4,21 +4,22 @@ import {
     ScrollView,
     View,
     Text,
-    TextInput,
     TouchableOpacity,
     StyleSheet,
     ActivityIndicator,
     Alert,
     Animated,
-    Dimensions
+    Dimensions,
+    StatusBar
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
-import IPS from '../config/IPS'; // Importamos la configuración centralizada
-
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme';
+import InputApp from '../componentes/Inputapp'; // Importar el componente InputApp
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -30,10 +31,12 @@ interface SecretQuestion {
 
 export default function RecoveryScreen() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme();
 
     // Estados para el formulario de verificación
     const [email, setEmail] = useState('');
     const [secretAnswer, setSecretAnswer] = useState('');
+    const [emailValid, setEmailValid] = useState(false);
 
     // Estados para las preguntas secretas y el dropdown
     const [secretQuestions, setSecretQuestions] = useState<SecretQuestion[]>([]);
@@ -47,6 +50,7 @@ export default function RecoveryScreen() {
     const [isVerified, setIsVerified] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordValid, setPasswordValid] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -139,6 +143,12 @@ export default function RecoveryScreen() {
             return;
         }
 
+        if (!emailValid) {
+            setMessage('Por favor ingresa un correo electrónico válido');
+            setMessageType('error');
+            return;
+        }
+
         if (!secretAnswer.trim()) {
             setMessage('Por favor ingresa tu respuesta secreta');
             setMessageType('error');
@@ -202,8 +212,8 @@ export default function RecoveryScreen() {
             return;
         }
 
-        if (newPassword.length < 6) {
-            setMessage('La contraseña debe tener al menos 6 caracteres');
+        if (!passwordValid) {
+            setMessage('La contraseña debe cumplir con todos los requisitos');
             setMessageType('error');
             return;
         }
@@ -247,25 +257,45 @@ export default function RecoveryScreen() {
         }
     };
 
-    return (
-        <SafeAreaView style={styles.screen}>
-            <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
+    // Obtener colores del gradiente para el botón según el tema
+    const getButtonGradientColors = () => {
+        return isDarkMode
+            ? [colors.primary, '#1e3a8a'] as const // Primario a azul oscuro para tema oscuro
+            : [colors.primary, '#2C5282'] as const; // Primario a azul medio para tema claro
+    };
 
+    return (
+        <SafeAreaView style={baseStyles.screen}>
+            <StatusBar
+                backgroundColor={isDarkMode ? colors.background : '#FFFFFF'}
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+            />
+            <ScrollView style={{ flex: 1 }}>
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.recoverySection,
-                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+                            {
+                                opacity: fadeAnim,
+                                transform: [{ scale: scaleAnim }],
+                                marginTop: 15,
+                                marginBottom: 25
+                            }
                         ]}
                     >
-                        <View style={styles.recoveryHeader}>
-                            <View style={styles.iconContainer}>
-                                <Feather name="key" size={40} color="#3182CE" />
+                        <View style={localStyles.recoveryHeader}>
+                            <View style={[localStyles.iconContainer, {
+                                backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF',
+                            }]}>
+                                <Feather
+                                    name="key"
+                                    size={40}
+                                    color={colors.primary}
+                                />
                             </View>
-                            <Text style={styles.recoveryTitle}>
+                            <Text style={[localStyles.recoveryTitle, { color: colors.text }]}>
                                 {isVerified ? 'Crear Nueva Contraseña' : 'Recuperar Contraseña'}
                             </Text>
-                            <Text style={styles.recoverySubtitle}>
+                            <Text style={[localStyles.recoverySubtitle, { color: colors.secondaryText }]}>
                                 {isVerified
                                     ? 'Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta'
                                     : 'Verifica tu identidad para recuperar el acceso a tu cuenta'}
@@ -274,60 +304,73 @@ export default function RecoveryScreen() {
 
                         {message ? (
                             <View style={[
-                                styles.messageContainer,
-                                messageType === 'success' ? styles.successMessageContainer : styles.errorMessageContainer
+                                localStyles.messageContainer,
+                                messageType === 'success'
+                                    ? {
+                                        backgroundColor: isDarkMode ? 'rgba(56, 161, 105, 0.1)' : '#F0FFF4',
+                                        borderLeftColor: isDarkMode ? '#68D391' : '#48BB78'
+                                    }
+                                    : {
+                                        backgroundColor: isDarkMode ? 'rgba(229, 62, 62, 0.1)' : '#FFF5F5',
+                                        borderLeftColor: isDarkMode ? '#FC8181' : '#FC8181'
+                                    }
                             ]}>
                                 <Ionicons
                                     name={messageType === 'success' ? "checkmark-circle-outline" : "alert-circle-outline"}
                                     size={20}
-                                    color={messageType === 'success' ? "#38A169" : "#E53E3E"}
-                                    style={styles.messageIcon}
+                                    color={messageType === 'success'
+                                        ? (isDarkMode ? '#68D391' : '#38A169')
+                                        : (isDarkMode ? '#FC8181' : '#E53E3E')}
+                                    style={localStyles.messageIcon}
                                 />
                                 <Text style={[
-                                    styles.messageText,
-                                    messageType === 'success' ? styles.successMessage : styles.errorMessage
+                                    localStyles.messageText,
+                                    {
+                                        color: messageType === 'success'
+                                            ? (isDarkMode ? '#68D391' : '#276749')
+                                            : (isDarkMode ? '#FC8181' : '#C53030')
+                                    }
                                 ]}>
                                     {message}
                                 </Text>
                             </View>
                         ) : null}
 
-                        <Animated.View style={styles.formContainer}>
+                        <Animated.View style={localStyles.formContainer}>
                             {!isVerified ? (
-                                <View style={styles.form}>
-                                    {/* Correo electrónico */}
-                                    <View style={styles.fieldContainer}>
-                                        <Text style={styles.fieldLabel}>Correo electrónico</Text>
-                                        <View style={styles.inputWithIcon}>
-                                            <View style={styles.inputIconContainer}>
-                                                <Ionicons name="mail-outline" size={18} color="#3182CE" />
-                                            </View>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Ingresa tu correo electrónico"
-                                                value={email}
-                                                onChangeText={setEmail}
-                                                keyboardType="email-address"
-                                                autoCapitalize="none"
-                                                placeholderTextColor="#A0AEC0"
-                                            />
-                                        </View>
-                                    </View>
+                                <View style={localStyles.form}>
+                                    {/* Correo electrónico - Usando InputApp */}
+                                    <InputApp
+                                        value={email}
+                                        onChangeText={setEmail}
+                                        tipo="correo"
+                                        label="Correo electrónico"
+                                        placeholder="Ingresa tu correo electrónico"
+                                        showValidation={true}
+                                        onValidationChange={(isValid) => setEmailValid(isValid)}
+                                    />
 
                                     {/* Pregunta secreta */}
-                                    <View style={styles.fieldContainer}>
-                                        <Text style={styles.fieldLabel}>Pregunta secreta</Text>
+                                    <View style={localStyles.fieldContainer}>
+                                        <Text style={[localStyles.fieldLabel, { color: colors.text }]}>Pregunta secreta</Text>
                                         {isLoadingQuestions ? (
-                                            <View style={styles.loadingContainer}>
-                                                <ActivityIndicator size="small" color="#3182CE" />
-                                                <Text style={styles.loadingText}>Cargando preguntas...</Text>
+                                            <View style={[localStyles.loadingContainer, {
+                                                backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                                borderColor: colors.border
+                                            }]}>
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                                <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                                                    Cargando preguntas...
+                                                </Text>
                                             </View>
                                         ) : (
-                                            <View style={styles.dropdownWithIcon}>
-                                                <View style={styles.inputIconContainer}>
-                                                    <Ionicons name="help-circle-outline" size={18} color="#3182CE" />
+                                            <View style={localStyles.dropdownWithIcon}>
+                                                <View style={[localStyles.inputIconContainer, {
+                                                    backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                                                }]}>
+                                                    <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
                                                 </View>
-                                                <View style={styles.dropdownContainer}>
+                                                <View style={localStyles.dropdownContainer}>
                                                     <DropDownPicker
                                                         open={open}
                                                         value={selectedQuestion}
@@ -336,124 +379,123 @@ export default function RecoveryScreen() {
                                                         setValue={setSelectedQuestion as React.Dispatch<React.SetStateAction<number>>}
                                                         setItems={setItems as React.Dispatch<React.SetStateAction<{ label: string; value: number }[]>>}
                                                         placeholder="Selecciona una pregunta secreta"
-                                                        style={styles.dropdown}
-                                                        dropDownContainerStyle={styles.dropdownList}
+                                                        style={[localStyles.dropdown, {
+                                                            backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                                            borderColor: colors.border
+                                                        }]}
+                                                        dropDownContainerStyle={[localStyles.dropdownList, {
+                                                            backgroundColor: isDarkMode ? colors.card : '#FFFFFF',
+                                                            borderColor: colors.border
+                                                        }]}
                                                         listMode="SCROLLVIEW"
                                                         scrollViewProps={{
                                                             nestedScrollEnabled: true,
                                                         }}
-                                                        textStyle={styles.dropdownText}
-                                                        placeholderStyle={styles.dropdownPlaceholder}
-                                                        ArrowDownIconComponent={() => <Ionicons name="chevron-down" size={16} color="#718096" />}
-                                                        ArrowUpIconComponent={() => <Ionicons name="chevron-up" size={16} color="#718096" />}
+                                                        textStyle={[localStyles.dropdownText, { color: colors.text }]}
+                                                        placeholderStyle={[localStyles.dropdownPlaceholder, { color: colors.secondaryText }]}
+                                                        ArrowDownIconComponent={() => <Ionicons name="chevron-down" size={16} color={colors.secondaryText} />}
+                                                        ArrowUpIconComponent={() => <Ionicons name="chevron-up" size={16} color={colors.secondaryText} />}
                                                     />
                                                 </View>
                                             </View>
                                         )}
                                     </View>
 
-                                    {/* Respuesta secreta */}
-                                    <View style={styles.fieldContainer}>
-                                        <Text style={styles.fieldLabel}>Respuesta secreta</Text>
-                                        <View style={styles.inputWithIcon}>
-                                            <View style={styles.inputIconContainer}>
-                                                <Ionicons name="key-outline" size={18} color="#3182CE" />
-                                            </View>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Ingresa tu respuesta secreta"
-                                                value={secretAnswer}
-                                                onChangeText={setSecretAnswer}
-                                                placeholderTextColor="#A0AEC0"
-                                            />
-                                        </View>
-                                    </View>
+                                    {/* Respuesta secreta - Usando InputApp */}
+                                    <InputApp
+                                        value={secretAnswer}
+                                        onChangeText={setSecretAnswer}
+                                        tipo="texto"
+                                        label="Respuesta secreta"
+                                        placeholder="Ingresa tu respuesta secreta"
+                                        showValidation={false}
+                                    />
 
                                     <TouchableOpacity
-                                        style={styles.buttonContainer}
+                                        style={[localStyles.buttonContainer, {
+                                            shadowOpacity: isDarkMode ? 0.3 : 0.2,
+                                            elevation: isDarkMode ? 4 : 3
+                                        }]}
                                         onPress={handleVerifyCredentials}
                                         disabled={isVerifying}
                                         activeOpacity={0.8}
                                     >
                                         <LinearGradient
-                                            colors={isVerifying ? ['#A0AEC0', '#718096'] : ['#3182CE', '#2C5282']}
-                                            style={styles.button}
+                                            colors={isVerifying
+                                                ? (isDarkMode ? ['#4A5568', '#2D3748'] : ['#A0AEC0', '#718096'])
+                                                : getButtonGradientColors()}
+                                            style={localStyles.button}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 0 }}
                                         >
                                             {isVerifying ? (
                                                 <>
-                                                    <ActivityIndicator size="small" color="#FFFFFF" style={styles.buttonIcon} />
-                                                    <Text style={styles.buttonText}>Verificando...</Text>
+                                                    <ActivityIndicator size="small" color="#FFFFFF" style={localStyles.buttonIcon} />
+                                                    <Text style={localStyles.buttonText}>Verificando...</Text>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Ionicons name="shield-checkmark-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                                    <Text style={styles.buttonText}>Verificar Identidad</Text>
+                                                    <Ionicons name="shield-checkmark-outline" size={20} color="#FFFFFF" style={localStyles.buttonIcon} />
+                                                    <Text style={localStyles.buttonText}>Verificar Identidad</Text>
                                                 </>
                                             )}
                                         </LinearGradient>
                                     </TouchableOpacity>
                                 </View>
                             ) : (
-                                <View style={styles.form}>
-                                    {/* Nueva contraseña */}
-                                    <View style={styles.fieldContainer}>
-                                        <Text style={styles.fieldLabel}>Nueva contraseña</Text>
-                                        <View style={styles.inputWithIcon}>
-                                            <View style={styles.inputIconContainer}>
-                                                <Ionicons name="lock-closed-outline" size={18} color="#3182CE" />
-                                            </View>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Ingresa tu nueva contraseña"
-                                                value={newPassword}
-                                                onChangeText={setNewPassword}
-                                                secureTextEntry
-                                                placeholderTextColor="#A0AEC0"
-                                            />
-                                        </View>
-                                    </View>
+                                <View style={localStyles.form}>
+                                    {/* Nueva contraseña - Usando InputApp */}
+                                        <InputApp
+                                            value={newPassword}
+                                            onChangeText={setNewPassword}
+                                            tipo="contrasenna"
+                                            label="Nueva contraseña"
+                                            placeholder="Ingresa tu nueva contraseña"
+                                            showValidation={true}
+                                            onValidationChange={(isValid) => setPasswordValid(isValid)}
+                                        />
 
-                                    {/* Confirmar contraseña */}
-                                    <View style={styles.fieldContainer}>
-                                        <Text style={styles.fieldLabel}>Confirmar contraseña</Text>
-                                        <View style={styles.inputWithIcon}>
-                                            <View style={styles.inputIconContainer}>
-                                                <Ionicons name="lock-closed-outline" size={18} color="#3182CE" />
-                                            </View>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Confirma tu nueva contraseña"
-                                                value={confirmPassword}
-                                                onChangeText={setConfirmPassword}
-                                                secureTextEntry
-                                                placeholderTextColor="#A0AEC0"
-                                            />
-                                        </View>
-                                    </View>
+                                    {/* Confirmar contraseña - Usando InputApp */}
+                                    <InputApp
+                                        value={confirmPassword}
+                                        onChangeText={setConfirmPassword}
+                                        tipo="contrasenna"
+                                        label="Confirmar contraseña"
+                                        placeholder="Confirma tu nueva contraseña"
+                                        showValidation={false}
+                                        errorMessage={
+                                            confirmPassword && newPassword !== confirmPassword
+                                                ? "Las contraseñas no coinciden"
+                                                : undefined
+                                        }
+                                    />
 
                                     <TouchableOpacity
-                                        style={styles.buttonContainer}
+                                        style={[localStyles.buttonContainer, {
+                                            shadowOpacity: isDarkMode ? 0.3 : 0.2,
+                                            elevation: isDarkMode ? 4 : 3
+                                        }]}
                                         onPress={handleUpdatePassword}
                                         disabled={isUpdating}
                                         activeOpacity={0.8}
                                     >
                                         <LinearGradient
-                                            colors={isUpdating ? ['#A0AEC0', '#718096'] : ['#3182CE', '#2C5282']}
-                                            style={styles.button}
+                                            colors={isUpdating
+                                                ? (isDarkMode ? ['#4A5568', '#2D3748'] : ['#A0AEC0', '#718096'])
+                                                : getButtonGradientColors()}
+                                            style={localStyles.button}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 0 }}
                                         >
                                             {isUpdating ? (
                                                 <>
-                                                    <ActivityIndicator size="small" color="#FFFFFF" style={styles.buttonIcon} />
-                                                    <Text style={styles.buttonText}>Actualizando...</Text>
+                                                    <ActivityIndicator size="small" color="#FFFFFF" style={localStyles.buttonIcon} />
+                                                    <Text style={localStyles.buttonText}>Actualizando...</Text>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Ionicons name="save-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                                    <Text style={styles.buttonText}>Actualizar Contraseña</Text>
+                                                    <Ionicons name="save-outline" size={20} color="#FFFFFF" style={localStyles.buttonIcon} />
+                                                    <Text style={localStyles.buttonText}>Actualizar Contraseña</Text>
                                                 </>
                                             )}
                                         </LinearGradient>
@@ -468,32 +510,7 @@ export default function RecoveryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    recoverySection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+const localStyles = StyleSheet.create({
     recoveryHeader: {
         alignItems: 'center',
         marginBottom: 24,
@@ -502,7 +519,6 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
@@ -515,12 +531,10 @@ const styles = StyleSheet.create({
     recoveryTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 8,
     },
     recoverySubtitle: {
         fontSize: 16,
-        color: '#718096',
         textAlign: 'center',
         maxWidth: '90%',
         lineHeight: 22,
@@ -531,16 +545,7 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 8,
         marginBottom: 16,
-    },
-    successMessageContainer: {
-        backgroundColor: '#F0FFF4',
         borderLeftWidth: 4,
-        borderLeftColor: '#48BB78',
-    },
-    errorMessageContainer: {
-        backgroundColor: '#FFF5F5',
-        borderLeftWidth: 4,
-        borderLeftColor: '#FC8181',
     },
     messageIcon: {
         marginRight: 8,
@@ -549,12 +554,6 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         fontWeight: '500',
-    },
-    successMessage: {
-        color: '#276749',
-    },
-    errorMessage: {
-        color: '#C53030',
     },
     formContainer: {
         width: '100%',
@@ -567,7 +566,6 @@ const styles = StyleSheet.create({
     },
     fieldLabel: {
         fontSize: 15,
-        color: '#4A5568',
         marginBottom: 6,
         fontWeight: '500',
     },
@@ -579,21 +577,9 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
-    },
-    input: {
-        flex: 1,
-        height: 48,
-        backgroundColor: '#F7FAFC',
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        fontSize: 16,
-        color: '#2D3748',
     },
     dropdownWithIcon: {
         flexDirection: 'row',
@@ -605,15 +591,11 @@ const styles = StyleSheet.create({
         zIndex: 100,
     },
     dropdown: {
-        backgroundColor: '#F7FAFC',
-        borderColor: '#E2E8F0',
         borderWidth: 1,
         borderRadius: 8,
         minHeight: 48,
     },
     dropdownList: {
-        backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
         borderWidth: 1,
         borderRadius: 8,
         shadowColor: "rgba(0,0,0,0.1)",
@@ -624,27 +606,22 @@ const styles = StyleSheet.create({
     },
     dropdownText: {
         fontSize: 16,
-        color: '#2D3748',
     },
     dropdownPlaceholder: {
-        color: '#A0AEC0',
         fontSize: 16,
     },
     loadingContainer: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
         borderRadius: 8,
         padding: 12,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
         height: 48,
         marginLeft: 50,
     },
     loadingText: {
         marginLeft: 10,
-        color: '#718096',
         fontSize: 16,
     },
     buttonContainer: {
@@ -653,9 +630,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         shadowColor: "#2C5282",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
         shadowRadius: 8,
-        elevation: 4,
     },
     button: {
         flexDirection: 'row',
