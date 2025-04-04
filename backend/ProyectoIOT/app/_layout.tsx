@@ -84,7 +84,7 @@ const LayoutContent = () => {
 
   return (
     <View style={styles.container}>
-      <HeaderBar />
+      {/* <HeaderBar /> */}
       <View style={styles.content}>
         <Stack screenOptions={{ headerShown: false }}>
           {/* Rutas existentes */}

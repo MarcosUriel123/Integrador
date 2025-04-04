@@ -16,8 +16,8 @@ import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import InputApp from './Inputapp';
-
-import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar el hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -33,6 +33,9 @@ interface SecretQuestion {
 }
 
 export default function PantallaRegistro1({ onNext, isLoading = false }: PantallaRegistro1Props) {
+    // Obtenemos colores y estilos del tema
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme();
+
     // Campos de formulario
     const [name, setName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -143,6 +146,21 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
             secretAnswer.trim() !== '';
     };
 
+    // Definir los colores del gradiente para el botón según el tema y estado
+    const getButtonGradientColors = (): readonly [string, string] => {
+        if (!areAllRequiredFieldsValid() || isRegistering || isLoading) {
+            // Colores para estado deshabilitado
+            return isDarkMode
+                ? ['#3d4451', '#2d3748'] as const // Gris oscuro para tema oscuro
+                : ['#A0AEC0', '#718096'] as const; // Gris claro para tema claro
+        } else {
+            // Colores para estado activo
+            return isDarkMode
+                ? [colors.primary, '#1e3a8a'] as const // Primario a azul oscuro para tema oscuro
+                : [colors.primary, '#2C5282'] as const; // Primario a azul medio para tema claro
+        }
+    };
+
     const handleRegister = async () => {
         // Validar campos usando los estados de validación
         if (!areAllRequiredFieldsValid()) {
@@ -176,293 +194,301 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
+                <Animated.View
+                    style={[
+                        baseStyles.contentContainer,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ scale: scaleAnim }],
+                        }
+                    ]}
+                >
+                    <View style={localStyles.registerHeader}>
+                        <View style={[localStyles.iconContainer, { backgroundColor: colors.primaryLight }]}>
+                            <Feather name="user-plus" size={36} color={colors.primary} />
+                        </View>
+                        <Text style={[baseStyles.title, { textAlign: 'center' }]}>Crear Cuenta</Text>
+                        <Text style={[baseStyles.secondaryText, { textAlign: 'center', maxWidth: '90%', lineHeight: 22 }]}>
+                            Complete los siguientes campos para registrarse en nuestra plataforma
+                        </Text>
+                    </View>
 
-
-                    <Animated.View
-                        style={[
-                            styles.formSection,
-                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-                        ]}
-                    >
-                        <View style={styles.formHeader}>
-                            <View style={styles.iconContainer}>
-                                <Feather name="user-plus" size={36} color="#3182CE" />
-                            </View>
-                            <Text style={styles.formTitle}>Crear Cuenta</Text>
-                            <Text style={styles.formSubtitle}>
-                                Complete los siguientes campos para registrarse en nuestra plataforma
+                    <View style={[baseStyles.section, { marginTop: 20 }]}>
+                        {/* Nombre */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Nombre <Text style={localStyles.requiredMark}>*</Text>
                             </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="person-outline" size={18} color={colors.primary} />
+                                </View>
+                                <InputApp
+                                    tipo="nombre"
+                                    value={name}
+                                    onChangeText={setName}
+                                    placeholder="Ingresa tu nombre"
+                                    showValidation={name.length > 0}
+                                    onValidationChange={setNameValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                    maxLength={20}
+                                />
+                            </View>
                         </View>
 
-                        <View style={styles.formFields}>
-                            {/* Nombre */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Nombre <Text style={styles.requiredMark}>*</Text></Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="person-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="nombre"
-                                        value={name}
-                                        onChangeText={setName}
-                                        placeholder="Ingresa tu nombre"
-                                        showValidation={name.length > 0}
-                                        onValidationChange={setNameValid}
-                                        containerStyle={styles.customInputContainer}
-                                        maxLength={20}
-                                    />
+                        {/* Apellido paterno */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Apellido paterno <Text style={localStyles.requiredMark}>*</Text>
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="person-outline" size={18} color={colors.primary} />
                                 </View>
+                                <InputApp
+                                    tipo="nombre"
+                                    value={lastName}
+                                    onChangeText={setLastName}
+                                    placeholder="Ingresa tu apellido paterno"
+                                    showValidation={lastName.length > 0}
+                                    onValidationChange={setLastNameValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                    maxLength={20}
+                                />
                             </View>
+                        </View>
 
-                            {/* Apellido paterno */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Apellido paterno <Text style={styles.requiredMark}>*</Text></Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="person-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="nombre"
-                                        value={lastName}
-                                        onChangeText={setLastName}
-                                        placeholder="Ingresa tu apellido paterno"
-                                        showValidation={lastName.length > 0}
-                                        onValidationChange={setLastNameValid}
-                                        containerStyle={styles.customInputContainer}
-                                        maxLength={20}
-                                    />
+                        {/* Apellido materno */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Apellido materno
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="person-outline" size={18} color={colors.primary} />
                                 </View>
+                                <InputApp
+                                    tipo="nombre"
+                                    value={surname}
+                                    onChangeText={setSurname}
+                                    placeholder="Ingresa tu apellido materno"
+                                    showValidation={surname.length > 0}
+                                    onValidationChange={setSurnameValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                    maxLength={20}
+                                />
                             </View>
+                        </View>
 
-                            {/* Apellido materno */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Apellido materno</Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="person-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="nombre"
-                                        value={surname}
-                                        onChangeText={setSurname}
-                                        placeholder="Ingresa tu apellido materno"
-                                        showValidation={surname.length > 0}
-                                        onValidationChange={setSurnameValid}
-                                        containerStyle={styles.customInputContainer}
-                                        maxLength={20}
-                                    />
+                        {/* Teléfono */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Teléfono
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="call-outline" size={18} color={colors.primary} />
                                 </View>
+                                <InputApp
+                                    tipo="telefono"
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    placeholder="Ingresa tu teléfono (10 dígitos)"
+                                    showValidation={phone.length > 0}
+                                    onValidationChange={setPhoneValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                />
                             </View>
+                        </View>
 
-                            {/* Teléfono */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Teléfono</Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="call-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="telefono"
-                                        value={phone}
-                                        onChangeText={setPhone}
-                                        placeholder="Ingresa tu teléfono (10 dígitos)"
-                                        showValidation={phone.length > 0}
-                                        onValidationChange={setPhoneValid}
-                                        containerStyle={styles.customInputContainer}
-                                    />
+                        {/* Correo electrónico */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Correo electrónico <Text style={localStyles.requiredMark}>*</Text>
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="mail-outline" size={18} color={colors.primary} />
                                 </View>
+                                <InputApp
+                                    tipo="correo"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    placeholder="Ingresa tu correo electrónico"
+                                    showValidation={email.length > 0}
+                                    onValidationChange={setEmailValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                />
                             </View>
+                        </View>
 
-                            {/* Correo electrónico */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Correo electrónico <Text style={styles.requiredMark}>*</Text></Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="mail-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="correo"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        placeholder="Ingresa tu correo electrónico"
-                                        showValidation={email.length > 0}
-                                        onValidationChange={setEmailValid}
-                                        containerStyle={styles.customInputContainer}
-                                    />
+                        {/* Contraseña */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Contraseña <Text style={localStyles.requiredMark}>*</Text>
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
                                 </View>
+                                <InputApp
+                                    tipo="contrasenna"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    placeholder="Ingresa tu contraseña"
+                                    showValidation={password.length > 0}
+                                    onValidationChange={setPasswordValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                />
                             </View>
+                        </View>
 
-                            {/* Contraseña */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Contraseña <Text style={styles.requiredMark}>*</Text></Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="lock-closed-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="contrasenna"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        placeholder="Ingresa tu contraseña"
-                                        showValidation={password.length > 0}
-                                        onValidationChange={setPasswordValid}
-                                        containerStyle={styles.customInputContainer}
-                                    />
+                        {/* Pregunta secreta */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Pregunta secreta <Text style={localStyles.requiredMark}>*</Text>
+                            </Text>
+                            {isLoadingQuestions ? (
+                                <View style={[localStyles.loadingContainer, { backgroundColor: colors.input, borderColor: colors.border }]}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                    <Text style={[baseStyles.secondaryText, { marginLeft: 10 }]}>Cargando preguntas...</Text>
                                 </View>
-                            </View>
-
-                            {/* Pregunta secreta */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Pregunta secreta <Text style={styles.requiredMark}>*</Text></Text>
-                                {isLoadingQuestions ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="small" color="#3182CE" />
-                                        <Text style={styles.loadingText}>Cargando preguntas...</Text>
+                            ) : (
+                                <View style={localStyles.dropdownWithIcon}>
+                                    <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                        <Ionicons name="help-circle-outline" size={18} color={colors.primary} />
                                     </View>
-                                ) : (
-                                    <View style={styles.dropdownWithIcon}>
-                                        <View style={styles.inputIconContainer}>
-                                            <Ionicons name="help-circle-outline" size={18} color="#3182CE" />
-                                        </View>
-                                        <View style={styles.dropdownContainer}>
-                                            <DropDownPicker
-                                                open={open}
-                                                value={selectedQuestion}
-                                                items={items}
-                                                setOpen={setOpen as React.Dispatch<React.SetStateAction<boolean>>}
-                                                setValue={setSelectedQuestion as React.Dispatch<React.SetStateAction<number>>}
-                                                setItems={setItems as React.Dispatch<React.SetStateAction<{ label: string; value: number }[]>>}
-                                                placeholder="Selecciona una pregunta secreta"
-                                                style={styles.dropdown}
-                                                dropDownContainerStyle={styles.dropdownList}
-                                                listMode="SCROLLVIEW"
-                                                scrollViewProps={{
-                                                    nestedScrollEnabled: true,
-                                                }}
-                                                textStyle={styles.dropdownText}
-                                                placeholderStyle={styles.dropdownPlaceholder}
-                                                ArrowDownIconComponent={() => <Ionicons name="chevron-down" size={16} color="#718096" />}
-                                                ArrowUpIconComponent={() => <Ionicons name="chevron-up" size={16} color="#718096" />}
-                                            />
-                                        </View>
+                                    <View style={localStyles.dropdownContainer}>
+                                        <DropDownPicker
+                                            open={open}
+                                            value={selectedQuestion}
+                                            items={items}
+                                            setOpen={setOpen as React.Dispatch<React.SetStateAction<boolean>>}
+                                            setValue={setSelectedQuestion as React.Dispatch<React.SetStateAction<number>>}
+                                            setItems={setItems as React.Dispatch<React.SetStateAction<{ label: string; value: number }[]>>}
+                                            placeholder="Selecciona una pregunta secreta"
+                                            style={[localStyles.dropdown, {
+                                                backgroundColor: colors.input,
+                                                borderColor: colors.border
+                                            }]}
+                                            dropDownContainerStyle={[localStyles.dropdownList, {
+                                                backgroundColor: isDarkMode ? colors.card : '#FFFFFF',
+                                                borderColor: colors.border
+                                            }]}
+                                            listMode="SCROLLVIEW"
+                                            scrollViewProps={{
+                                                nestedScrollEnabled: true,
+                                            }}
+                                            textStyle={[localStyles.dropdownText, { color: colors.text }]}
+                                            placeholderStyle={[localStyles.dropdownPlaceholder, { color: colors.secondaryText }]}
+                                            ArrowDownIconComponent={() => <Ionicons name="chevron-down" size={16} color={colors.secondaryText} />}
+                                            ArrowUpIconComponent={() => <Ionicons name="chevron-up" size={16} color={colors.secondaryText} />}
+                                        />
                                     </View>
-                                )}
-                            </View>
-
-                            {/* Respuesta secreta */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Respuesta secreta <Text style={styles.requiredMark}>*</Text></Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="key-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Ingresa tu respuesta secreta"
-                                        value={secretAnswer}
-                                        onChangeText={setSecretAnswer}
-                                        placeholderTextColor="#A0AEC0"
-                                    />
                                 </View>
-                            </View>
+                            )}
+                        </View>
 
-                            {message ? (
-                                <View style={[
-                                    styles.messageContainer,
-                                    message.includes('exitoso') ? styles.successMessageContainer : styles.errorMessageContainer
+                        {/* Respuesta secreta */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Respuesta secreta <Text style={localStyles.requiredMark}>*</Text>
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="key-outline" size={18} color={colors.primary} />
+                                </View>
+                                <TextInput
+                                    style={[localStyles.input, {
+                                        backgroundColor: colors.input,
+                                        borderColor: colors.border,
+                                        color: colors.text
+                                    }]}
+                                    placeholder="Ingresa tu respuesta secreta"
+                                    value={secretAnswer}
+                                    onChangeText={setSecretAnswer}
+                                    placeholderTextColor={colors.secondaryText}
+                                />
+                            </View>
+                        </View>
+
+                        {message ? (
+                            <View style={[
+                                localStyles.messageContainer,
+                                message.includes('exitoso')
+                                    ? [localStyles.successMessageContainer, { backgroundColor: isDarkMode ? '#1C4532' : '#F0FFF4', borderLeftColor: colors.success }]
+                                    : [localStyles.errorMessageContainer, { backgroundColor: isDarkMode ? '#3C1618' : '#FFF5F5', borderLeftColor: colors.error }]
+                            ]}>
+                                <Ionicons
+                                    name={message.includes('exitoso') ? "checkmark-circle-outline" : "alert-circle-outline"}
+                                    size={20}
+                                    color={message.includes('exitoso') ? colors.success : colors.error}
+                                    style={localStyles.messageIcon}
+                                />
+                                <Text style={[
+                                    localStyles.messageText,
+                                    message.includes('exitoso')
+                                        ? { color: isDarkMode ? '#68D391' : '#276749' }
+                                        : { color: isDarkMode ? '#FC8181' : '#C53030' }
                                 ]}>
-                                    <Ionicons
-                                        name={message.includes('exitoso') ? "checkmark-circle-outline" : "alert-circle-outline"}
-                                        size={20}
-                                        color={message.includes('exitoso') ? "#38A169" : "#E53E3E"}
-                                        style={styles.messageIcon}
-                                    />
-                                    <Text style={[
-                                        styles.messageText,
-                                        message.includes('exitoso') ? styles.successMessage : styles.errorMessage
-                                    ]}>
-                                        {message}
-                                    </Text>
-                                </View>
-                            ) : null}
-
-                            <TouchableOpacity
-                                style={styles.registerButtonContainer}
-                                onPress={handleRegister}
-                                disabled={!areAllRequiredFieldsValid() || isRegistering || isLoading}
-                                activeOpacity={0.8}
-                            >
-                                <LinearGradient
-                                    colors={
-                                        !areAllRequiredFieldsValid() || isRegistering || isLoading
-                                            ? ['#A0AEC0', '#718096']
-                                            : ['#3182CE', '#2C5282']
-                                    }
-                                    style={styles.registerButton}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                >
-                                    {isRegistering || isLoading ? (
-                                        <>
-                                            <ActivityIndicator size="small" color="#FFFFFF" style={styles.buttonIcon} />
-                                            <Text style={styles.registerButtonText}>
-                                                {isRegistering ? 'Registrando...' : 'Iniciando sesión...'}
-                                            </Text>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Ionicons name="person-add-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                            <Text style={styles.registerButtonText}>Crear Cuenta</Text>
-                                        </>
-                                    )}
-                                </LinearGradient>
-                            </TouchableOpacity>
-
-                            <View style={styles.requiredFieldsNote}>
-                                <Text style={styles.requiredFieldsText}>
-                                    <Text style={styles.requiredMark}>*</Text> Campos obligatorios
+                                    {message}
                                 </Text>
                             </View>
-                        </View>
-                    </Animated.View>
+                        ) : null}
 
-                </View>
+                        <TouchableOpacity
+                            style={[
+                                localStyles.registerButtonContainer,
+                                {
+                                    overflow: 'hidden',
+                                    marginTop: 16,
+                                    shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                    elevation: isDarkMode ? 3 : 2
+                                }
+                            ]}
+                            onPress={handleRegister}
+                            disabled={!areAllRequiredFieldsValid() || isRegistering || isLoading}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={getButtonGradientColors()}
+                                style={localStyles.registerButton}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                            >
+                                {isRegistering || isLoading ? (
+                                    <>
+                                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                                        <Text style={baseStyles.primaryButtonText}>
+                                            {isRegistering ? 'Registrando...' : 'Iniciando sesión...'}
+                                        </Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Ionicons name="person-add-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                        <Text style={baseStyles.primaryButtonText}>Crear Cuenta</Text>
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <View style={localStyles.requiredFieldsNote}>
+                            <Text style={[baseStyles.secondaryText, { fontSize: 13 }]}>
+                                <Text style={localStyles.requiredMark}>*</Text> Campos obligatorios
+                            </Text>
+                        </View>
+                    </View>
+                </Animated.View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    formSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
-    formHeader: {
+// Estilos locales específicos que no están en el sistema de temas
+const localStyles = StyleSheet.create({
+    registerHeader: {
         alignItems: 'center',
         marginBottom: 24,
     },
@@ -470,44 +496,20 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: "rgba(66,153,225,0.2)",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 3,
-    },
-    formTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2D3748',
-        marginBottom: 8,
-    },
-    formSubtitle: {
-        fontSize: 16,
-        color: '#718096',
-        textAlign: 'center',
-        maxWidth: '90%',
-        lineHeight: 22,
-    },
-    formFields: {
-        width: '100%',
-    },
-    fieldContainer: {
-        marginBottom: 16,
-    },
-    fieldLabel: {
-        fontSize: 15,
-        color: '#4A5568',
-        marginBottom: 6,
-        fontWeight: '500',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 2,
     },
     requiredMark: {
         color: '#E53E3E',
         fontWeight: 'bold',
+    },
+    fieldContainer: {
+        marginBottom: 16,
     },
     inputWithIcon: {
         flexDirection: 'row',
@@ -517,7 +519,6 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
@@ -529,13 +530,10 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         height: 48,
-        backgroundColor: '#F7FAFC',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
         borderRadius: 8,
         paddingHorizontal: 12,
         fontSize: 16,
-        color: '#2D3748',
     },
     dropdownWithIcon: {
         flexDirection: 'row',
@@ -547,47 +545,34 @@ const styles = StyleSheet.create({
         zIndex: 100,
     },
     dropdown: {
-        backgroundColor: '#F7FAFC',
-        borderColor: '#E2E8F0',
+        minHeight: 48,
         borderWidth: 1,
         borderRadius: 8,
-        minHeight: 48,
     },
     dropdownList: {
-        backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
         borderWidth: 1,
         borderRadius: 8,
         shadowColor: "rgba(0,0,0,0.1)",
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowRadius: 4,
         elevation: 2,
     },
     dropdownText: {
         fontSize: 16,
-        color: '#2D3748',
     },
     dropdownPlaceholder: {
-        color: '#A0AEC0',
         fontSize: 16,
     },
     loadingContainer: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
         borderRadius: 8,
         padding: 12,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
         height: 48,
         marginLeft: 50,
-    },
-    loadingText: {
-        marginLeft: 10,
-        color: '#718096',
-        fontSize: 16,
     },
     messageContainer: {
         flexDirection: 'row',
@@ -597,14 +582,10 @@ const styles = StyleSheet.create({
         marginVertical: 16,
     },
     successMessageContainer: {
-        backgroundColor: '#F0FFF4',
         borderLeftWidth: 4,
-        borderLeftColor: '#48BB78',
     },
     errorMessageContainer: {
-        backgroundColor: '#FFF5F5',
         borderLeftWidth: 4,
-        borderLeftColor: '#FC8181',
     },
     messageIcon: {
         marginRight: 8,
@@ -614,42 +595,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
-    successMessage: {
-        color: '#276749',
-    },
-    errorMessage: {
-        color: '#C53030',
-    },
     registerButtonContainer: {
-        marginTop: 10,
         borderRadius: 12,
-        overflow: 'hidden',
-        shadowColor: "#2C5282",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 5,
     },
     registerButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 16,
-    },
-    buttonIcon: {
-        marginRight: 8,
-    },
-    registerButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+        borderRadius: 12,
     },
     requiredFieldsNote: {
         marginTop: 16,
         alignItems: 'center',
-    },
-    requiredFieldsText: {
-        fontSize: 13,
-        color: '#718096',
     },
 });

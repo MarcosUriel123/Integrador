@@ -11,6 +11,7 @@ import {
     KeyboardType
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar el hook de tema
 
 // Tipos de input soportados
 type InputType = 'telefono' | 'nombre' | 'correo' | 'contrasenna' | 'texto';
@@ -47,6 +48,8 @@ export default function InputApp({
     onValidationChange,
     maxLength
 }: InputProps) {
+    // Obtener todos los valores del theme, incluyendo isDarkMode
+    const { colors, isDarkMode } = useAppTheme();
     const [visible, setVisible] = useState(false);
     const [validationState, setValidationState] = useState<ValidationState>({
         isValid: false,
@@ -203,12 +206,14 @@ export default function InputApp({
                 <Feather
                     name={item.isValid ? 'check-circle' : 'circle'}
                     size={16}
-                    color={item.isValid ? '#4CAF50' : '#9E9E9E'}
+                    color={item.isValid ? colors.success : colors.secondaryText}
                 />
                 <Text
                     style={[
                         styles.validationText,
-                        item.isValid ? styles.validText : styles.invalidText
+                        {
+                            color: item.isValid ? colors.success : colors.secondaryText
+                        }
                     ]}
                 >
                     {item.text}
@@ -217,14 +222,58 @@ export default function InputApp({
         );
     };
 
-    return (
-        <View style={[styles.container, containerStyle]}>
-            {label && <Text style={styles.label}>{label}</Text>}
+    // Crear estilos dinámicos con StyleSheet.create para correcta tipificación
+    const dynamicStyles = StyleSheet.create({
+        container: {
+            width: '100%',
+            marginBottom: 15,
+        },
+        label: {
+            fontSize: 16,
+            marginBottom: 5,
+            fontWeight: '500', // Valor específico en lugar de string genérico
+            color: colors.text,
+        },
+        inputContainer: {
+            flexDirection: 'row', // Valor específico en lugar de string genérico
+            alignItems: 'center', // Valor específico en lugar de string genérico
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 5,
+            backgroundColor: colors.input,
+        },
+        input: {
+            flex: 1,
+            height: 45,
+            paddingHorizontal: 10,
+            fontSize: 16,
+            color: colors.text,
+        },
+        visibilityToggle: {
+            padding: 10,
+        },
+        errorMessage: {
+            color: colors.error,
+            marginTop: 5,
+            fontSize: 14,
+        },
+        validationContainer: {
+            marginTop: 10,
+            backgroundColor: isDarkMode ? colors.card : '#f9f9f9', // Usar isDarkMode directamente
+            borderRadius: 5,
+            padding: 10,
+        }
+    });
 
-            <View style={styles.inputContainer}>
+    return (
+        <View style={[dynamicStyles.container, containerStyle]}>
+            {label && <Text style={dynamicStyles.label}>{label}</Text>}
+
+            <View style={dynamicStyles.inputContainer}>
                 <TextInput
-                    style={[styles.input, inputStyle]}
+                    style={[dynamicStyles.input, inputStyle]}
                     placeholder={placeholder}
+                    placeholderTextColor={colors.secondaryText}
                     secureTextEntry={tipo === 'contrasenna' && !visible}
                     value={value}
                     onChangeText={(text) => {
@@ -248,24 +297,24 @@ export default function InputApp({
 
                 {tipo === 'contrasenna' && (
                     <TouchableOpacity
-                        style={styles.visibilityToggle}
+                        style={dynamicStyles.visibilityToggle}
                         onPress={toggleVisibility}
                     >
                         <Feather
                             name={visible ? 'eye-off' : 'eye'}
                             size={24}
-                            color="#007bff"
+                            color={colors.primary}
                         />
                     </TouchableOpacity>
                 )}
             </View>
 
             {errorMessage ? (
-                <Text style={styles.errorMessage}>{errorMessage}</Text>
+                <Text style={dynamicStyles.errorMessage}>{errorMessage}</Text>
             ) : null}
 
             {showValidation && value.length > 0 && validationState.messages.length > 0 && (
-                <View style={styles.validationContainer}>
+                <View style={dynamicStyles.validationContainer}>
                     {validationState.messages.map(renderValidationItem)}
                 </View>
             )}
@@ -273,45 +322,8 @@ export default function InputApp({
     );
 }
 
+// Mantener los estilos básicos para compatibilidad
 const styles = StyleSheet.create({
-    container: {
-        width: '100%',
-        marginBottom: 15,
-    },
-    label: {
-        fontSize: 16,
-        marginBottom: 5,
-        fontWeight: '500',
-        color: '#333',
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderColor: '#ccc',
-        borderWidth: 1,
-        borderRadius: 5,
-        backgroundColor: 'white',
-    },
-    input: {
-        flex: 1,
-        height: 45,
-        paddingHorizontal: 10,
-        fontSize: 16,
-    },
-    visibilityToggle: {
-        padding: 10,
-    },
-    errorMessage: {
-        color: 'red',
-        marginTop: 5,
-        fontSize: 14,
-    },
-    validationContainer: {
-        marginTop: 10,
-        backgroundColor: '#f9f9f9',
-        borderRadius: 5,
-        padding: 10,
-    },
     validationItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -320,11 +332,5 @@ const styles = StyleSheet.create({
     validationText: {
         marginLeft: 8,
         fontSize: 14,
-    },
-    validText: {
-        color: '#4CAF50',
-    },
-    invalidText: {
-        color: '#9E9E9E',
     },
 });

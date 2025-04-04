@@ -11,14 +11,16 @@ import {
     Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
 export default function EmpresaScreen() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const [menuVisible, setMenuVisible] = useState(false);
 
     // Animaciones
@@ -66,6 +68,13 @@ export default function EmpresaScreen() {
         }
     };
 
+    // Obtener colores del gradiente para el botón según el tema
+    const getButtonGradientColors = () => {
+        return isDarkMode
+            ? [colors.primary, '#1e3a8a'] // Primario a azul oscuro para tema oscuro
+            : [colors.primary, '#2C5282']; // Primario a azul medio para tema claro
+    };
+
     // Animar la entrada del contenido cuando carga la pantalla
     useEffect(() => {
         Animated.parallel([
@@ -88,84 +97,105 @@ export default function EmpresaScreen() {
     }, []);
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
-
-
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentSection,
-                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+                            {
+                                width: '100%',
+                                opacity: fadeAnim,
+                                transform: [{ scale: scaleAnim }]
+                            }
                         ]}
                     >
-                        <Text style={styles.sectionTitle}>¿Quiénes Somos?</Text>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>¿Quiénes Somos?</Text>
 
                         {/* Sección Hero (Imagen) con animación */}
                         <Animated.View
                             style={[
-                                styles.heroSection,
+                                localStyles.heroSection,
                                 { transform: [{ translateY: slideAnim }] }
                             ]}
                         >
                             <Image
-                                source={require('../assets/images/puertaIOT-empresa.png')}
-                                style={styles.heroImage}
+                                source={require('../assets/images/puertaIOT-pantallaPrincipal.jpg')}
+                                style={localStyles.heroImage}
                                 resizeMode="contain"
                             />
                         </Animated.View>
 
                         {/* Contenido principal */}
-                        <View style={styles.mainContent}>
-                            <Text style={styles.description}>
+                        <View style={localStyles.mainContent}>
+                            <Text style={[localStyles.description, { color: colors.secondaryText }]}>
                                 Somos una empresa innovadora especializada en soluciones IoT para el control
                                 de acceso y seguridad. Nuestra tecnología permite a hogares y negocios
                                 controlar sus sistemas de seguridad de manera inteligente y eficiente.
                             </Text>
 
-                            <View style={styles.featuresContainer}>
-                                <View style={styles.featureItem}>
-                                    <View style={styles.featureIconContainer}>
-                                        <Ionicons name="shield-checkmark" size={22} color="#3182CE" />
+                            <View style={localStyles.featuresContainer}>
+                                <View style={localStyles.featureItem}>
+                                    <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                        <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
                                     </View>
-                                    <Text style={styles.featureText}>Soluciones de seguridad innovadoras</Text>
+                                    <Text style={[localStyles.featureText, { color: colors.text }]}>
+                                        Soluciones de seguridad innovadoras
+                                    </Text>
                                 </View>
 
-                                <View style={styles.featureItem}>
-                                    <View style={styles.featureIconContainer}>
-                                        <Ionicons name="wifi" size={22} color="#3182CE" />
+                                <View style={localStyles.featureItem}>
+                                    <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                        <Ionicons name="wifi" size={22} color={colors.primary} />
                                     </View>
-                                    <Text style={styles.featureText}>Tecnología IoT de vanguardia</Text>
+                                    <Text style={[localStyles.featureText, { color: colors.text }]}>
+                                        Tecnología IoT de vanguardia
+                                    </Text>
                                 </View>
 
-                                <View style={styles.featureItem}>
-                                    <View style={styles.featureIconContainer}>
-                                        <Ionicons name="people" size={22} color="#3182CE" />
+                                <View style={localStyles.featureItem}>
+                                    <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                        <Ionicons name="people" size={22} color={colors.primary} />
                                     </View>
-                                    <Text style={styles.featureText}>Equipo profesional y comprometido</Text>
+                                    <Text style={[localStyles.featureText, { color: colors.text }]}>
+                                        Equipo profesional y comprometido
+                                    </Text>
                                 </View>
                             </View>
 
                             {/* Tarjeta de navegación a secciones */}
-                            <View style={styles.navSection}>
-                                <Text style={styles.navTitle}>Nuestra Identidad Corporativa</Text>
-                                <Text style={styles.navDescription}>
+                            <View style={[localStyles.navSection, {
+                                backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                borderColor: colors.border
+                            }]}>
+                                <Text style={[localStyles.navTitle, { color: colors.text }]}>
+                                    Nuestra Identidad Corporativa
+                                </Text>
+                                <Text style={[localStyles.navDescription, { color: colors.secondaryText }]}>
                                     Descubre lo que nos define como empresa y nuestra filosofía de trabajo
                                 </Text>
 
                                 {/* Botón para desplegar el menú */}
                                 <TouchableOpacity
-                                    style={styles.dropdownButtonContainer}
+                                    style={[
+                                        localStyles.dropdownButtonContainer,
+                                        {
+                                            shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                            elevation: isDarkMode ? 3 : 2
+                                        }
+                                    ]}
                                     onPress={toggleMenu}
                                     activeOpacity={0.8}
                                 >
                                     <LinearGradient
-                                        colors={['#3182CE', '#2C5282']}
-                                        style={styles.dropdownButton}
+                                        colors={getButtonGradientColors()}
+                                        style={localStyles.dropdownButton}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 0 }}
                                     >
-                                        <Text style={styles.dropdownButtonText}>
+                                        <Text style={localStyles.dropdownButtonText}>
                                             Conoce más sobre nosotros
                                         </Text>
                                         <Ionicons
@@ -181,8 +211,10 @@ export default function EmpresaScreen() {
                                 {menuVisible && (
                                     <Animated.View
                                         style={[
-                                            styles.dropdownMenu,
+                                            localStyles.dropdownMenu,
                                             {
+                                                backgroundColor: colors.card,
+                                                borderColor: colors.border,
                                                 opacity: menuAnim,
                                                 transform: [
                                                     {
@@ -196,77 +228,77 @@ export default function EmpresaScreen() {
                                         ]}
                                     >
                                         <TouchableOpacity
-                                            style={styles.menuItem}
+                                            style={localStyles.menuItem}
                                             onPress={handleMision}
                                             activeOpacity={0.7}
                                         >
-                                            <View style={styles.menuIconContainer}>
-                                                <MaterialCommunityIcons name="target" size={20} color="#3182CE" />
+                                            <View style={[localStyles.menuIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                                <MaterialCommunityIcons name="target" size={20} color={colors.primary} />
                                             </View>
-                                            <View style={styles.menuItemContent}>
-                                                <Text style={styles.menuItemTitle}>Misión</Text>
-                                                <Text style={styles.menuItemDescription}>
+                                            <View style={localStyles.menuItemContent}>
+                                                <Text style={[localStyles.menuItemTitle, { color: colors.text }]}>Misión</Text>
+                                                <Text style={[localStyles.menuItemDescription, { color: colors.secondaryText }]}>
                                                     Nuestro propósito y compromiso
                                                 </Text>
                                             </View>
-                                            <Ionicons name="chevron-forward" size={18} color="#3182CE" />
+                                            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
                                         </TouchableOpacity>
 
-                                        <View style={styles.menuDivider} />
+                                        <View style={[localStyles.menuDivider, { backgroundColor: colors.divider }]} />
 
                                         <TouchableOpacity
-                                            style={styles.menuItem}
+                                            style={localStyles.menuItem}
                                             onPress={handleVision}
                                             activeOpacity={0.7}
                                         >
-                                            <View style={styles.menuIconContainer}>
-                                                <Ionicons name="eye-outline" size={20} color="#3182CE" />
+                                            <View style={[localStyles.menuIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                                <Ionicons name="eye-outline" size={20} color={colors.primary} />
                                             </View>
-                                            <View style={styles.menuItemContent}>
-                                                <Text style={styles.menuItemTitle}>Visión</Text>
-                                                <Text style={styles.menuItemDescription}>
+                                            <View style={localStyles.menuItemContent}>
+                                                <Text style={[localStyles.menuItemTitle, { color: colors.text }]}>Visión</Text>
+                                                <Text style={[localStyles.menuItemDescription, { color: colors.secondaryText }]}>
                                                     Hacia dónde nos dirigimos
                                                 </Text>
                                             </View>
-                                            <Ionicons name="chevron-forward" size={18} color="#3182CE" />
+                                            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
                                         </TouchableOpacity>
 
-                                        <View style={styles.menuDivider} />
+                                        <View style={[localStyles.menuDivider, { backgroundColor: colors.divider }]} />
 
                                         <TouchableOpacity
-                                            style={styles.menuItem}
+                                            style={localStyles.menuItem}
                                             onPress={handleValores}
                                             activeOpacity={0.7}
                                         >
-                                            <View style={styles.menuIconContainer}>
-                                                <Ionicons name="star-outline" size={20} color="#3182CE" />
+                                            <View style={[localStyles.menuIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                                <Ionicons name="star-outline" size={20} color={colors.primary} />
                                             </View>
-                                            <View style={styles.menuItemContent}>
-                                                <Text style={styles.menuItemTitle}>Valores</Text>
-                                                <Text style={styles.menuItemDescription}>
+                                            <View style={localStyles.menuItemContent}>
+                                                <Text style={[localStyles.menuItemTitle, { color: colors.text }]}>Valores</Text>
+                                                <Text style={[localStyles.menuItemDescription, { color: colors.secondaryText }]}>
                                                     Los principios que nos guían
                                                 </Text>
                                             </View>
-                                            <Ionicons name="chevron-forward" size={18} color="#3182CE" />
+                                            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
                                         </TouchableOpacity>
 
-                                        <View style={styles.menuDivider} />
+                                        <View style={[localStyles.menuDivider, { backgroundColor: colors.divider }]} />
 
                                         <TouchableOpacity
-                                            style={styles.menuItem}
+                                            style={localStyles.menuItem}
                                             onPress={handlePoliticas}
                                             activeOpacity={0.7}
                                         >
-                                            <View style={styles.menuIconContainer}>
-                                                <Ionicons name="shield-outline" size={20} color="#3182CE" />
+                                            <View style={[localStyles.menuIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                                <Ionicons name="shield-outline" size={20} color={colors.primary} />
                                             </View>
-                                            <View style={styles.menuItemContent}>
-                                                <Text style={styles.menuItemTitle}>Políticas</Text>
-                                                <Text style={styles.menuItemDescription}>
+                                            <View style={localStyles.menuItemContent}>
+                                                <Text style={[localStyles.menuItemTitle, { color: colors.text }]}>Políticas</Text>
+                                                <Text style={[localStyles.menuItemDescription, { color: colors.secondaryText }]}>
                                                     Nuestros lineamientos y normativas
                                                 </Text>
                                             </View>
-                                            <Ionicons name="chevron-forward" size={18} color="#3182CE" />
+                                            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
                                         </TouchableOpacity>
                                     </Animated.View>
                                 )}
@@ -279,39 +311,13 @@ export default function EmpresaScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+// Estilos locales específicos para este componente
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 24,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
@@ -324,7 +330,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 200,
         borderRadius: 16,
-        backgroundColor: '#EBF8FF',
     },
     mainContent: {
         marginBottom: 10,
@@ -332,7 +337,6 @@ const styles = StyleSheet.create({
     description: {
         fontSize: 16,
         lineHeight: 26,
-        color: '#4A5568',
         marginBottom: 24,
         textAlign: 'justify',
     },
@@ -345,7 +349,6 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     featureIconContainer: {
-        backgroundColor: '#EBF8FF',
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -355,35 +358,28 @@ const styles = StyleSheet.create({
     },
     featureText: {
         fontSize: 15,
-        color: '#2D3748',
         flex: 1,
     },
     navSection: {
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         padding: 18,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
     navTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 6,
     },
     navDescription: {
         fontSize: 14,
-        color: '#4A5568',
         marginBottom: 18,
     },
     dropdownButtonContainer: {
         borderRadius: 12,
         overflow: 'hidden',
-        shadowColor: "#2C5282",
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
         shadowRadius: 8,
-        elevation: 4,
     },
     dropdownButton: {
         paddingVertical: 14,
@@ -399,11 +395,9 @@ const styles = StyleSheet.create({
     },
     dropdownMenu: {
         marginTop: 16,
-        backgroundColor: '#FFFFFF',
         borderRadius: 16,
         padding: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
         shadowColor: "rgba(0,0,0,0.1)",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
@@ -416,7 +410,6 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     menuIconContainer: {
-        backgroundColor: '#EBF8FF',
         width: 36,
         height: 36,
         borderRadius: 18,
@@ -430,16 +423,13 @@ const styles = StyleSheet.create({
     menuItemTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#2D3748',
         marginBottom: 2,
     },
     menuItemDescription: {
         fontSize: 13,
-        color: '#718096',
     },
     menuDivider: {
         height: 1,
-        backgroundColor: '#E2E8F0',
         marginVertical: 8,
     },
 });

@@ -7,14 +7,15 @@ import {
     Image,
     TouchableOpacity,
     StyleSheet,
-    Modal,
-    ActivityIndicator
+    ActivityIndicator,
+    Animated
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Entypo, Feather } from '@expo/vector-icons'; // Añadir Feather
+import { Entypo, Feather, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Añadir AsyncStorage
-import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Interfaz para las FAQs
 interface FAQ {
@@ -25,14 +26,32 @@ interface FAQ {
 
 export default function PantallaPrincipal() {
     const router = useRouter();
-    const [menuVisible, setMenuVisible] = useState(false);
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const [faqs, setFaqs] = useState<FAQ[]>([]);
     const [loadingFaqs, setLoadingFaqs] = useState(true);
     const [error, setError] = useState('');
     const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
 
+    // Configurar animaciones
+    const [fadeAnim] = useState(new Animated.Value(0));
+    const [slideAnim] = useState(new Animated.Value(50));
+
     // Cargar preguntas frecuentes al montar el componente
     useEffect(() => {
+        // Animar entrada del contenido
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 700,
+                useNativeDriver: true,
+            })
+        ]).start();
+
         const fetchFAQs = async () => {
             try {
                 setLoadingFaqs(true);
@@ -77,7 +96,6 @@ export default function PantallaPrincipal() {
             // Si es una ruta pública, navegar directamente sin verificar autenticación
             if (publicRoutes.includes(path)) {
                 router.push(path as any);
-                setMenuVisible(false);
                 return;
             }
 
@@ -95,13 +113,10 @@ export default function PantallaPrincipal() {
         } catch (error) {
             console.error('Error al verificar autenticación:', error);
             router.push('/Login1');
-        } finally {
-            // Cerrar el menú
-            setMenuVisible(false);
         }
     };
 
-    // Función para manejar el botón de perfil - modificada
+    // Función para manejar el botón de perfil
     const handleProfilePress = async () => {
         try {
             // Verificar si hay una sesión activa
@@ -112,7 +127,6 @@ export default function PantallaPrincipal() {
                 router.push('/Datosperfil');
             } else {
                 // Si no hay sesión activa, redirigir al login
-                // Cambiamos replace por push para mantener la navegación hacia atrás
                 router.push('/Login1');
 
                 // Opcional: guardar la ruta de retorno para después del login
@@ -125,212 +139,258 @@ export default function PantallaPrincipal() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
+                <View style={baseStyles.contentContainer}>
+                    <Animated.View
+                        style={[
+                            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+                        ]}
+                    >
+                        {/* Sección Hero */}
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Segurix IoT</Text>
 
-                    {/* Sección Hero */}
-                    <View style={styles.heroSection}>
-                        <Image
-                            source={require('../assets/images/puertaIOT-pantallaPrincipal.jpg')}
-                            style={styles.heroImage}
-                            resizeMode="cover"
-                        />
-                        <Text style={styles.heroTitle}>Bienvenido a Segurix</Text>
-                        <Text style={styles.heroSubtitle}>
-                            La solución inteligente para controlar y asegurar tus dispositivos IoT.
-                        </Text>
-                    </View>
+                        <View style={[localStyles.heroSection, {
+                            backgroundColor: colors.card,
+                            borderColor: colors.border,
+                            shadowOpacity: isDarkMode ? 0.2 : 0.1,
+                            elevation: isDarkMode ? 2 : 1
+                        }]}>
+                            <Image
+                                source={require('../assets/images/puertaIOT-pantallaPrincipal.jpg')}
+                                style={localStyles.heroImage}
+                                resizeMode="cover"
+                            />
+                            <Text style={[localStyles.heroTitle, { color: colors.text }]}>
+                                Bienvenido a Segurix
+                            </Text>
+                            <Text style={[localStyles.heroSubtitle, { color: colors.secondaryText }]}>
+                                La solución inteligente para controlar y asegurar tus dispositivos IoT.
+                            </Text>
+                        </View>
 
-                    {/* Sección de Preguntas Frecuentes */}
-                    <View style={styles.faqSection}>
-                        <Text style={styles.sectionTitle}>Preguntas Frecuentes</Text>
-
-                        {loadingFaqs ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="small" color="#007bff" />
-                                <Text style={styles.loadingText}>Cargando preguntas...</Text>
-                            </View>
-                        ) : error ? (
-                            <View style={styles.errorContainer}>
-                                <Text style={styles.errorText}>{error}</Text>
-                            </View>
-                        ) : (
-                            faqs.map((faq) => (
-                                <View key={faq._id} style={styles.faqItem}>
-                                    <TouchableOpacity
-                                        style={styles.faqQuestion}
-                                        onPress={() => toggleFaqExpansion(faq._id)}
-                                    >
-                                        <Text style={styles.faqQuestionText}>{faq.pregunta}</Text>
-                                        <Entypo
-                                            name={expandedFaq === faq._id ? "chevron-up" : "chevron-down"}
-                                            size={20}
-                                            color="#1E1E1E"
-                                        />
-                                    </TouchableOpacity>
-
-                                    {expandedFaq === faq._id && (
-                                        <View style={styles.faqAnswer}>
-                                            <Text style={styles.faqAnswerText}>{faq.respuesta}</Text>
-                                        </View>
-                                    )}
+                        {/* Características principales */}
+                        <View style={localStyles.featuresContainer}>
+                            <View style={localStyles.featureItem}>
+                                <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
                                 </View>
-                            ))
-                        )}
-                    </View>
+                                <Text style={[localStyles.featureText, { color: colors.text }]}>
+                                    Seguridad de primera clase para tu hogar
+                                </Text>
+                            </View>
 
+                            <View style={localStyles.featureItem}>
+                                <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="wifi" size={22} color={colors.primary} />
+                                </View>
+                                <Text style={[localStyles.featureText, { color: colors.text }]}>
+                                    Conectividad y control remoto
+                                </Text>
+                            </View>
+
+                            <View style={localStyles.featureItem}>
+                                <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="notifications" size={22} color={colors.primary} />
+                                </View>
+                                <Text style={[localStyles.featureText, { color: colors.text }]}>
+                                    Alertas y notificaciones en tiempo real
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Sección de Preguntas Frecuentes */}
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary,
+                            marginTop: 30
+                        }]}>Preguntas Frecuentes</Text>
+
+                        <View style={localStyles.faqSection}>
+                            {loadingFaqs ? (
+                                <View style={[localStyles.loadingContainer, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                                        Cargando preguntas...
+                                    </Text>
+                                </View>
+                            ) : error ? (
+                                <View style={[localStyles.errorContainer, {
+                                    backgroundColor: isDarkMode ? 'rgba(254, 178, 178, 0.1)' : '#FFF5F5',
+                                    borderLeftColor: colors.error
+                                }]}>
+                                    <Feather name="alert-triangle" size={32} color={colors.error} />
+                                    <Text style={[localStyles.errorText, {
+                                        color: isDarkMode ? '#FC8181' : '#C53030'
+                                    }]}>{error}</Text>
+                                </View>
+                            ) : (
+                                faqs.map((faq) => (
+                                    <View key={faq._id} style={[localStyles.faqItem, {
+                                        backgroundColor: colors.card,
+                                        borderColor: colors.border
+                                    }]}>
+                                        <TouchableOpacity
+                                            style={[localStyles.faqQuestion, {
+                                                backgroundColor: isDarkMode ? colors.card : '#F7FAFC'
+                                            }]}
+                                            onPress={() => toggleFaqExpansion(faq._id)}
+                                        >
+                                            <Text style={[localStyles.faqQuestionText, { color: colors.text }]}>
+                                                {faq.pregunta}
+                                            </Text>
+                                            <Ionicons
+                                                name={expandedFaq === faq._id ? "chevron-up" : "chevron-down"}
+                                                size={20}
+                                                color={colors.primary}
+                                            />
+                                        </TouchableOpacity>
+
+                                        {expandedFaq === faq._id && (
+                                            <View style={[localStyles.faqAnswer, {
+                                                backgroundColor: isDarkMode ? colors.primaryLight + '30' : colors.primaryLight + '40',
+                                                borderTopColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                                            }]}>
+                                                <Text style={[localStyles.faqAnswerText, { color: colors.secondaryText }]}>
+                                                    {faq.respuesta}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                ))
+                            )}
+                        </View>
+                    </Animated.View>
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8', // Fondo más suave
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    /* Sección Hero */
-    heroSection: {
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        padding: 16,
-        marginBottom: 30,
-        marginTop: 15,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-    },
-    heroImage: {
-        width: '100%',
-        borderRadius: 20,
-        height: 240,
-        marginBottom: 22,
-        borderWidth: 1,
-        borderColor: 'rgba(226,232,240,0.6)',
-    },
-    heroTitle: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#1A365D', // Azul más profundo
-        textAlign: 'center',
-        marginBottom: 12,
-        letterSpacing: 0.5,
-    },
-    heroSubtitle: {
-        fontSize: 17,
-        color: '#4A5568',
-        marginTop: 4,
-        textAlign: 'center',
-        marginBottom: 16,
-        lineHeight: 24,
-        paddingHorizontal: 15,
-        fontWeight: '400',
-    },
-    /* Sección Preguntas Frecuentes */
-    faqSection: {
-        marginTop: 25,
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-    },
+// Estilos locales específicos para este componente
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 24,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
     },
-    faqItem: {
-        backgroundColor: '#F7FAFC',
+    heroSection: {
+        alignItems: 'center',
         borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowRadius: 6,
+    },
+    heroImage: {
+        width: '100%',
+        borderRadius: 12,
+        height: 200,
+        marginBottom: 20,
+    },
+    heroTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 10,
+        letterSpacing: 0.5,
+    },
+    heroSubtitle: {
+        fontSize: 16,
+        marginTop: 4,
+        textAlign: 'center',
+        marginBottom: 10,
+        lineHeight: 24,
+        paddingHorizontal: 15,
+        fontWeight: '400',
+    },
+    featuresContainer: {
         marginBottom: 16,
+    },
+    featureItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    featureIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    featureText: {
+        fontSize: 15,
+        flex: 1,
+    },
+    faqSection: {
+        marginBottom: 20,
+    },
+    faqItem: {
+        borderRadius: 12,
+        marginBottom: 12,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: "rgba(0,0,0,0.06)",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 2,
     },
     faqQuestion: {
-        padding: 18,
+        padding: 16,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
     },
     faqQuestionText: {
-        fontSize: 17,
+        fontSize: 16,
         fontWeight: '600',
-        color: '#2C5282', // Azul más profundo para las preguntas
         flex: 1,
         letterSpacing: 0.3,
     },
     faqAnswer: {
-        backgroundColor: '#EBF8FF', // Fondo azul claro para las respuestas
-        padding: 20,
+        padding: 16,
         borderTopWidth: 1,
-        borderTopColor: '#BEE3F8',
     },
     faqAnswerText: {
-        fontSize: 16,
-        color: '#2D3748',
-        lineHeight: 24,
+        fontSize: 15,
+        lineHeight: 22,
         letterSpacing: 0.2,
     },
     loadingContainer: {
         padding: 40,
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         marginVertical: 10,
+        borderWidth: 1,
     },
     loadingText: {
         marginTop: 15,
         fontSize: 16,
-        color: '#4A5568',
         fontWeight: '500',
     },
     errorContainer: {
         padding: 22,
-        backgroundColor: '#FFF5F5',
         borderRadius: 16,
         borderLeftWidth: 5,
-        borderLeftColor: '#FC8181',
         marginVertical: 10,
-        shadowColor: "rgba(0,0,0,0.05)",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     errorText: {
-        color: '#C53030',
-        textAlign: 'center',
         fontSize: 16,
         fontWeight: '500',
         letterSpacing: 0.3,
-    }
+        marginLeft: 10,
+        flex: 1,
+    },
 });

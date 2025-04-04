@@ -20,12 +20,14 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
 export default function PantallaConfigurarDispositivo() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const [isLoading, setIsLoading] = useState(false);
     const [deviceInfo, setDeviceInfo] = useState<{ name: string; macAddress: string; isOnline: boolean } | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -292,42 +294,62 @@ export default function PantallaConfigurarDispositivo() {
         });
     };
 
+    // Obtener colores del gradiente para los botones según el tema
+    const getButtonGradientColors = (isCancel = false) => {
+        if (isCancel) {
+            return isDarkMode
+                ? ['#718096', '#4A5568'] // Gris oscuro para tema oscuro
+                : ['#718096', '#4A5568']; // Gris para tema claro
+        } else {
+            return isDarkMode
+                ? [colors.primary, '#1e3a8a'] // Primario a azul oscuro para tema oscuro
+                : [colors.primary, '#2C5282']; // Primario a azul medio para tema claro
+        }
+    };
+
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
-
-
-
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentSection,
                             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                         ]}
                     >
-                        <Text style={styles.sectionTitle}>Configuración del Dispositivo</Text>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Configuración del Dispositivo</Text>
 
                         {/* Estado del dispositivo */}
-                        <View style={styles.deviceStatusContainer}>
-                            <View style={styles.deviceIconContainer}>
+                        <View style={[localStyles.deviceStatusContainer, {
+                            backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF',
+                        }]}>
+                            <View style={[localStyles.deviceIconContainer, {
+                                backgroundColor: isDarkMode ? colors.primary + '40' : '#BEE3F8'
+                            }]}>
                                 <MaterialCommunityIcons
                                     name="door-sliding-lock"
                                     size={40}
-                                    color="#3182CE"
+                                    color={colors.primary}
                                 />
                             </View>
 
-                            <View style={styles.deviceInfoContainer}>
-                                <Text style={styles.deviceName}>
+                            <View style={localStyles.deviceInfoContainer}>
+                                <Text style={[localStyles.deviceName, { color: colors.text }]}>
                                     {deviceInfo?.name || "Mi dispositivo"}
                                 </Text>
 
-                                <View style={styles.statusIndicatorContainer}>
+                                <View style={localStyles.statusIndicatorContainer}>
                                     <View style={[
-                                        styles.statusDot,
-                                        { backgroundColor: deviceConnected ? '#38A169' : '#E53E3E' }
+                                        localStyles.statusDot,
+                                        {
+                                            backgroundColor: deviceConnected
+                                                ? (isDarkMode ? '#68D391' : '#38A169')
+                                                : (isDarkMode ? '#FC8181' : '#E53E3E')
+                                        }
                                     ]} />
-                                    <Text style={styles.statusText}>
+                                    <Text style={[localStyles.statusText, { color: colors.secondaryText }]}>
                                         {deviceConnected ? 'Conectado' : 'Sin conexión'}
                                     </Text>
                                 </View>
@@ -335,17 +357,20 @@ export default function PantallaConfigurarDispositivo() {
                         </View>
 
                         {/* Sección de configuración */}
-                        <View style={styles.configSection}>
-                            <Text style={styles.configTitle}>Información General</Text>
+                        <View style={localStyles.configSection}>
+                            <Text style={[localStyles.configTitle, { color: colors.text }]}>Información General</Text>
 
                             {/* ID del dispositivo */}
-                            <View style={styles.infoItem}>
-                                <View style={styles.infoLabelContainer}>
-                                    <Ionicons name="finger-print-outline" size={20} color="#3182CE" />
-                                    <Text style={styles.infoLabel}>ID del dispositivo</Text>
+                            <View style={localStyles.infoItem}>
+                                <View style={localStyles.infoLabelContainer}>
+                                    <Ionicons name="finger-print-outline" size={20} color={colors.primary} />
+                                    <Text style={[localStyles.infoLabel, { color: colors.secondaryText }]}>ID del dispositivo</Text>
                                 </View>
-                                <View style={styles.infoValueContainer}>
-                                    <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="middle">
+                                <View style={[localStyles.infoValueContainer, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}>
+                                    <Text style={[localStyles.infoValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">
                                         {isLoading
                                             ? "Cargando..."
                                             : deviceInfo?.macAddress || "No disponible"}
@@ -353,19 +378,21 @@ export default function PantallaConfigurarDispositivo() {
                                 </View>
                             </View>
 
-                            <View style={styles.sectionDivider} />
+                            <View style={[localStyles.sectionDivider, { backgroundColor: colors.divider }]} />
 
-                            <Text style={styles.configTitle}>Configuración de Seguridad</Text>
+                            <Text style={[localStyles.configTitle, { color: colors.text }]}>Configuración de Seguridad</Text>
 
                             {/* Desactivar todos los seguros */}
-                            <View style={styles.toggleContainer}>
-                                <View style={styles.toggleInfo}>
-                                    <View style={styles.toggleIconContainer}>
-                                        <MaterialCommunityIcons name="lock-open-variant" size={20} color="#3182CE" />
+                            <View style={localStyles.toggleContainer}>
+                                <View style={localStyles.toggleInfo}>
+                                    <View style={[localStyles.toggleIconContainer, {
+                                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                                    }]}>
+                                        <MaterialCommunityIcons name="lock-open-variant" size={20} color={colors.primary} />
                                     </View>
                                     <View>
-                                        <Text style={styles.toggleLabel}>Desactivar todos los seguros</Text>
-                                        <Text style={styles.toggleDescription}>
+                                        <Text style={[localStyles.toggleLabel, { color: colors.text }]}>Desactivar todos los seguros</Text>
+                                        <Text style={[localStyles.toggleDescription, { color: colors.secondaryText }]}>
                                             La puerta se abrirá automáticamente sin requerir PIN
                                         </Text>
                                     </View>
@@ -373,22 +400,30 @@ export default function PantallaConfigurarDispositivo() {
                                 <Switch
                                     value={seguroActivo}
                                     onValueChange={toggleSeguro}
-                                    trackColor={{ false: "#CBD5E0", true: "#BEE3F8" }}
-                                    thumbColor={seguroActivo ? "#3182CE" : "#A0AEC0"}
+                                    trackColor={{
+                                        false: isDarkMode ? "#4A5568" : "#CBD5E0",
+                                        true: isDarkMode ? colors.primary + '70' : "#BEE3F8"
+                                    }}
+                                    thumbColor={seguroActivo
+                                        ? colors.primary
+                                        : (isDarkMode ? "#A0AEC0" : "#A0AEC0")
+                                    }
                                     disabled={isLoading}
                                     style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
                                 />
                             </View>
 
                             {/* Desactivar alarma sonora */}
-                            <View style={styles.toggleContainer}>
-                                <View style={styles.toggleInfo}>
-                                    <View style={styles.toggleIconContainer}>
-                                        <Ionicons name="volume-mute" size={20} color="#3182CE" />
+                            <View style={localStyles.toggleContainer}>
+                                <View style={localStyles.toggleInfo}>
+                                    <View style={[localStyles.toggleIconContainer, {
+                                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                                    }]}>
+                                        <Ionicons name="volume-mute" size={20} color={colors.primary} />
                                     </View>
                                     <View>
-                                        <Text style={styles.toggleLabel}>Desactivar alarma sonora</Text>
-                                        <Text style={styles.toggleDescription}>
+                                        <Text style={[localStyles.toggleLabel, { color: colors.text }]}>Desactivar alarma sonora</Text>
+                                        <Text style={[localStyles.toggleDescription, { color: colors.secondaryText }]}>
                                             El dispositivo no emitirá sonidos de alerta
                                         </Text>
                                     </View>
@@ -396,42 +431,56 @@ export default function PantallaConfigurarDispositivo() {
                                 <Switch
                                     value={alarmaActiva}
                                     onValueChange={toggleAlarma}
-                                    trackColor={{ false: "#CBD5E0", true: "#BEE3F8" }}
-                                    thumbColor={alarmaActiva ? "#3182CE" : "#A0AEC0"}
+                                    trackColor={{
+                                        false: isDarkMode ? "#4A5568" : "#CBD5E0",
+                                        true: isDarkMode ? colors.primary + '70' : "#BEE3F8"
+                                    }}
+                                    thumbColor={alarmaActiva
+                                        ? colors.primary
+                                        : (isDarkMode ? "#A0AEC0" : "#A0AEC0")
+                                    }
                                     disabled={isLoading}
                                     style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
                                 />
                             </View>
 
-                            <View style={styles.sectionDivider} />
+                            <View style={[localStyles.sectionDivider, { backgroundColor: colors.divider }]} />
 
-                            <Text style={styles.configTitle}>Opciones Avanzadas</Text>
+                            <Text style={[localStyles.configTitle, { color: colors.text }]}>Opciones Avanzadas</Text>
 
                             {/* Cambiar PIN */}
                             <TouchableOpacity
-                                style={styles.optionButton}
+                                style={[localStyles.optionButton, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}
                                 onPress={openModal}
                                 activeOpacity={0.7}
                                 disabled={isLoading}
                             >
-                                <View style={styles.optionContent}>
-                                    <View style={styles.optionIconContainer}>
-                                        <Ionicons name="key-outline" size={20} color="#3182CE" />
+                                <View style={localStyles.optionContent}>
+                                    <View style={[localStyles.optionIconContainer, {
+                                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                                    }]}>
+                                        <Ionicons name="key-outline" size={20} color={colors.primary} />
                                     </View>
-                                    <View style={styles.optionTextContainer}>
-                                        <Text style={styles.optionTitle}>Cambiar PIN de seguridad</Text>
-                                        <Text style={styles.optionDescription}>
+                                    <View style={localStyles.optionTextContainer}>
+                                        <Text style={[localStyles.optionTitle, { color: colors.text }]}>Cambiar PIN de seguridad</Text>
+                                        <Text style={[localStyles.optionDescription, { color: colors.secondaryText }]}>
                                             Modifica el código de acceso de 4 dígitos
                                         </Text>
                                     </View>
                                 </View>
-                                <Ionicons name="chevron-forward" size={20} color="#718096" />
+                                <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
                             </TouchableOpacity>
 
 
                             {/* Borrar todas las huellas */}
                             <TouchableOpacity
-                                style={[styles.optionButton, styles.dangerButton]}
+                                style={[localStyles.optionButton, {
+                                    backgroundColor: isDarkMode ? 'rgba(229, 62, 62, 0.1)' : '#FFF5F5',
+                                    borderColor: isDarkMode ? 'rgba(252, 129, 129, 0.5)' : '#FED7D7'
+                                }]}
                                 onPress={() => Alert.alert(
                                     "Borrar Todas las Huellas",
                                     "¿Está seguro que desea eliminar todas las huellas dactilares registradas en este dispositivo? Esta acción no se puede deshacer.",
@@ -447,59 +496,76 @@ export default function PantallaConfigurarDispositivo() {
                                 activeOpacity={0.7}
                                 disabled={isLoading}
                             >
-                                <View style={styles.optionContent}>
-                                    <View style={[styles.optionIconContainer, styles.dangerIcon]}>
-                                        <Ionicons name="finger-print" size={20} color="#E53E3E" />
+                                <View style={localStyles.optionContent}>
+                                    <View style={[localStyles.optionIconContainer, {
+                                        backgroundColor: isDarkMode ? 'rgba(252, 129, 129, 0.3)' : '#FED7D7'
+                                    }]}>
+                                        <Ionicons
+                                            name="finger-print"
+                                            size={20}
+                                            color={isDarkMode ? '#FC8181' : '#E53E3E'}
+                                        />
                                     </View>
-                                    <View style={styles.optionTextContainer}>
-                                        <Text style={[styles.optionTitle, styles.dangerText]}>Borrar todas las huellas</Text>
-                                        <Text style={styles.optionDescription}>
+                                    <View style={localStyles.optionTextContainer}>
+                                        <Text style={[localStyles.optionTitle, {
+                                            color: isDarkMode ? '#FC8181' : '#E53E3E'
+                                        }]}>Borrar todas las huellas</Text>
+                                        <Text style={[localStyles.optionDescription, { color: colors.secondaryText }]}>
                                             Eliminar todos los registros de huellas dactilares
                                         </Text>
                                     </View>
                                 </View>
-                                <Ionicons name="chevron-forward" size={20} color="#718096" />
+                                <Ionicons name="chevron-forward" size={20} color={colors.secondaryText} />
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
-
                 </View>
             </ScrollView>
 
-            {/* Modal para cambiar PIN - Mejorado visualmente */}
+            {/* Modal para cambiar PIN - Adaptado al tema */}
             <Modal
                 visible={modalVisible}
                 transparent={true}
                 animationType="none" // Usamos nuestra propia animación
                 onRequestClose={closeModal}
             >
-                <View style={styles.modalBackground}>
+                <View style={localStyles.modalBackground}>
                     <Animated.View
                         style={[
-                            styles.modalContainer,
+                            localStyles.modalContainer,
                             {
+                                backgroundColor: isDarkMode ? colors.background : '#FFFFFF',
+                                borderColor: colors.border,
                                 opacity: modalOpacityAnim,
                                 transform: [{ scale: modalScaleAnim }]
                             }
                         ]}
                     >
-                        <View style={styles.modalHeader}>
-                            <View style={styles.modalIconContainer}>
-                                <Ionicons name="key" size={30} color="#3182CE" />
+                        <View style={localStyles.modalHeader}>
+                            <View style={[localStyles.modalIconContainer, {
+                                backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                            }]}>
+                                <Ionicons name="key" size={30} color={colors.primary} />
                             </View>
-                            <Text style={styles.modalTitle}>Cambiar PIN de Seguridad</Text>
+                            <Text style={[localStyles.modalTitle, { color: colors.text }]}>Cambiar PIN de Seguridad</Text>
                         </View>
 
-                        <Text style={styles.modalSubtitle}>
+                        <Text style={[localStyles.modalSubtitle, { color: colors.secondaryText }]}>
                             Ingrese un nuevo PIN de 4 dígitos para acceder a su dispositivo
                         </Text>
 
-                        <View style={styles.pinInputContainer}>
-                            <View style={styles.pinInputIconContainer}>
-                                <Ionicons name="keypad-outline" size={20} color="#3182CE" />
+                        <View style={localStyles.pinInputContainer}>
+                            <View style={[localStyles.pinInputIconContainer, {
+                                backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                            }]}>
+                                <Ionicons name="keypad-outline" size={20} color={colors.primary} />
                             </View>
                             <TextInput
-                                style={styles.pinInput}
+                                style={[localStyles.pinInput, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border,
+                                    color: colors.text
+                                }]}
                                 placeholder="Nuevo PIN (4 dígitos)"
                                 value={newPin}
                                 onChangeText={validatePin}
@@ -507,36 +573,45 @@ export default function PantallaConfigurarDispositivo() {
                                 maxLength={4}
                                 secureTextEntry={true}
                                 autoFocus={true}
-                                placeholderTextColor="#A0AEC0"
+                                placeholderTextColor={isDarkMode ? '#718096' : '#A0AEC0'}
                             />
                         </View>
 
                         {errorMsg ? (
-                            <View style={styles.errorContainer}>
-                                <Ionicons name="alert-circle-outline" size={18} color="#E53E3E" style={styles.errorIcon} />
-                                <Text style={styles.errorText}>{errorMsg}</Text>
+                            <View style={[localStyles.errorContainer, {
+                                backgroundColor: isDarkMode ? 'rgba(254, 178, 178, 0.1)' : '#FFF5F5',
+                                borderLeftColor: colors.error
+                            }]}>
+                                <Feather name="alert-triangle" size={18} color={colors.error} style={localStyles.errorIcon} />
+                                <Text style={[localStyles.errorText, {
+                                    color: isDarkMode ? '#FC8181' : '#C53030'
+                                }]}>{errorMsg}</Text>
                             </View>
                         ) : null}
 
-                        <View style={styles.modalButtonsContainer}>
+                        <View style={localStyles.modalButtonsContainer}>
                             <TouchableOpacity
-                                style={styles.cancelButtonContainer}
+                                style={[localStyles.cancelButtonContainer, {
+                                    shadowOpacity: isDarkMode ? 0.3 : 0.2
+                                }]}
                                 onPress={closeModal}
                                 activeOpacity={0.8}
                             >
                                 <LinearGradient
-                                    colors={['#718096', '#4A5568']}
-                                    style={styles.cancelButton}
+                                    colors={getButtonGradientColors(true)}
+                                    style={localStyles.cancelButton}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
                                 >
-                                    <Ionicons name="close-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                    <Text style={styles.buttonText}>Cancelar</Text>
+                                    <Ionicons name="close-outline" size={20} color="#FFFFFF" style={localStyles.buttonIcon} />
+                                    <Text style={localStyles.buttonText}>Cancelar</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={styles.confirmButtonContainer}
+                                style={[localStyles.confirmButtonContainer, {
+                                    shadowOpacity: isDarkMode ? 0.3 : 0.2
+                                }]}
                                 onPress={handleChangePin}
                                 disabled={newPin.length !== 4 || isLoading}
                                 activeOpacity={0.8}
@@ -545,21 +620,21 @@ export default function PantallaConfigurarDispositivo() {
                                     colors={
                                         newPin.length !== 4 || isLoading
                                             ? ['#A0AEC0', '#718096']
-                                            : ['#3182CE', '#2C5282']
+                                            : getButtonGradientColors()
                                     }
-                                    style={styles.confirmButton}
+                                    style={localStyles.confirmButton}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
                                 >
                                     {isLoading ? (
                                         <>
-                                            <ActivityIndicator size="small" color="#FFFFFF" style={styles.buttonIcon} />
-                                            <Text style={styles.buttonText}>Guardando...</Text>
+                                            <ActivityIndicator size="small" color="#FFFFFF" style={localStyles.buttonIcon} />
+                                            <Text style={localStyles.buttonText}>Guardando...</Text>
                                         </>
                                     ) : (
                                         <>
-                                            <Ionicons name="save-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                            <Text style={styles.buttonText}>Guardar</Text>
+                                            <Ionicons name="save-outline" size={20} color="#FFFFFF" style={localStyles.buttonIcon} />
+                                            <Text style={localStyles.buttonText}>Guardar</Text>
                                         </>
                                     )}
                                 </LinearGradient>
@@ -571,10 +646,12 @@ export default function PantallaConfigurarDispositivo() {
 
             {/* Indicador de carga global */}
             {isLoading && !modalVisible && (
-                <View style={styles.globalLoaderContainer}>
-                    <View style={styles.globalLoader}>
-                        <ActivityIndicator size="large" color="#3182CE" />
-                        <Text style={styles.loaderText}>Actualizando...</Text>
+                <View style={localStyles.globalLoaderContainer}>
+                    <View style={[localStyles.globalLoader, {
+                        backgroundColor: isDarkMode ? colors.background : '#FFFFFF'
+                    }]}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={[localStyles.loaderText, { color: colors.text }]}>Actualizando...</Text>
                     </View>
                 </View>
             )}
@@ -582,39 +659,13 @@ export default function PantallaConfigurarDispositivo() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+// Estilos locales
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 24,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
@@ -622,13 +673,11 @@ const styles = StyleSheet.create({
     deviceStatusContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#EBF8FF',
         borderRadius: 16,
         padding: 16,
         marginBottom: 25,
     },
     deviceIconContainer: {
-        backgroundColor: '#BEE3F8',
         width: 70,
         height: 70,
         borderRadius: 35,
@@ -642,7 +691,6 @@ const styles = StyleSheet.create({
     deviceName: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 6,
     },
     statusIndicatorContainer: {
@@ -657,7 +705,6 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 14,
-        color: '#4A5568',
     },
     configSection: {
         marginBottom: 10,
@@ -665,7 +712,6 @@ const styles = StyleSheet.create({
     configTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 16,
     },
     infoItem: {
@@ -678,24 +724,19 @@ const styles = StyleSheet.create({
     },
     infoLabel: {
         fontSize: 15,
-        color: '#4A5568',
         marginLeft: 8,
     },
     infoValueContainer: {
-        backgroundColor: '#F7FAFC',
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 10,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
     infoValue: {
         fontSize: 15,
-        color: '#2D3748',
     },
     sectionDivider: {
         height: 1,
-        backgroundColor: '#E2E8F0',
         marginVertical: 20,
     },
     toggleContainer: {
@@ -710,7 +751,6 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     toggleIconContainer: {
-        backgroundColor: '#EBF8FF',
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -721,28 +761,20 @@ const styles = StyleSheet.create({
     toggleLabel: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#2D3748',
         marginBottom: 2,
     },
     toggleDescription: {
         fontSize: 13,
-        color: '#718096',
     },
     optionButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#F7FAFC',
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 14,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-    },
-    dangerButton: {
-        backgroundColor: '#FFF5F5',
-        borderColor: '#FED7D7',
     },
     optionContent: {
         flexDirection: 'row',
@@ -750,7 +782,6 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     optionIconContainer: {
-        backgroundColor: '#EBF8FF',
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -758,24 +789,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 12,
     },
-    dangerIcon: {
-        backgroundColor: '#FED7D7',
-    },
     optionTextContainer: {
         flex: 1,
     },
     optionTitle: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#2D3748',
         marginBottom: 2,
-    },
-    dangerText: {
-        color: '#E53E3E',
     },
     optionDescription: {
         fontSize: 13,
-        color: '#718096',
     },
     modalBackground: {
         flex: 1,
@@ -785,9 +808,9 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         width: width * 0.85,
-        backgroundColor: '#FFFFFF',
         borderRadius: 20,
         padding: 24,
+        borderWidth: 1,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.25,
@@ -802,7 +825,6 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 12,
@@ -815,12 +837,10 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#2D3748',
         textAlign: 'center',
     },
     modalSubtitle: {
         fontSize: 15,
-        color: '#718096',
         textAlign: 'center',
         marginBottom: 20,
         lineHeight: 22,
@@ -834,40 +854,33 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
     },
     pinInput: {
         flex: 1,
-        backgroundColor: '#F7FAFC',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
         borderRadius: 8,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 20,
         textAlign: 'center',
         letterSpacing: 10,
-        color: '#2D3748',
     },
     errorContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF5F5',
         borderRadius: 8,
         padding: 10,
         marginBottom: 20,
         borderLeftWidth: 3,
-        borderLeftColor: '#FC8181',
     },
     errorIcon: {
         marginRight: 8,
     },
     errorText: {
         flex: 1,
-        color: '#C53030',
         fontSize: 14,
         fontWeight: '500',
     },
@@ -882,7 +895,6 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         shadowColor: "#4A5568",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
     },
@@ -900,7 +912,6 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         shadowColor: "#2C5282",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
     },
@@ -931,7 +942,6 @@ const styles = StyleSheet.create({
         zIndex: 9999,
     },
     globalLoader: {
-        backgroundColor: '#FFFFFF',
         borderRadius: 10,
         padding: 20,
         alignItems: 'center',
@@ -943,7 +953,6 @@ const styles = StyleSheet.create({
     },
     loaderText: {
         marginTop: 10,
-        color: '#2D3748',
         fontSize: 16,
         fontWeight: '500',
     },

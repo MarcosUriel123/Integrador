@@ -13,14 +13,16 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import { Ionicons } from '@expo/vector-icons';
-import IPS from '../config/IPS'; // Importamos la configuración centralizada
+import { Ionicons, Feather } from '@expo/vector-icons';
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
 export default function PoliticasScreen() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const API_BASE = `${IPS.SERVER_URL}/api`;
     const [politica, setPolitica] = useState('');
     const [loading, setLoading] = useState(true);
@@ -72,43 +74,54 @@ export default function PoliticasScreen() {
     }, []);
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
-
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentSection,
                             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                         ]}
                     >
-                        <Text style={styles.sectionTitle}>Nuestras Políticas</Text>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Nuestras Políticas</Text>
 
                         {/* Sección Hero (Imagen) con animación */}
                         <Animated.View
                             style={[
-                                styles.heroSection,
+                                localStyles.heroSection,
                                 { transform: [{ translateY: slideAnim }] }
                             ]}
                         >
                             <Image
                                 source={require('../assets/images/puertaIOT-politicas.png')}
-                                style={styles.heroImage}
+                                style={localStyles.heroImage}
                                 resizeMode="contain"
                             />
                         </Animated.View>
 
                         {/* Contenido principal: Políticas */}
-                        <View style={styles.mainContent}>
+                        <View style={localStyles.mainContent}>
                             {loading ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color="#3182CE" />
-                                    <Text style={styles.loadingText}>Cargando nuestras políticas...</Text>
+                                <View style={[localStyles.loadingContainer, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                                        Cargando nuestras políticas...
+                                    </Text>
                                 </View>
                             ) : error ? (
-                                <View style={styles.errorContainer}>
-                                    <Ionicons name="alert-circle" size={32} color="#FC8181" />
-                                    <Text style={styles.errorText}>{error}</Text>
+                                <View style={[localStyles.errorContainer, {
+                                    backgroundColor: isDarkMode ? 'rgba(254, 178, 178, 0.1)' : '#FFF5F5',
+                                    borderLeftColor: colors.error
+                                }]}>
+                                    <Feather name="alert-triangle" size={32} color={colors.error} />
+                                    <Text style={[localStyles.errorText, {
+                                        color: isDarkMode ? '#FC8181' : '#C53030'
+                                    }]}>{error}</Text>
                                 </View>
                             ) : (
                                 <Animated.View
@@ -122,17 +135,36 @@ export default function PoliticasScreen() {
                                         }]
                                     }}
                                 >
-                                    <View style={styles.politicaCard}>
-                                        <View style={styles.iconContainer}>
-                                            <Ionicons name="shield-checkmark" size={32} color="#3182CE" />
+                                    <View style={[localStyles.politicaCard, {
+                                        backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                        borderColor: colors.border,
+                                        shadowOpacity: isDarkMode ? 0.2 : 0.1,
+                                        elevation: isDarkMode ? 2 : 1
+                                    }]}>
+                                        <View style={[localStyles.iconContainer, {
+                                            backgroundColor: colors.primaryLight
+                                        }]}>
+                                            <Ionicons name="shield-checkmark" size={32} color={colors.primary} />
                                         </View>
-                                        <Text style={styles.politicaTitle}>Política Corporativa</Text>
-                                        <Text style={styles.politicaText}>{politica}</Text>
+                                        <Text style={[localStyles.politicaTitle, { color: colors.text }]}>
+                                            Política Corporativa
+                                        </Text>
+                                        <Text style={[localStyles.politicaText, { color: colors.secondaryText }]}>
+                                            {politica}
+                                        </Text>
                                     </View>
 
-                                    <View style={styles.politicaInfo}>
-                                        <Text style={styles.politicaInfoTitle}>¿Por qué son importantes nuestras políticas?</Text>
-                                        <Text style={styles.politicaInfoText}>
+                                    <View style={[localStyles.politicaInfo, {
+                                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : colors.primaryLight
+                                    }]}>
+                                        <Text style={[localStyles.politicaInfoTitle, {
+                                            color: isDarkMode ? colors.text : '#2C5282'
+                                        }]}>
+                                            ¿Por qué son importantes nuestras políticas?
+                                        </Text>
+                                        <Text style={[localStyles.politicaInfoText, {
+                                            color: isDarkMode ? colors.secondaryText : '#4A5568'
+                                        }]}>
                                             Nuestras políticas corporativas representan los principios y normativas
                                             que guían todas nuestras operaciones, asegurando que nuestros servicios
                                             y productos se desarrollen con los más altos estándares éticos y profesionales.
@@ -148,39 +180,13 @@ export default function PoliticasScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+// Estilos locales adaptados
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 24,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
@@ -193,7 +199,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 200,
         borderRadius: 16,
-        backgroundColor: '#EBF8FF',
     },
     mainContent: {
         minHeight: 200,
@@ -201,28 +206,24 @@ const styles = StyleSheet.create({
     loadingContainer: {
         padding: 40,
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         marginVertical: 10,
+        borderWidth: 1,
     },
     loadingText: {
         marginTop: 15,
         fontSize: 16,
-        color: '#4A5568',
         fontWeight: '500',
     },
     errorContainer: {
         padding: 22,
-        backgroundColor: '#FFF5F5',
         borderRadius: 16,
         borderLeftWidth: 5,
-        borderLeftColor: '#FC8181',
         marginVertical: 10,
         flexDirection: 'row',
         alignItems: 'center',
     },
     errorText: {
-        color: '#C53030',
         fontSize: 16,
         fontWeight: '500',
         letterSpacing: 0.3,
@@ -230,52 +231,48 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     politicaCard: {
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         padding: 24,
         marginBottom: 20,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: "rgba(0,0,0,0.06)",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowColor: "rgba(0,0,0,0.1)",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
     },
     iconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+        alignSelf: 'center',
     },
     politicaTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 12,
         textAlign: 'center',
     },
     politicaText: {
         fontSize: 16,
         lineHeight: 26,
-        color: '#4A5568',
         textAlign: 'justify',
         letterSpacing: 0.2,
     },
     politicaInfo: {
-        backgroundColor: '#EBF8FF',
         borderRadius: 16,
         padding: 18,
     },
     politicaInfoTitle: {
         fontSize: 17,
         fontWeight: '600',
-        color: '#2C5282',
         marginBottom: 8,
         textAlign: 'center',
     },
     politicaInfoText: {
         fontSize: 14,
         lineHeight: 22,
-        color: '#4A5568',
         textAlign: 'center',
     },
 });

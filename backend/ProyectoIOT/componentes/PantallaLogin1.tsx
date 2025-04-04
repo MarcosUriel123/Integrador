@@ -16,7 +16,8 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import InputApp from './Inputapp';
-import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -32,6 +33,7 @@ interface LoginResponse {
 
 export default function PantallaLogin1() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener isDarkMode también
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
@@ -106,7 +108,6 @@ export default function PantallaLogin1() {
                 handleSuccessfulLogin();
             }
         } catch (error: any) {
-            console.error("Error al iniciar sesión:", error);
             setIsLoggingIn(false);
 
             // Mostrar mensaje de error más específico
@@ -133,157 +134,158 @@ export default function PantallaLogin1() {
         }
     };
 
+    // Definir los colores del gradiente para el botón según el tema y estado
+    const getButtonGradientColors = (): readonly [string, string] => {
+        if (!emailValid || !password || isLoggingIn) {
+            // Colores para estado deshabilitado
+            return isDarkMode
+                ? ['#3d4451', '#2d3748'] as const // Gris oscuro para tema oscuro
+                : ['#A0AEC0', '#718096'] as const; // Gris claro para tema claro
+        } else {
+            // Colores para estado activo
+            return isDarkMode
+                ? [colors.primary, '#1e3a8a'] as const // Primario a azul oscuro para tema oscuro
+                : [colors.primary, '#2C5282'] as const; // Primario a azul medio para tema claro
+        }
+    };
+
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
-                    <Animated.View
-                        style={[
-                            styles.loginSection,
-                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-                        ]}
-                    >
-                        <View style={styles.loginHeader}>
-                            <View style={styles.iconContainer}>
-                                <Feather name="lock" size={40} color="#3182CE" />
-                            </View>
-                            <Text style={styles.loginTitle}>Iniciar Sesión</Text>
-                            <Text style={styles.loginSubtitle}>
-                                Accede a tu cuenta para disfrutar de todas las funcionalidades
+                <Animated.View
+                    style={[
+                        baseStyles.contentContainer,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ scale: scaleAnim }],
+                        }
+                    ]}
+                >
+                    <View style={localStyles.loginHeader}>
+                        <View style={[localStyles.iconContainer, { backgroundColor: colors.primaryLight }]}>
+                            <Feather name="lock" size={40} color={colors.primary} />
+                        </View>
+                        <Text style={[baseStyles.title, { textAlign: 'center' }]}>Iniciar Sesión</Text>
+                        <Text style={[baseStyles.secondaryText, { textAlign: 'center', maxWidth: '90%', lineHeight: 22 }]}>
+                            Accede a tu cuenta para disfrutar de todas las funcionalidades
+                        </Text>
+                    </View>
+
+                    <View style={[baseStyles.section, { marginTop: 20 }]}>
+                        {/* Correo electrónico */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Correo electrónico
                             </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="mail-outline" size={18} color={colors.primary} />
+                                </View>
+                                <InputApp
+                                    tipo="correo"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    placeholder="Ingresa tu correo electrónico"
+                                    showValidation={email.length > 0}
+                                    onValidationChange={setEmailValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                />
+                            </View>
                         </View>
 
-                        <View style={styles.formFields}>
-                            {/* Correo electrónico */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Correo electrónico</Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="mail-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="correo"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        placeholder="Ingresa tu correo electrónico"
-                                        showValidation={email.length > 0}
-                                        onValidationChange={setEmailValid}
-                                        containerStyle={styles.customInputContainer}
-                                    />
+                        {/* Contraseña */}
+                        <View style={localStyles.fieldContainer}>
+                            <Text style={[baseStyles.secondaryText, { fontWeight: '500', marginBottom: 6 }]}>
+                                Contraseña
+                            </Text>
+                            <View style={localStyles.inputWithIcon}>
+                                <View style={[localStyles.inputIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                    <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
                                 </View>
+                                <InputApp
+                                    tipo="contrasenna"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    placeholder="Ingresa tu contraseña"
+                                    showValidation={false}
+                                    onValidationChange={setPasswordValid}
+                                    containerStyle={localStyles.customInputContainer}
+                                />
                             </View>
+                        </View>
 
-                            {/* Contraseña */}
-                            <View style={styles.fieldContainer}>
-                                <Text style={styles.fieldLabel}>Contraseña</Text>
-                                <View style={styles.inputWithIcon}>
-                                    <View style={styles.inputIconContainer}>
-                                        <Ionicons name="lock-closed-outline" size={18} color="#3182CE" />
-                                    </View>
-                                    <InputApp
-                                        tipo="contrasenna"
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        placeholder="Ingresa tu contraseña"
-                                        showValidation={false}
-                                        onValidationChange={setPasswordValid}
-                                        containerStyle={styles.customInputContainer}
-                                    />
-                                </View>
+                        {errorMessage ? (
+                            <View style={[baseStyles.errorContainer, { marginVertical: 16 }]}>
+                                <Ionicons name="alert-circle-outline" size={18} color={colors.error} style={{ marginRight: 8 }} />
+                                <Text style={[baseStyles.normalText, { color: colors.error }]}>{errorMessage}</Text>
                             </View>
+                        ) : null}
 
-                            {errorMessage ? (
-                                <View style={styles.errorContainer}>
-                                    <Ionicons name="alert-circle-outline" size={18} color="#E53E3E" style={styles.errorIcon} />
-                                    <Text style={styles.errorMessage}>{errorMessage}</Text>
-                                </View>
-                            ) : null}
-
-                            <TouchableOpacity
-                                style={styles.loginButtonContainer}
-                                onPress={handleLogin}
-                                disabled={!emailValid || !password || isLoggingIn}
-                                activeOpacity={0.8}
+                        <TouchableOpacity
+                            style={[
+                                localStyles.loginButtonContainer,
+                                {
+                                    overflow: 'hidden',
+                                    marginTop: 16,
+                                    // Reducir las sombras para un diseño más plano
+                                    shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                    elevation: isDarkMode ? 3 : 2
+                                }
+                            ]}
+                            onPress={handleLogin}
+                            disabled={!emailValid || !password || isLoggingIn}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={getButtonGradientColors()}
+                                style={localStyles.loginButton}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
                             >
-                                <LinearGradient
-                                    colors={
-                                        !emailValid || !password || isLoggingIn
-                                            ? ['#A0AEC0', '#718096']
-                                            : ['#3182CE', '#2C5282']
-                                    }
-                                    style={styles.loginButton}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                >
-                                    {isLoggingIn ? (
-                                        <>
-                                            <ActivityIndicator size="small" color="#FFFFFF" style={styles.buttonIcon} />
-                                            <Text style={styles.loginButtonText}>Iniciando sesión...</Text>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Ionicons name="log-in-outline" size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                                            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-                                        </>
-                                    )}
-                                </LinearGradient>
+                                {isLoggingIn ? (
+                                    <>
+                                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                                        <Text style={baseStyles.primaryButtonText}>Iniciando sesión...</Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Ionicons name="log-in-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                        <Text style={baseStyles.primaryButtonText}>Iniciar Sesión</Text>
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <View style={localStyles.linkContainer}>
+                            <TouchableOpacity
+                                style={localStyles.linkButton}
+                                onPress={() => router.push('/registro1')}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={[baseStyles.secondaryText, { textAlign: 'center' }]}>
+                                    ¿No tienes cuenta? <Text style={{ color: colors.primary, fontWeight: '600' }}>Regístrate aquí</Text>
+                                </Text>
                             </TouchableOpacity>
 
-                            <View style={styles.linkContainer}>
-                                <TouchableOpacity
-                                    style={styles.linkButton}
-                                    onPress={() => router.push('/registro1')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.linkText}>
-                                        ¿No tienes cuenta? <Text style={styles.linkTextBold}>Regístrate aquí</Text>
-                                    </Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.linkButton}
-                                    onPress={() => router.push('/recovery')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.linkText}>
-                                        ¿Olvidaste tu contraseña? <Text style={styles.linkTextBold}>Recupérala</Text>
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                            <TouchableOpacity
+                                style={localStyles.linkButton}
+                                onPress={() => router.push('/recovery')}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={[baseStyles.secondaryText, { textAlign: 'center' }]}>
+                                    ¿Olvidaste tu contraseña? <Text style={{ color: colors.primary, fontWeight: '600' }}>Recupérala</Text>
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                    </Animated.View>
-                </View>
+                    </View>
+                </Animated.View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    loginSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+// Estilos locales específicos que no están en el sistema de temas
+const localStyles = StyleSheet.create({
     loginHeader: {
         alignItems: 'center',
         marginBottom: 24,
@@ -292,7 +294,6 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
@@ -302,30 +303,8 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 3,
     },
-    loginTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2D3748',
-        marginBottom: 8,
-    },
-    loginSubtitle: {
-        fontSize: 16,
-        color: '#718096',
-        textAlign: 'center',
-        maxWidth: '90%',
-        lineHeight: 22,
-    },
-    formFields: {
-        width: '100%',
-    },
     fieldContainer: {
         marginBottom: 16,
-    },
-    fieldLabel: {
-        fontSize: 15,
-        color: '#4A5568',
-        marginBottom: 6,
-        fontWeight: '500',
     },
     inputWithIcon: {
         flexDirection: 'row',
@@ -335,7 +314,6 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
@@ -344,48 +322,17 @@ const styles = StyleSheet.create({
         flex: 1,
         marginBottom: 0,
     },
-    errorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFF5F5',
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 16,
-        borderLeftWidth: 3,
-        borderLeftColor: '#FC8181',
-    },
-    errorIcon: {
-        marginRight: 8,
-    },
-    errorMessage: {
-        flex: 1,
-        color: '#C53030',
-        fontSize: 14,
-        fontWeight: '500',
-    },
     loginButtonContainer: {
-        marginTop: 5,
         borderRadius: 12,
-        overflow: 'hidden',
-        shadowColor: "#2C5282",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 2 }, // Reducir el offset
+        shadowRadius: 5, // Reducir el radio
     },
     loginButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 16,
-    },
-    buttonIcon: {
-        marginRight: 8,
-    },
-    loginButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+        borderRadius: 12, // Asegurar que el gradiente tenga el mismo radio que el contenedor
     },
     linkContainer: {
         marginTop: 20,
@@ -395,14 +342,5 @@ const styles = StyleSheet.create({
         marginVertical: 8,
         paddingVertical: 6,
         paddingHorizontal: 10,
-    },
-    linkText: {
-        color: '#718096',
-        textAlign: 'center',
-        fontSize: 15,
-    },
-    linkTextBold: {
-        color: '#3182CE',
-        fontWeight: '600',
     },
 });

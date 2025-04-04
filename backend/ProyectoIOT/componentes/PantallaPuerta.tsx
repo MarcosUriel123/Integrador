@@ -15,12 +15,14 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
 export default function PantallaPuerta() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
 
     // Estado para saber si la puerta está abierta (true) o cerrada (false)
     const [puertaAbierta, setPuertaAbierta] = useState(false);
@@ -65,7 +67,7 @@ export default function PantallaPuerta() {
 
             setCargandoEstado(false);
         } catch (error) {
-            console.error("Error al obtener estado real de la puerta:", error);
+            // console.error("Error al obtener estado real de la puerta:", error);
             setErrorConexion(true);
             setCargandoEstado(false);
         }
@@ -94,6 +96,25 @@ export default function PantallaPuerta() {
         } finally {
             setEnviandoComando(false);
         }
+    };
+
+    // Obtener colores del gradiente para los botones según el tema
+    const getMainButtonGradientColors = () => {
+        if (enviandoComando || errorConexion) {
+            return isDarkMode
+                ? ['#4A5568', '#2D3748'] // Gris oscuro para tema oscuro
+                : ['#A0AEC0', '#718096']; // Gris para tema claro
+        } else {
+            return isDarkMode
+                ? [colors.primary, '#1e3a8a'] // Primario a azul oscuro para tema oscuro
+                : [colors.primary, '#2C5282']; // Primario a azul medio para tema claro
+        }
+    };
+
+    const getUsersButtonGradientColors = () => {
+        return isDarkMode
+            ? ['#805AD5', '#553C9A'] // Púrpura oscuro para tema oscuro
+            : ['#805AD5', '#6B46C1']; // Púrpura para tema claro
     };
 
     // Animación para el indicador cuando la puerta está abierta
@@ -158,37 +179,66 @@ export default function PantallaPuerta() {
         return () => clearInterval(intervalo);
     }, []);
 
-    return (
-        <SafeAreaView style={styles.screen}>
-            <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
+    // Obtener colores de estado según la condición
+    const getStatusColors = () => {
+        if (estadoRealPuerta === 'open') {
+            return {
+                bgColor: isDarkMode ? 'rgba(229, 62, 62, 0.1)' : '#FFF5F5',
+                borderColor: isDarkMode ? 'rgba(252, 129, 129, 0.5)' : '#FC8181',
+                indicatorColor: isDarkMode ? '#F56565' : '#E53E3E',
+                doorIconColor: isDarkMode ? '#F56565' : '#E53E3E'
+            };
+        } else if (estadoRealPuerta === 'closed') {
+            return {
+                bgColor: isDarkMode ? 'rgba(56, 161, 105, 0.1)' : '#F0FFF4',
+                borderColor: isDarkMode ? 'rgba(104, 211, 145, 0.5)' : '#68D391',
+                indicatorColor: isDarkMode ? '#48BB78' : '#38A169',
+                doorIconColor: isDarkMode ? '#48BB78' : '#38A169'
+            };
+        } else {
+            return {
+                bgColor: isDarkMode ? 'rgba(203, 213, 224, 0.1)' : '#F7FAFC',
+                borderColor: isDarkMode ? 'rgba(203, 213, 224, 0.5)' : '#CBD5E0',
+                indicatorColor: isDarkMode ? '#A0AEC0' : '#CBD5E0',
+                doorIconColor: colors.secondaryText
+            };
+        }
+    };
 
-   
+    const statusColors = getStatusColors();
+
+    return (
+        <SafeAreaView style={baseStyles.screen}>
+            <ScrollView style={{ flex: 1 }}>
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentSection,
                             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                         ]}
                     >
-                        <Text style={styles.sectionTitle}>Control de Puerta</Text>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Control de Puerta</Text>
 
                         {/* Estado real de la puerta desde el sensor magnético */}
                         <View style={[
-                            styles.statusContainer,
-                            estadoRealPuerta === 'open' ? styles.statusOpen :
-                                estadoRealPuerta === 'closed' ? styles.statusClosed :
-                                    styles.statusUnknown
+                            localStyles.statusContainer,
+                            {
+                                backgroundColor: statusColors.bgColor,
+                                borderColor: statusColors.borderColor
+                            }
                         ]}>
                             <Animated.View
                                 style={[
-                                    styles.statusIndicator,
-                                    estadoRealPuerta === 'open' ? styles.statusIndicatorOpen :
-                                        estadoRealPuerta === 'closed' ? styles.statusIndicatorClosed :
-                                            styles.statusIndicatorUnknown,
-                                    { opacity: estadoRealPuerta === 'open' ? opacidadDot : 1 }
+                                    localStyles.statusIndicator,
+                                    {
+                                        backgroundColor: statusColors.indicatorColor,
+                                        opacity: estadoRealPuerta === 'open' ? opacidadDot : 1
+                                    }
                                 ]}
                             />
-                            <Text style={styles.statusText}>
+                            <Text style={[localStyles.statusText, { color: colors.text }]}>
                                 {cargandoEstado ? "Consultando estado..." :
                                     errorConexion ? "ERROR DE CONEXIÓN" :
                                         estadoRealPuerta === 'open' ? "PUERTA ABIERTA" :
@@ -200,38 +250,52 @@ export default function PantallaPuerta() {
                         {/* Ícono de la puerta basado en el estado real */}
                         <Animated.View
                             style={[
-                                styles.doorIconContainer,
+                                localStyles.doorIconContainer,
                                 { transform: [{ translateY: slideAnim }] }
                             ]}
                         >
                             <MaterialCommunityIcons
                                 name={estadoRealPuerta === 'open' ? "door-open" : "door-closed"}
                                 size={160}
-                                color={estadoRealPuerta === 'open' ? "#E53E3E" : "#3182CE"}
-                                style={styles.doorIcon}
+                                color={statusColors.doorIconColor}
+                                style={localStyles.doorIcon}
                             />
                         </Animated.View>
 
                         {/* Información sobre el estado con iconos */}
-                        <View style={styles.infoContainer}>
-                            <View style={styles.infoItem}>
-                                <View style={styles.infoIconContainer}>
-                                    <Ionicons name="time-outline" size={20} color="#3182CE" />
+                        <View style={[localStyles.infoContainer, {
+                            backgroundColor: isDarkMode ? colors.primaryLight + '30' : '#EBF8FF'
+                        }]}>
+                            <View style={localStyles.infoItem}>
+                                <View style={[localStyles.infoIconContainer, {
+                                    backgroundColor: isDarkMode ? colors.primary + '40' : '#BEE3F8'
+                                }]}>
+                                    <Ionicons name="time-outline" size={20} color={colors.primary} />
                                 </View>
-                                <Text style={styles.infoText}>
+                                <Text style={[localStyles.infoText, {
+                                    color: isDarkMode ? colors.text : '#2C5282'
+                                }]}>
                                     Última actualización: {new Date().toLocaleTimeString()}
                                 </Text>
                             </View>
 
-                            <View style={styles.infoItem}>
-                                <View style={styles.infoIconContainer}>
+                            <View style={localStyles.infoItem}>
+                                <View style={[localStyles.infoIconContainer, {
+                                    backgroundColor: isDarkMode
+                                        ? (errorConexion ? 'rgba(229, 62, 62, 0.3)' : colors.primary + '40')
+                                        : (errorConexion ? '#FED7D7' : '#BEE3F8')
+                                }]}>
                                     <Ionicons
                                         name={errorConexion ? "wifi-off" : "wifi"}
                                         size={20}
-                                        color={errorConexion ? "#E53E3E" : "#3182CE"}
+                                        color={errorConexion ? colors.error : colors.primary}
                                     />
                                 </View>
-                                <Text style={styles.infoText}>
+                                <Text style={[localStyles.infoText, {
+                                    color: isDarkMode
+                                        ? (errorConexion ? colors.error : colors.text)
+                                        : (errorConexion ? '#C53030' : '#2C5282')
+                                }]}>
                                     {errorConexion
                                         ? "Problema de conexión con el dispositivo"
                                         : "Conectado con el dispositivo"}
@@ -241,117 +305,111 @@ export default function PantallaPuerta() {
 
                         {/* Botón para abrir/cerrar */}
                         <TouchableOpacity
-                            style={styles.doorButtonContainer}
+                            style={[
+                                localStyles.doorButtonContainer,
+                                {
+                                    shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                    elevation: isDarkMode ? 3 : 2
+                                }
+                            ]}
                             onPress={handleTogglePuerta}
                             disabled={enviandoComando || errorConexion}
                             activeOpacity={0.8}
                         >
                             <LinearGradient
-                                colors={
-                                    enviandoComando || errorConexion
-                                        ? ['#A0AEC0', '#718096']
-                                        : ['#3182CE', '#2C5282']
-                                }
-                                style={styles.doorButton}
+                                colors={getMainButtonGradientColors()}
+                                style={localStyles.doorButton}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                             >
                                 {enviandoComando ? (
                                     <>
-                                        <ActivityIndicator size="small" color="#FFFFFF" style={styles.buttonIcon} />
-                                        <Text style={styles.doorButtonText}>Abriendo puerta...</Text>
+                                        <ActivityIndicator size="small" color="#FFFFFF" style={localStyles.buttonIcon} />
+                                        <Text style={localStyles.doorButtonText}>Abriendo puerta...</Text>
                                     </>
                                 ) : (
                                     <>
-                                        <Ionicons name="key" size={22} color="#FFFFFF" style={styles.buttonIcon} />
-                                        <Text style={styles.doorButtonText}>Abrir Puerta</Text>
+                                        <Ionicons name="key" size={22} color="#FFFFFF" style={localStyles.buttonIcon} />
+                                        <Text style={localStyles.doorButtonText}>Abrir Puerta</Text>
                                     </>
                                 )}
                             </LinearGradient>
                         </TouchableOpacity>
 
                         {/* Opciones adicionales */}
-                        <View style={styles.optionsContainer}>
+                        <View style={localStyles.optionsContainer}>
                             <TouchableOpacity
-                                style={styles.optionButton}
+                                style={[localStyles.optionButton, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}
                                 onPress={() => router.push('../configurarDispositivo')}
                                 activeOpacity={0.7}
                             >
-                                <View style={styles.optionIconContainer}>
-                                    <Ionicons name="settings-outline" size={22} color="#3182CE" />
+                                <View style={[localStyles.optionIconContainer, {
+                                    backgroundColor: isDarkMode ? colors.primaryLight + '40' : colors.primaryLight
+                                }]}>
+                                    <Ionicons name="settings-outline" size={22} color={colors.primary} />
                                 </View>
-                                <Text style={styles.optionText}>Configuración</Text>
+                                <Text style={[localStyles.optionText, { color: colors.text }]}>
+                                    Configuración
+                                </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={styles.optionButton}
+                                style={[localStyles.optionButton, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}
                                 onPress={() => router.push('/registros')}
                                 activeOpacity={0.7}
                             >
-                                <View style={styles.optionIconContainer}>
-                                    <Ionicons name="document-text-outline" size={22} color="#3182CE" />
+                                <View style={[localStyles.optionIconContainer, {
+                                    backgroundColor: isDarkMode ? colors.primaryLight + '40' : colors.primaryLight
+                                }]}>
+                                    <Ionicons name="document-text-outline" size={22} color={colors.primary} />
                                 </View>
-                                <Text style={styles.optionText}>Registros</Text>
+                                <Text style={[localStyles.optionText, { color: colors.text }]}>
+                                    Registros
+                                </Text>
                             </TouchableOpacity>
                         </View>
 
                         {/* Botón de Gestionar Usuarios */}
                         <TouchableOpacity
-                            style={styles.usersButtonContainer}
+                            style={[
+                                localStyles.usersButtonContainer,
+                                {
+                                    shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                    elevation: isDarkMode ? 3 : 2
+                                }
+                            ]}
                             onPress={() => router.push('/registroUsuarios')}
                             activeOpacity={0.8}
                         >
                             <LinearGradient
-                                colors={['#805AD5', '#6B46C1']}
-                                style={styles.usersButton}
+                                colors={getUsersButtonGradientColors()}
+                                style={localStyles.usersButton}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                             >
-                                <Ionicons name="people" size={22} color="#FFFFFF" style={styles.buttonIcon} />
-                                <Text style={styles.usersButtonText}>Gestionar Usuarios</Text>
+                                <Ionicons name="people" size={22} color="#FFFFFF" style={localStyles.buttonIcon} />
+                                <Text style={localStyles.usersButtonText}>Gestionar Usuarios</Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </Animated.View>
-
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
-        marginBottom: 20,
-        color: '#1A365D',
+        marginBottom: 24,
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
@@ -364,21 +422,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderRadius: 12,
         marginBottom: 25,
-    },
-    statusOpen: {
-        backgroundColor: '#FFF5F5',
         borderWidth: 1,
-        borderColor: '#FC8181',
-    },
-    statusClosed: {
-        backgroundColor: '#F0FFF4',
-        borderWidth: 1,
-        borderColor: '#68D391',
-    },
-    statusUnknown: {
-        backgroundColor: '#F7FAFC',
-        borderWidth: 1,
-        borderColor: '#CBD5E0',
     },
     statusIndicator: {
         width: 14,
@@ -386,19 +430,9 @@ const styles = StyleSheet.create({
         borderRadius: 7,
         marginRight: 10,
     },
-    statusIndicatorOpen: {
-        backgroundColor: '#E53E3E',
-    },
-    statusIndicatorClosed: {
-        backgroundColor: '#38A169',
-    },
-    statusIndicatorUnknown: {
-        backgroundColor: '#CBD5E0',
-    },
     statusText: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#2D3748',
         letterSpacing: 0.5,
     },
     doorIconContainer: {
@@ -410,11 +444,10 @@ const styles = StyleSheet.create({
     doorIcon: {
         shadowColor: "rgba(0,0,0,0.1)",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.2,
         shadowRadius: 8,
     },
     infoContainer: {
-        backgroundColor: '#EBF8FF',
         borderRadius: 16,
         padding: 16,
         marginBottom: 25,
@@ -428,24 +461,20 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#BEE3F8',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
     infoText: {
         fontSize: 14,
-        color: '#2C5282',
         flex: 1,
     },
     doorButtonContainer: {
         borderRadius: 12,
         overflow: 'hidden',
-        shadowColor: "#2C5282",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
         marginBottom: 25,
     },
     doorButton: {
@@ -468,9 +497,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     optionButton: {
-        backgroundColor: '#F7FAFC',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
         borderRadius: 12,
         paddingVertical: 14,
         paddingHorizontal: 16,
@@ -480,21 +507,23 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     optionIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginRight: 8,
     },
     optionText: {
         fontSize: 15,
         fontWeight: '500',
-        color: '#2D3748',
     },
     usersButtonContainer: {
         borderRadius: 12,
         overflow: 'hidden',
-        shadowColor: "#6B46C1",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
     },
     usersButton: {
         flexDirection: 'row',

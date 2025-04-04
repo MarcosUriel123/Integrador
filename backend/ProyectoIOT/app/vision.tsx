@@ -13,15 +13,16 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import { Ionicons } from '@expo/vector-icons';
-
-import IPS from '../config/IPS'; // Importamos la configuración centralizada
+import { Ionicons, Feather } from '@expo/vector-icons';
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
 export default function VisionScreen() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const API_BASE = `${IPS.SERVER_URL}/api`;
     const [vision, setVision] = useState('');
     const [loading, setLoading] = useState(true);
@@ -73,44 +74,54 @@ export default function VisionScreen() {
     }, []);
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
-
-
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentSection,
                             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                         ]}
                     >
-                        <Text style={styles.sectionTitle}>Nuestra Visión</Text>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Nuestra Visión</Text>
 
                         {/* Sección Hero (Imagen) con animación */}
                         <Animated.View
                             style={[
-                                styles.heroSection,
+                                localStyles.heroSection,
                                 { transform: [{ translateY: slideAnim }] }
                             ]}
                         >
                             <Image
                                 source={require('../assets/images/puertaIOT-vision.jpg')}
-                                style={styles.heroImage}
+                                style={localStyles.heroImage}
                                 resizeMode="contain"
                             />
                         </Animated.View>
 
                         {/* Contenido principal: Visión */}
-                        <View style={styles.mainContent}>
+                        <View style={localStyles.mainContent}>
                             {loading ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color="#3182CE" />
-                                    <Text style={styles.loadingText}>Cargando nuestra visión...</Text>
+                                <View style={[localStyles.loadingContainer, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                                        Cargando nuestra visión...
+                                    </Text>
                                 </View>
                             ) : error ? (
-                                <View style={styles.errorContainer}>
-                                    <Ionicons name="alert-circle" size={32} color="#FC8181" />
-                                    <Text style={styles.errorText}>{error}</Text>
+                                <View style={[localStyles.errorContainer, {
+                                    backgroundColor: isDarkMode ? 'rgba(254, 178, 178, 0.1)' : '#FFF5F5',
+                                    borderLeftColor: colors.error
+                                }]}>
+                                    <Feather name="alert-triangle" size={32} color={colors.error} />
+                                    <Text style={[localStyles.errorText, {
+                                        color: isDarkMode ? '#FC8181' : '#C53030'
+                                    }]}>{error}</Text>
                                 </View>
                             ) : (
                                 <Animated.View
@@ -124,29 +135,50 @@ export default function VisionScreen() {
                                         }]
                                     }}
                                 >
-                                    <View style={styles.visionCard}>
-                                        <View style={styles.iconContainer}>
-                                            <Ionicons name="eye" size={32} color="#3182CE" />
+                                    <View style={[localStyles.visionCard, {
+                                        backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                        borderColor: colors.border,
+                                        shadowOpacity: isDarkMode ? 0.2 : 0.1,
+                                        elevation: isDarkMode ? 2 : 1
+                                    }]}>
+                                        <View style={[localStyles.iconContainer, {
+                                            backgroundColor: colors.primaryLight
+                                        }]}>
+                                            <Ionicons name="eye" size={32} color={colors.primary} />
                                         </View>
-                                        <Text style={styles.visionTitle}>Proyección de Futuro</Text>
-                                        <Text style={styles.visionText}>{vision}</Text>
+                                        <Text style={[localStyles.visionTitle, { color: colors.text }]}>
+                                            Proyección de Futuro
+                                        </Text>
+                                        <Text style={[localStyles.visionText, { color: colors.secondaryText }]}>
+                                            {vision}
+                                        </Text>
                                     </View>
 
-                                    <View style={styles.visionInfoContainer}>
-                                        <View style={styles.visionInfoItem}>
-                                            <View style={styles.visionInfoIconContainer}>
-                                                <Ionicons name="telescope" size={20} color="#3182CE" />
+                                    <View style={[localStyles.visionInfoContainer, {
+                                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : colors.primaryLight
+                                    }]}>
+                                        <View style={localStyles.visionInfoItem}>
+                                            <View style={[localStyles.visionInfoIconContainer, {
+                                                backgroundColor: isDarkMode ? colors.primary + '50' : '#BEE3F8'
+                                            }]}>
+                                                <Ionicons name="telescope" size={20} color={colors.primary} />
                                             </View>
-                                            <Text style={styles.visionInfoText}>
+                                            <Text style={[localStyles.visionInfoText, {
+                                                color: isDarkMode ? colors.text : '#2C5282'
+                                            }]}>
                                                 Nuestra visión guía nuestro rumbo y nuestras decisiones estratégicas.
                                             </Text>
                                         </View>
 
-                                        <View style={styles.visionInfoItem}>
-                                            <View style={styles.visionInfoIconContainer}>
-                                                <Ionicons name="trending-up" size={20} color="#3182CE" />
+                                        <View style={localStyles.visionInfoItem}>
+                                            <View style={[localStyles.visionInfoIconContainer, {
+                                                backgroundColor: isDarkMode ? colors.primary + '50' : '#BEE3F8'
+                                            }]}>
+                                                <Ionicons name="trending-up" size={20} color={colors.primary} />
                                             </View>
-                                            <Text style={styles.visionInfoText}>
+                                            <Text style={[localStyles.visionInfoText, {
+                                                color: isDarkMode ? colors.text : '#2C5282'
+                                            }]}>
                                                 Aspiramos a transformar la vida cotidiana a través de soluciones IoT innovadoras.
                                             </Text>
                                         </View>
@@ -155,46 +187,19 @@ export default function VisionScreen() {
                             )}
                         </View>
                     </Animated.View>
-
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+// Estilos locales
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 24,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
@@ -207,7 +212,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 200,
         borderRadius: 16,
-        backgroundColor: '#EBF8FF',
     },
     mainContent: {
         minHeight: 200,
@@ -215,28 +219,24 @@ const styles = StyleSheet.create({
     loadingContainer: {
         padding: 40,
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         marginVertical: 10,
+        borderWidth: 1,
     },
     loadingText: {
         marginTop: 15,
         fontSize: 16,
-        color: '#4A5568',
         fontWeight: '500',
     },
     errorContainer: {
         padding: 22,
-        backgroundColor: '#FFF5F5',
         borderRadius: 16,
         borderLeftWidth: 5,
-        borderLeftColor: '#FC8181',
         marginVertical: 10,
         flexDirection: 'row',
         alignItems: 'center',
     },
     errorText: {
-        color: '#C53030',
         fontSize: 16,
         fontWeight: '500',
         letterSpacing: 0.3,
@@ -244,38 +244,36 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     visionCard: {
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         padding: 24,
         marginBottom: 20,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: "rgba(0,0,0,0.06)",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowColor: "rgba(0,0,0,0.1)",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
     },
     iconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+        alignSelf: 'center',
     },
     visionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 12,
         textAlign: 'center',
     },
     visionText: {
         fontSize: 16,
         lineHeight: 26,
-        color: '#4A5568',
         textAlign: 'justify',
         letterSpacing: 0.2,
     },
     visionInfoContainer: {
-        backgroundColor: '#EBF8FF',
         borderRadius: 16,
         padding: 18,
     },
@@ -285,7 +283,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     visionInfoIconContainer: {
-        backgroundColor: '#BEE3F8',
         width: 36,
         height: 36,
         borderRadius: 18,
@@ -295,7 +292,6 @@ const styles = StyleSheet.create({
     },
     visionInfoText: {
         fontSize: 14,
-        color: '#2C5282',
         flex: 1,
         lineHeight: 20,
     },

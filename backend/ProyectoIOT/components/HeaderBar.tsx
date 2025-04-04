@@ -20,7 +20,7 @@ export default function HeaderBar() {
                 return 'Carrito';
             case '/Datosperfil':
             case '/(tabs)/Datosperfil':
-                return 'Perfil';
+                return 'Mi Perfil';
             case '/menu':
             case '/(tabs)/menu':
                 return 'Menú';
@@ -69,14 +69,14 @@ export default function HeaderBar() {
 
 const styles = StyleSheet.create({
     container: {
-        height: 60,
+        height: 70,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        borderBottomWidth: 1,
+        // borderBottomWidth: 1,
     },
     title: {
-        fontSize: 18,
+        fontSize: 25,
         fontWeight: 'bold',
     },
 });

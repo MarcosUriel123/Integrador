@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import BotonVolver from '../componentes/BotonVolver';
 import {
     SafeAreaView,
     ScrollView,
@@ -16,7 +15,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar el hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -36,21 +36,18 @@ export default function ProductDetail() {
     const params = useLocalSearchParams();
     const productParam = params.product as string;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Usar el hook de tema
 
     // Animaciones
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const slideAnim = useRef(new Animated.Value(50)).current;
 
-    console.log("Parámetros recibidos:", params);
-    console.log("Product param:", productParam);
-
     let product: Product | null = null;
 
     try {
         if (productParam) {
             product = JSON.parse(productParam);
-            console.log("Producto parseado:", product);
         }
     } catch (error) {
         console.error("Error al parsear el producto:", error);
@@ -64,6 +61,19 @@ export default function ProductDetail() {
         } catch (error) {
             console.error('Error al verificar el estado de inicio de sesión:', error);
             setIsLoggedIn(false);
+        }
+    };
+
+    // Obtener colores del gradiente para el botón según el estado de login
+    const getButtonGradientColors = () => {
+        if (isLoggedIn) {
+            return isDarkMode
+                ? [colors.primary, '#1e3a8a'] // Primario a azul oscuro para tema oscuro
+                : [colors.primary, '#2C5282']; // Primario a azul medio para tema claro
+        } else {
+            return isDarkMode
+                ? ['#ED8936', '#C05621'] // Naranja más oscuro para tema oscuro
+                : ['#ED8936', '#DD6B20']; // Naranja para tema claro
         }
     };
 
@@ -93,20 +103,16 @@ export default function ProductDetail() {
     // Reemplazamos el hook useEffect con useFocusEffect para detectar cuando la pantalla recibe el foco
     useFocusEffect(
         useCallback(() => {
-            console.log('La pantalla recibió el foco');
             checkLoginStatus();
         }, [])
     );
 
     const handlePurchase = async () => {
-        console.log("Botón de compra presionado");  // Añadir para depuración
-
         // Verificar si el usuario tiene la sesión iniciada
         const token = await AsyncStorage.getItem('userToken');
 
         if (token) {
             // Usuario con sesión iniciada
-            // Mostrar mensaje de compra exitosa
             Alert.alert(
                 "¡Compra Exitosa, ahora puedes dar de alta tu dispositivo!",
                 `Has comprado ${product?.name} correctamente.`,
@@ -114,13 +120,11 @@ export default function ProductDetail() {
                     {
                         text: "OK",
                         onPress: () => {
-                            console.log("Redirigiendo a registro de dispositivo");
                             router.push('/registroDispositivo');
                         }
                     }
                 ]
             );
-
         } else {
             // Usuario sin sesión iniciada
             Alert.alert(
@@ -134,7 +138,6 @@ export default function ProductDetail() {
                     {
                         text: "Iniciar sesión",
                         onPress: () => {
-                            console.log("Redirigiendo a pantalla de login");
                             // Pasar la ruta actual como parámetro para regresar después de login
                             router.push({
                                 pathname: '/Login1',
@@ -150,26 +153,26 @@ export default function ProductDetail() {
     // El renderizado condicional para cuando no hay producto
     if (!product) {
         return (
-            <SafeAreaView style={styles.screen}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <View style={styles.cardContainer}>
+            <SafeAreaView style={baseStyles.screen}>
+                <ScrollView style={{ flex: 1 }}>
+                    <View style={baseStyles.contentContainer}>
                         <Animated.View
                             style={[
-                                styles.errorContainer,
+                                baseStyles.errorContainer,
                                 { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                             ]}
                         >
-                            <MaterialCommunityIcons name="alert-circle-outline" size={64} color="#FC8181" />
-                            <Text style={styles.errorTitle}>Producto no encontrado</Text>
-                            <Text style={styles.errorText}>
+                            <Feather name="alert-triangle" size={48} color={colors.error} />
+                            <Text style={[baseStyles.subtitle, { textAlign: 'center' }]}>Producto no encontrado</Text>
+                            <Text style={[baseStyles.normalText, { textAlign: 'center', marginBottom: 20 }]}>
                                 El producto solicitado no está disponible o ha sido eliminado.
                             </Text>
                             <TouchableOpacity
-                                style={styles.backToProductsButton}
+                                style={baseStyles.primaryButton}
                                 onPress={() => router.push('/CatalogoProductosScreen')}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.backToProductsText}>Ver catálogo de productos</Text>
+                                <Text style={baseStyles.primaryButtonText}>Ver catálogo de productos</Text>
                             </TouchableOpacity>
                         </Animated.View>
                     </View>
@@ -180,87 +183,93 @@ export default function ProductDetail() {
 
     // El renderizado principal
     return (
-        <SafeAreaView style={styles.screen}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.cardContainer}>
-
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/CatalogoProductosScreen" />
+        <SafeAreaView style={baseStyles.screen}>
+            <ScrollView style={{ flex: 1 }}>
+                <View style={baseStyles.contentContainer}>
+                    <View style={localStyles.buttonBackContainer}>
                     </View>
 
                     <Animated.View
                         style={[
-                            styles.productSection,
                             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                         ]}
                     >
-                        <View style={styles.imageContainer}>
+                        <View style={localStyles.imageContainer}>
                             <Image
                                 source={{ uri: product.image }}
-                                style={styles.image}
+                                style={localStyles.image}
                                 resizeMode="cover"
                             />
-                            <View style={styles.categoryBadge}>
-                                <Text style={styles.categoryText}>{product.category}</Text>
+                            <View style={[localStyles.categoryBadge, { backgroundColor: colors.primary + 'E6' }]}>
+                                <Text style={localStyles.categoryText}>{product.category}</Text>
                             </View>
                         </View>
 
-                        <View style={styles.productInfoContainer}>
-                            <Text style={styles.productTitle}>{product.name}</Text>
+                        <View style={[localStyles.productInfoContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            <Text style={[localStyles.productTitle, { color: colors.text }]}>{product.name}</Text>
 
-                            <View style={styles.priceContainer}>
-                                <Text style={styles.priceLabel}>Precio:</Text>
-                                <Text style={styles.priceValue}>${product.price.toFixed(2)}</Text>
+                            <View style={localStyles.priceContainer}>
+                                <Text style={[localStyles.priceLabel, { color: colors.secondaryText }]}>Precio:</Text>
+                                <Text style={[localStyles.priceValue, { color: colors.primary }]}>${product.price.toFixed(2)}</Text>
                             </View>
 
-                            <View style={styles.divider} />
+                            <View style={[localStyles.divider, { backgroundColor: colors.border }]} />
 
-                            <Text style={styles.descriptionLabel}>Descripción</Text>
-                            <Text style={styles.descriptionText}>
+                            <Text style={[localStyles.descriptionLabel, { color: colors.text }]}>Descripción</Text>
+                            <Text style={[localStyles.descriptionText, { color: colors.secondaryText }]}>
                                 {product.description || 'Sin descripción disponible.'}
                             </Text>
 
                             {/* Características del producto */}
-                            <View style={styles.featuresContainer}>
-                                <View style={styles.featureItem}>
-                                    <View style={styles.featureIconContainer}>
-                                        <MaterialCommunityIcons name="shield-check" size={20} color="#3182CE" />
+                            <View style={localStyles.featuresContainer}>
+                                <View style={localStyles.featureItem}>
+                                    <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                        <MaterialCommunityIcons name="shield-check" size={20} color={colors.primary} />
                                     </View>
-                                    <Text style={styles.featureText}>Garantía de 12 meses</Text>
+                                    <Text style={[localStyles.featureText, { color: colors.text }]}>Garantía de 12 meses</Text>
                                 </View>
 
-                                <View style={styles.featureItem}>
-                                    <View style={styles.featureIconContainer}>
-                                        <MaterialCommunityIcons name="truck-delivery" size={20} color="#3182CE" />
+                                <View style={localStyles.featureItem}>
+                                    <View style={[localStyles.featureIconContainer, { backgroundColor: colors.primaryLight }]}>
+                                        <MaterialCommunityIcons name="truck-delivery" size={20} color={colors.primary} />
                                     </View>
-                                    <Text style={styles.featureText}>Envío gratuito</Text>
+                                    <Text style={[localStyles.featureText, { color: colors.text }]}>Envío gratuito</Text>
                                 </View>
                             </View>
 
                             {/* Información de instalación */}
                             <Animated.View
                                 style={[
-                                    styles.installInfoContainer,
-                                    { transform: [{ translateY: slideAnim }] }
+                                    localStyles.installInfoContainer,
+                                    {
+                                        backgroundColor: colors.primaryLight,
+                                        transform: [{ translateY: slideAnim }]
+                                    }
                                 ]}
                             >
-                                <View style={styles.installInfoIconContainer}>
-                                    <Ionicons name="information-circle" size={24} color="#3182CE" />
+                                <View style={localStyles.installInfoIconContainer}>
+                                    <Ionicons name="information-circle" size={24} color={colors.primary} />
                                 </View>
-                                <Text style={styles.installInfoText}>
+                                <Text style={[localStyles.installInfoText, { color: colors.text }]}>
                                     Después de la compra, podrás registrar este dispositivo en tu cuenta.
                                 </Text>
                             </Animated.View>
 
                             {/* Botón de Compra mejorado */}
                             <TouchableOpacity
-                                style={styles.purchaseButtonContainer}
+                                style={[
+                                    localStyles.purchaseButtonContainer,
+                                    {
+                                        shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                        elevation: isDarkMode ? 3 : 2
+                                    }
+                                ]}
                                 onPress={handlePurchase}
                                 activeOpacity={0.8}
                             >
                                 <LinearGradient
-                                    colors={isLoggedIn ? ['#3182CE', '#2C5282'] : ['#ED8936', '#DD6B20']}
-                                    style={styles.purchaseButton}
+                                    colors={getButtonGradientColors()}
+                                    style={localStyles.purchaseButton}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
                                 >
@@ -270,14 +279,14 @@ export default function ProductDetail() {
                                         color="#FFFFFF"
                                         style={{ marginRight: 8 }}
                                     />
-                                    <Text style={styles.purchaseButtonText}>
+                                    <Text style={localStyles.purchaseButtonText}>
                                         {isLoggedIn ? "Comprar Ahora" : "Iniciar sesión para comprar"}
                                     </Text>
                                 </LinearGradient>
                             </TouchableOpacity>
 
                             {!isLoggedIn && (
-                                <Text style={styles.loginNote}>
+                                <Text style={[localStyles.loginNote, { color: colors.secondaryText }]}>
                                     Debes iniciar sesión para realizar una compra
                                 </Text>
                             )}
@@ -289,37 +298,17 @@ export default function ProductDetail() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    scrollContent: {
-        flexGrow: 1,
-    },
-    cardContainer: {
-        padding: 20,
-    },
+// Estilos locales específicos para este componente
+const localStyles = StyleSheet.create({
     buttonBackContainer: {
         marginBottom: 15,
-        marginTop: 5,
-    },
-    productSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        overflow: 'hidden',
     },
     imageContainer: {
         position: 'relative',
         width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 20,
     },
     image: {
         width: '100%',
@@ -329,7 +318,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 16,
         right: 16,
-        backgroundColor: 'rgba(49, 130, 206, 0.85)',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
@@ -341,49 +329,46 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     productInfoContainer: {
-        padding: 24,
+        padding: 20,
+        borderRadius: 16,
+        borderWidth: 1,
+        marginBottom: 20,
     },
     productTitle: {
-        fontSize: 26,
+        fontSize: 24,
         fontWeight: 'bold',
-        color: '#1A365D',
         marginBottom: 12,
         letterSpacing: 0.3,
     },
     priceContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 16,
     },
     priceLabel: {
-        fontSize: 18,
-        color: '#4A5568',
+        fontSize: 16,
         marginRight: 8,
     },
     priceValue: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: 'bold',
-        color: '#3182CE',
     },
     divider: {
         height: 1,
-        backgroundColor: '#E2E8F0',
-        marginBottom: 20,
+        marginBottom: 16,
     },
     descriptionLabel: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
-        color: '#2D3748',
         marginBottom: 8,
     },
     descriptionText: {
-        fontSize: 16,
-        color: '#4A5568',
-        lineHeight: 24,
-        marginBottom: 20,
+        fontSize: 15,
+        lineHeight: 22,
+        marginBottom: 16,
     },
     featuresContainer: {
-        marginBottom: 20,
+        marginBottom: 16,
     },
     featureItem: {
         flexDirection: 'row',
@@ -391,40 +376,34 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     featureIconContainer: {
-        backgroundColor: '#EBF8FF',
         padding: 8,
         borderRadius: 8,
         marginRight: 12,
     },
     featureText: {
         fontSize: 14,
-        color: '#2D3748',
     },
     installInfoContainer: {
-        backgroundColor: '#EBF8FF',
-        borderRadius: 16,
+        borderRadius: 12,
         padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     installInfoIconContainer: {
         marginRight: 12,
     },
     installInfoText: {
         fontSize: 14,
-        color: '#2D3748',
         flex: 1,
         lineHeight: 20,
     },
     purchaseButtonContainer: {
         borderRadius: 12,
         overflow: 'hidden',
-        shadowColor: "rgba(0,0,0,0.3)",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 5,
     },
     purchaseButton: {
         paddingVertical: 16,
@@ -440,55 +419,8 @@ const styles = StyleSheet.create({
     },
     loginNote: {
         marginTop: 10,
-        color: '#718096',
         fontSize: 14,
         textAlign: 'center',
         fontStyle: 'italic',
-    },
-    // Estilos para la pantalla de error
-    errorContainer: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        padding: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: 20,
-    },
-    errorTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#2D3748',
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#4A5568',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 22,
-    },
-    backToProductsButton: {
-        backgroundColor: '#3182CE',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        shadowColor: "#2C5282",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    backToProductsText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
     }
 });

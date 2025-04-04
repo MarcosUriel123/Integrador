@@ -45,13 +45,13 @@ export default function TabBar() {
                     >
                         <Ionicons
                             name={tab.icon as any}
-                            size={24}
+                            size={30}
                             color={active
                                 ? (isDarkMode ? '#58a6ff' : '#0969da')
                                 : (isDarkMode ? '#8b949e' : '#57606a')
                             }
                         />
-                        <Text
+                        {/* <Text
                             style={[
                                 styles.tabText,
                                 {
@@ -62,7 +62,7 @@ export default function TabBar() {
                             ]}
                         >
                             {tab.name}
-                        </Text>
+                        </Text> */}
                     </TouchableOpacity>
                 );
             })}
@@ -73,8 +73,8 @@ export default function TabBar() {
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        height: 60,
-        borderTopWidth: 1,
+        height: 70,
+        // borderTopWidth: 1,
         position: 'absolute',
         bottom: 0,
         left: 0,
@@ -86,7 +86,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     tabText: {
-        fontSize: 12,
-        marginTop: 2,
+        fontSize: 15,
+        marginTop: 6,
+        fontWeight: 'bold',
+
     },
 });

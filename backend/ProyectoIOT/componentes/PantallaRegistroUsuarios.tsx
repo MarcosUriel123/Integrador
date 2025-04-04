@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -9,14 +9,23 @@ import {
     StyleSheet,
     Alert,
     ActivityIndicator,
-    Modal
+    Modal,
+    Animated,
+    Dimensions,
+    StatusBar
 } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import RFIDControlModal from './RFIDControlModal';
 import FingerprintRegistrationModal from './FingerprintRegistrationModal';
-import IPS from '../config/IPS'; // Importar la configuración de IPs
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
+
+// Obtener dimensiones de pantalla
+const { width } = Dimensions.get('window');
 
 interface SubUser {
     _id: string;
@@ -42,6 +51,8 @@ interface MessageResponse {
 
 export default function PantallaRegistroUsuarios() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
+
     const [name, setName] = useState('');
     const [accessMethod, setAccessMethod] = useState<'fingerprint' | 'rfid'>('fingerprint');
     const [accessId, setAccessId] = useState('');
@@ -53,6 +64,36 @@ export default function PantallaRegistroUsuarios() {
 
     // Estado para controlar el modal
     const [isModalVisible, setModalVisible] = useState(false);
+
+    // Animaciones
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+
+    // Animación modal
+    const modalScaleAnim = useRef(new Animated.Value(0.8)).current;
+    const modalOpacityAnim = useRef(new Animated.Value(0)).current;
+
+    // Animar la entrada del contenido cuando carga la pantalla
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 700,
+                useNativeDriver: true,
+            })
+        ]).start();
+    }, []);
 
     useEffect(() => {
         loadSubUsers();
@@ -264,13 +305,50 @@ export default function PantallaRegistroUsuarios() {
         }
 
         // Mostrar modal según el método seleccionado
+        openModal();
+    };
+
+    // Función para abrir el modal con animación
+    const openModal = () => {
         setModalVisible(true);
+        // Animar la entrada del modal
+        Animated.parallel([
+            Animated.timing(modalScaleAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+            Animated.timing(modalOpacityAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            })
+        ]).start();
+    };
+
+    // Función para cerrar el modal con animación
+    const closeModal = () => {
+        // Animar la salida del modal
+        Animated.parallel([
+            Animated.timing(modalScaleAnim, {
+                toValue: 0.8,
+                duration: 250,
+                useNativeDriver: true,
+            }),
+            Animated.timing(modalOpacityAnim, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+            })
+        ]).start(() => {
+            setModalVisible(false);
+        });
     };
 
     // Función que se llamará cuando se complete el registro en el modal
     const handleAccessIdCapture = (capturedId: string) => {
         setAccessId(capturedId);
-        setModalVisible(false); // Cerrar el modal
+        closeModal(); // Cerrar el modal con animación
 
         // Proceder con el registro usando el ID capturado
         registerUserWithAccessId(capturedId);
@@ -376,483 +454,454 @@ export default function PantallaRegistroUsuarios() {
         }
     };
 
-    // Función para iniciar el proceso de registro de RFID
-    const handleRegisterRFID = async () => {
-        try {
-            setIsLoading(true);
-
-            // 1. Validar que haya un nombre
-            if (!name.trim()) {
-                setMessage('El nombre es requerido');
-                setMessageType('error');
-                return;
-            }
-
-            // 2. Iniciar la lectura de RFID en el Arduino
-            const arduinoResponse = await axios.post(
-                `${IPS.ESP32_URL}/api/arduino/rfid/read`,
-                { mode: 'register', userName: name },
-                { timeout: 5000 }
-            );
-
-            if (arduinoResponse.status === 200) {
-                setMessage('Acerca la tarjeta RFID al lector...');
-                setMessageType('info');
-
-                // 3. Iniciar polling para verificar cuando se complete la lectura
-                const intervalId = setInterval(async () => {
-                    try {
-                        const statusResponse = await axios.get(
-                            `${IPS.ESP32_URL}/api/arduino/rfid/status`,
-                            { timeout: 3000 }
-                        );
-
-                        const data = statusResponse.data as { status: string; cardId?: string; message?: string };
-                        if (data.status === 'completed' && data.cardId) {
-                            clearInterval(intervalId);
-
-                            // 4. RFID leído exitosamente, guardar en la base de datos
-                            const rfidValue = (statusResponse.data as { cardId: string }).cardId;
-
-                            // Primero verificar que no exista ya
-                            const token = await AsyncStorage.getItem('userToken');
-                            const checkResponse = await axios.post(
-                                `${IPS.SERVER_URL}/api/rfids/check`,
-                                { rfid: rfidValue },
-                                { headers: { Authorization: `Bearer ${token}` } }
-                            );
-
-                            const data = checkResponse.data as { exists: boolean };
-                            if (data.exists) {
-                                setMessage('Esta tarjeta RFID ya está registrada');
-                                setMessageType('error');
-                                setIsLoading(false);
-                                return;
-                            }
-
-                            // 5. Guardar RFID en la colección rfids
-                            const saveRfidResponse = await axios.post(
-                                `${IPS.SERVER_URL}/api/rfids/register`,
-                                { rfidValue: rfidValue },  // Usar rfidValue consistentemente
-                                { headers: { Authorization: `Bearer ${token}` } }
-                            );
-
-                            // 6. Crear el subusuario con el RFID como método de acceso
-                            const registerResponse = await axios.post(
-                                `${IPS.SERVER_URL}/api/subusers/register`,
-                                {
-                                    name: name,
-                                    accessMethod: 'rfid',
-                                    accessId: rfidValue
-                                },
-                                { headers: { Authorization: `Bearer ${token}` } }
-                            );
-
-                            setMessage(`Usuario ${name} registrado con RFID exitosamente`);
-                            setMessageType('success');
-                            setName('');
-                            loadSubUsers(); // Recargar la lista
-                        } else if (data.status === 'error') {
-                            clearInterval(intervalId);
-                            setMessage('Error al leer tarjeta: ' + data.message);
-                            setMessageType('error');
-                        } else if ((statusResponse.data as { status: string }).status === 'timeout') {
-                            clearInterval(intervalId);
-                            setMessage('Tiempo de espera agotado');
-                            setMessageType('error');
-                        }
-                        // Si sigue en 'reading', continuamos el polling
-                    } catch (error) {
-                        clearInterval(intervalId);
-                        console.error('Error al verificar estado:', error);
-                        setMessage('Error al comunicarse con el lector');
-                        setMessageType('error');
-                    }
-                }, 1000); // Consultar cada segundo
-
-                // Establecer un timeout general por si algo falla
-                setTimeout(() => {
-                    clearInterval(intervalId);
-                    if (isLoading) {
-                        setIsLoading(false);
-                        setMessage('Tiempo de espera agotado');
-                        setMessageType('error');
-                    }
-                }, 30000); // 30 segundos máximo
-            }
-        } catch (error) {
-            console.error('Error al registrar RFID:', error);
-            setMessage('Error al iniciar registro de RFID');
-            setMessageType('error');
-        } finally {
-            setIsLoading(false);
+    // Obtener colores del gradiente para los botones según el tema
+    const getButtonGradientColors = (isSecondary = false) => {
+        if (isSecondary) {
+            return isDarkMode
+                ? ['#718096', '#4A5568'] as const // Gris oscuro para tema oscuro
+                : ['#718096', '#4A5568'] as const; // Gris para tema claro
+        } else {
+            return isDarkMode
+                ? [colors.primary, '#1e3a8a'] as const // Primario a azul oscuro para tema oscuro
+                : [colors.primary, '#2C5282'] as const; // Primario a azul medio para tema claro
         }
     };
 
-    const handleRegister = async () => {
-        try {
-            // Primero, limpia los datos de cualquier sesión anterior
-            await AsyncStorage.multiRemove([
-                'userToken',
-                'userId',
-                'userHasDevice',
-                'userName',
-                'userEmail'
-                // Cualquier otra clave que almacenes para el usuario
-            ]);
+    const getDeleteButtonGradientColors = () => {
+        return isDarkMode
+            ? ['#F56565', '#C53030'] as const // Rojo para tema oscuro
+            : ['#F56565', '#C53030'] as const; // Rojo para tema claro
+    };
 
-            // Luego procede con el registro normal
-            interface RegisterResponse {
-                token: string;
-                _id: string;
-                name: string;
-                email: string;
-            }
-
-            const response = await axios.post<RegisterResponse>(
-                `${IPS.SERVER_URL}/api/users/register`,
-                {
-                    // datos de registro
-                }
+    // Función para renderizar el icono según el método de acceso
+    const renderMethodIcon = (method: 'fingerprint' | 'rfid') => {
+        if (method === 'fingerprint') {
+            return (
+                <View style={[localStyles.userMethodIcon, {
+                    backgroundColor: isDarkMode
+                        ? 'rgba(104, 211, 145, 0.2)'
+                        : '#C6F6D5'
+                }]}>
+                    <Ionicons
+                        name="finger-print"
+                        size={18}
+                        color={isDarkMode ? '#68D391' : '#38A169'}
+                    />
+                </View>
             );
-
-            // Si el registro es exitoso, guarda los nuevos datos
-            if (response.status === 201) {
-                const { token, _id, name, email } = response.data;
-
-                // Guarda los datos del nuevo usuario
-                await AsyncStorage.setItem('userToken', token);
-                await AsyncStorage.setItem('userId', _id);
-                await AsyncStorage.setItem('userName', name);
-                await AsyncStorage.setItem('userEmail', email);
-                await AsyncStorage.setItem('userHasDevice', 'false'); // Por defecto
-
-                // Navega a la pantalla adecuada
-                router.replace('/Datosperfil'); // Usa replace en lugar de push
-            }
-        } catch (error) {
-            console.error('Error al registrar:', error);
+        } else {
+            return (
+                <View style={[localStyles.userMethodIcon, {
+                    backgroundColor: isDarkMode
+                        ? 'rgba(99, 179, 237, 0.2)'
+                        : '#BEE3F8'
+                }]}>
+                    <MaterialCommunityIcons
+                        name="card-account-details"
+                        size={18}
+                        color={isDarkMode ? '#63B3ED' : '#3182CE'}
+                    />
+                </View>
+            );
         }
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.cardContainer}>
-
-                    <Text style={styles.title}>Registro de Usuarios</Text>
-                    <Text style={styles.subtitle}>Agregue usuarios que pueden acceder a su puerta</Text>
-
-                    <View style={styles.formContainer}>
-                        <Text style={styles.label}>Nombre del usuario</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ej: Juan Pérez"
-                            value={name}
-                            onChangeText={setName}
-                        />
-
-                        <Text style={styles.label}>Método de acceso</Text>
-                        <TouchableOpacity
-                            style={styles.methodSelector}
-                            onPress={toggleAccessMethod}
-                        >
-                            <View style={[styles.methodOption, accessMethod === 'fingerprint' && styles.methodSelected]}>
-                                <Text style={[styles.methodText, accessMethod === 'fingerprint' && styles.methodTextSelected]}>
-                                    Huella Dactilar
-                                </Text>
-                            </View>
-                            <View style={[styles.methodOption, accessMethod === 'rfid' && styles.methodSelected]}>
-                                <Text style={[styles.methodText, accessMethod === 'rfid' && styles.methodTextSelected]}>
-                                    Tarjeta RFID
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-
-                        {/* Botón para iniciar el registro */}
-                        <TouchableOpacity
-                            style={[styles.button, isLoading && styles.buttonDisabled]}
-                            onPress={startRegistration}
-                            disabled={isLoading}
-                        >
-                            <Text style={styles.buttonText}>
-                                {isLoading ? 'Procesando...' : accessMethod === 'fingerprint' ? 'Registrar Huella' : 'Registrar Tarjeta RFID'}
-                            </Text>
-                        </TouchableOpacity>
-
-                        {message ? (
-                            <Text style={[
-                                styles.message,
-                                messageType === 'success' ? styles.successMessage : styles.errorMessage
-                            ]}>
-                                {message}
-                            </Text>
-                        ) : null}
-                    </View>
-
-                    {/* Modal para registro de RFID o Huella */}
-                    <Modal
-                        animationType="slide"
-                        transparent={true}
-                        visible={isModalVisible}
-                        onRequestClose={() => setModalVisible(false)}
+        <SafeAreaView style={baseStyles.screen}>
+            <StatusBar
+                backgroundColor={isDarkMode ? colors.background : '#FFFFFF'}
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+            />
+            <ScrollView style={{ flex: 1 }}>
+                <View style={baseStyles.contentContainer}>
+                    <Animated.View
+                        style={[
+                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+                        ]}
                     >
-                        <View style={styles.modalContainer}>
-                            <View style={styles.modalContent}>
-                                {accessMethod === 'rfid' ? (
-                                    <RFIDControlModal
-                                        onCaptureComplete={handleAccessIdCapture}
-                                        onCancel={() => setModalVisible(false)}
-                                    />
-                                ) : (
-                                    <FingerprintRegistrationModal
-                                        onCaptureComplete={handleAccessIdCapture}
-                                        onCancel={() => setModalVisible(false)}
-                                        userName={name}
-                                    />
-                                )}
-                            </View>
-                        </View>
-                    </Modal>
-
-                    <View style={styles.usersListContainer}>
-                        <Text style={styles.listTitle}>Usuarios Registrados</Text>
-
-                        {isLoadingUsers ? (
-                            <ActivityIndicator size="large" color="#007bff" style={styles.loader} />
-                        ) : (
-                            subUsers.length > 0 ? (
-                                subUsers.map((user) => (
-                                    <View key={user._id} style={styles.userItem}>
-                                        <Text style={styles.userName}>{user.name}</Text>
-                                        <Text>Método: {user.accessMethod === 'fingerprint' ? 'Huella' : 'RFID'}</Text>
-                                        <TouchableOpacity
-                                            style={styles.deleteButton}
-                                            onPress={() => handleDeleteUser(user._id, user.name, user.accessMethod, user.accessId)}
-                                        >
-                                            <Text style={styles.deleteButtonText}>Eliminar</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                ))
-                            ) : (
-                                <Text style={styles.emptyList}>
-                                    No hay usuarios registrados
-                                </Text>
-                            )
-                        )}
-
                         <TouchableOpacity
-                            style={styles.refreshButton}
-                            onPress={loadSubUsers}
+                            style={localStyles.backButton}
+                            onPress={handleVolver}
                         >
-                            <Text style={styles.refreshButtonText}>Actualizar Lista</Text>
+                            <Ionicons
+                                name="arrow-back"
+                                size={24}
+                                color={colors.primary}
+                            />
+                            <Text style={[localStyles.backButtonText, { color: colors.primary }]}>
+                                Volver
+                            </Text>
                         </TouchableOpacity>
-                    </View>
 
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Gestión de Usuarios</Text>
+                        <Text style={[localStyles.subtitle, { color: colors.secondaryText }]}>
+                            Administre los usuarios que pueden acceder a su sistema
+                        </Text>
+
+                        <View style={localStyles.formSection}>
+                            <Text style={[localStyles.formSectionTitle, { color: colors.text }]}>
+                                Registrar Nuevo Usuario
+                            </Text>
+
+                            <View style={localStyles.inputGroup}>
+                                <Text style={[localStyles.label, { color: colors.secondaryText }]}>
+                                    Nombre del usuario
+                                </Text>
+                                <View style={localStyles.inputContainer}>
+                                    <View style={[localStyles.inputIconContainer, {
+                                        backgroundColor: isDarkMode
+                                            ? colors.primaryLight + '40'
+                                            : colors.primaryLight
+                                    }]}>
+                                        <Ionicons name="person-outline" size={18} color={colors.primary} />
+                                    </View>
+                                    <TextInput
+                                        style={[localStyles.input, {
+                                            backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                            borderColor: colors.border,
+                                            color: colors.text
+                                        }]}
+                                        placeholder="Ej: Juan Pérez"
+                                        placeholderTextColor={isDarkMode ? '#718096' : '#A0AEC0'}
+                                        value={name}
+                                        onChangeText={setName}
+                                    />
+                                </View>
+                            </View>
+
+                            <Text style={[localStyles.label, { color: colors.secondaryText }]}>
+                                Método de acceso
+                            </Text>
+                            <View style={[localStyles.methodSelector, {
+                                borderColor: colors.border,
+                                backgroundColor: isDarkMode ? colors.card : '#F7FAFC'
+                            }]}>
+                                <TouchableOpacity
+                                    style={[
+                                        localStyles.methodOption,
+                                        accessMethod === 'fingerprint' && [
+                                            localStyles.methodSelected,
+                                            { backgroundColor: colors.primary }
+                                        ]
+                                    ]}
+                                    onPress={() => setAccessMethod('fingerprint')}
+                                >
+                                    <Ionicons
+                                        name="finger-print"
+                                        size={20}
+                                        color={accessMethod === 'fingerprint' ? '#FFFFFF' : colors.secondaryText}
+                                    />
+                                    <Text style={[
+                                        localStyles.methodText,
+                                        { color: accessMethod === 'fingerprint' ? '#FFFFFF' : colors.secondaryText }
+                                    ]}>
+                                        Huella Dactilar
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        localStyles.methodOption,
+                                        accessMethod === 'rfid' && [
+                                            localStyles.methodSelected,
+                                            { backgroundColor: colors.primary }
+                                        ]
+                                    ]}
+                                    onPress={() => setAccessMethod('rfid')}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="card-account-details"
+                                        size={20}
+                                        color={accessMethod === 'rfid' ? '#FFFFFF' : colors.secondaryText}
+                                    />
+                                    <Text style={[
+                                        localStyles.methodText,
+                                        { color: accessMethod === 'rfid' ? '#FFFFFF' : colors.secondaryText }
+                                    ]}>
+                                        Tarjeta RFID
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <TouchableOpacity
+                                style={[
+                                    localStyles.buttonContainer,
+                                    {
+                                        shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                        elevation: isDarkMode ? 3 : 2
+                                    }
+                                ]}
+                                onPress={startRegistration}
+                                disabled={isLoading}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={getButtonGradientColors()}
+                                    style={localStyles.button}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <ActivityIndicator size="small" color="#FFFFFF" style={localStyles.buttonIcon} />
+                                            <Text style={localStyles.buttonText}>Procesando...</Text>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Ionicons
+                                                name={accessMethod === 'fingerprint' ? "finger-print" : "card-outline"}
+                                                size={20}
+                                                color="#FFFFFF"
+                                                style={localStyles.buttonIcon}
+                                            />
+                                            <Text style={localStyles.buttonText}>
+                                                {accessMethod === 'fingerprint' ? 'Registrar Huella' : 'Registrar Tarjeta RFID'}
+                                            </Text>
+                                        </>
+                                    )}
+                                </LinearGradient>
+                            </TouchableOpacity>
+
+                            {message ? (
+                                <View style={[
+                                    localStyles.messageContainer,
+                                    messageType === 'success'
+                                        ? {
+                                            backgroundColor: isDarkMode ? 'rgba(56, 161, 105, 0.1)' : '#F0FFF4',
+                                            borderColor: isDarkMode ? 'rgba(104, 211, 145, 0.5)' : '#C6F6D5'
+                                        }
+                                        : messageType === 'error'
+                                            ? {
+                                                backgroundColor: isDarkMode ? 'rgba(229, 62, 62, 0.1)' : '#FFF5F5',
+                                                borderColor: isDarkMode ? 'rgba(252, 129, 129, 0.5)' : '#FED7D7'
+                                            }
+                                            : {
+                                                backgroundColor: isDarkMode ? 'rgba(66, 153, 225, 0.1)' : '#EBF8FF',
+                                                borderColor: isDarkMode ? 'rgba(99, 179, 237, 0.5)' : '#BEE3F8'
+                                            }
+                                ]}>
+                                    <Feather
+                                        name={
+                                            messageType === 'success'
+                                                ? 'check-circle'
+                                                : messageType === 'error'
+                                                    ? 'alert-triangle'
+                                                    : 'info'
+                                        }
+                                        size={20}
+                                        color={
+                                            messageType === 'success'
+                                                ? (isDarkMode ? '#68D391' : '#38A169')
+                                                : messageType === 'error'
+                                                    ? (isDarkMode ? '#FC8181' : '#E53E3E')
+                                                    : (isDarkMode ? '#63B3ED' : '#3182CE')
+                                        }
+                                        style={localStyles.messageIcon}
+                                    />
+                                    <Text style={[
+                                        localStyles.messageText,
+                                        {
+                                            color: messageType === 'success'
+                                                ? (isDarkMode ? '#68D391' : '#38A169')
+                                                : messageType === 'error'
+                                                    ? (isDarkMode ? '#FC8181' : '#E53E3E')
+                                                    : (isDarkMode ? '#63B3ED' : '#3182CE')
+                                        }
+                                    ]}>
+                                        {message}
+                                    </Text>
+                                </View>
+                            ) : null}
+                        </View>
+
+                        <View style={[localStyles.sectionDivider, { backgroundColor: colors.divider }]} />
+
+                        <View style={localStyles.usersSection}>
+                            <View style={localStyles.usersSectionHeader}>
+                                <Text style={[localStyles.usersSectionTitle, { color: colors.text }]}>
+                                    Usuarios Registrados
+                                </Text>
+                                <TouchableOpacity
+                                    style={[localStyles.refreshIconButton, {
+                                        backgroundColor: isDarkMode
+                                            ? colors.primaryLight + '40'
+                                            : colors.primaryLight
+                                    }]}
+                                    onPress={loadSubUsers}
+                                    disabled={isLoadingUsers}
+                                >
+                                    {isLoadingUsers ? (
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                    ) : (
+                                        <Ionicons
+                                            name="refresh"
+                                            size={20}
+                                            color={colors.primary}
+                                        />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+
+                            {isLoadingUsers && !subUsers.length ? (
+                                <View style={[localStyles.loadingContainer, {
+                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                    borderColor: colors.border
+                                }]}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                                        Cargando usuarios...
+                                    </Text>
+                                </View>
+                            ) : (
+                                subUsers.length > 0 ? (
+                                    <View style={localStyles.usersList}>
+                                        {subUsers.map((user) => (
+                                            <View
+                                                key={user._id}
+                                                style={[localStyles.userCard, {
+                                                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                                    borderColor: colors.border
+                                                }]}
+                                            >
+                                                <View style={localStyles.userInfo}>
+                                                    <View style={localStyles.userHeader}>
+                                                        {renderMethodIcon(user.accessMethod)}
+                                                        <Text style={[localStyles.userName, { color: colors.text }]}>
+                                                            {user.name}
+                                                        </Text>
+                                                    </View>
+                                                    <Text style={[localStyles.userIdText, { color: colors.secondaryText }]}>
+                                                        ID: {user.accessId.substring(0, 8)}
+                                                        {user.accessId.length > 8 ? '...' : ''}
+                                                    </Text>
+                                                </View>
+
+                                                <TouchableOpacity
+                                                    style={[
+                                                        localStyles.deleteButtonContainer,
+                                                        {
+                                                            shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                                            elevation: isDarkMode ? 3 : 2
+                                                        }
+                                                    ]}
+                                                    onPress={() => handleDeleteUser(
+                                                        user._id,
+                                                        user.name,
+                                                        user.accessMethod,
+                                                        user.accessId
+                                                    )}
+                                                    disabled={isLoading}
+                                                    activeOpacity={0.8}
+                                                >
+                                                    <LinearGradient
+                                                        colors={getDeleteButtonGradientColors()}
+                                                        style={localStyles.deleteButton}
+                                                        start={{ x: 0, y: 0 }}
+                                                        end={{ x: 1, y: 0 }}
+                                                    >
+                                                        <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                                                    </LinearGradient>
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                ) : (
+                                    <View style={[localStyles.emptyContainer, {
+                                        backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                                        borderColor: colors.border
+                                    }]}>
+                                        <View style={[localStyles.emptyIconContainer, {
+                                            backgroundColor: isDarkMode
+                                                ? 'rgba(160, 174, 192, 0.1)'
+                                                : '#EDF2F7',
+                                        }]}>
+                                            <Ionicons name="people" size={40} color={colors.secondaryText} />
+                                        </View>
+                                        <Text style={[localStyles.emptyTitle, { color: colors.text }]}>
+                                            No hay usuarios registrados
+                                        </Text>
+                                        <Text style={[localStyles.emptyText, { color: colors.secondaryText }]}>
+                                            Registre nuevos usuarios para permitirles acceso al sistema
+                                        </Text>
+                                    </View>
+                                )
+                            )}
+                        </View>
+                    </Animated.View>
                 </View>
             </ScrollView>
+
+            {/* Modal para registro de RFID o Huella */}
+            <Modal
+                animationType="none"
+                transparent={true}
+                visible={isModalVisible}
+                onRequestClose={closeModal}
+            >
+                <View style={localStyles.modalBackground}>
+                    <Animated.View
+                        style={[
+                            localStyles.modalContainer,
+                            {
+                                backgroundColor: isDarkMode ? colors.background : '#FFFFFF',
+                                borderColor: colors.border,
+                                opacity: modalOpacityAnim,
+                                transform: [{ scale: modalScaleAnim }]
+                            }
+                        ]}
+                    >
+                        {accessMethod === 'rfid' ? (
+                            <RFIDControlModal
+                                onCaptureComplete={handleAccessIdCapture}
+                                onCancel={closeModal}
+                            />
+                        ) : (
+                            <FingerprintRegistrationModal
+                                onCaptureComplete={handleAccessIdCapture}
+                                onCancel={closeModal}
+                                userName={name}
+                            />
+                        )}
+                    </Animated.View>
+                </View>
+            </Modal>
+
+            {/* Indicador de carga global */}
+            {isLoading && !isModalVisible && (
+                <View style={localStyles.globalLoaderContainer}>
+                    <View style={[localStyles.globalLoader, {
+                        backgroundColor: isDarkMode ? colors.background : '#FFFFFF'
+                    }]}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={[localStyles.loaderText, { color: colors.text }]}>
+                            Procesando...
+                        </Text>
+                    </View>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
 
-// Extender los estilos existentes con los nuevos necesarios para el modal
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-    },
-    scrollContent: {
-        flexGrow: 1,
-        padding: 16,
-    },
-    cardContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    topBar: {
-        alignItems: 'center',
-        marginBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        paddingBottom: 10,
-    },
-    logo: {
-        fontSize: 24,
+// Estilos locales
+const localStyles = StyleSheet.create({
+    sectionTitle: {
+        fontSize: 26,
         fontWeight: 'bold',
-        color: '#007bff',
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        textAlign: 'center',
         marginBottom: 8,
+        borderBottomWidth: 3,
+        paddingBottom: 12,
+        width: '65%',
+        letterSpacing: 0.5,
     },
     subtitle: {
         fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
         marginBottom: 24,
+        lineHeight: 22,
     },
-    formContainer: {
-        marginBottom: 30,
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '500',
-        marginBottom: 8,
-        color: '#333',
-    },
-    input: {
-        backgroundColor: '#f9f9f9',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        marginBottom: 16,
-    },
-    methodSelector: {
-        flexDirection: 'row',
-        marginBottom: 16,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        overflow: 'hidden',
-    },
-    methodOption: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    methodSelected: {
-        backgroundColor: '#007bff',
-    },
-    methodText: {
-        fontWeight: '500',
-    },
-    methodTextSelected: {
-        color: 'white',
-    },
-    button: {
-        backgroundColor: '#007bff',
-        borderRadius: 8,
-        padding: 15,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    buttonDisabled: {
-        backgroundColor: '#b3d7ff',
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    message: {
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 16,
-        textAlign: 'center',
-    },
-    successMessage: {
-        backgroundColor: '#d4edda',
-        color: '#155724',
-    },
-    errorMessage: {
-        backgroundColor: '#f8d7da',
-        color: '#721c24',
-    },
-    usersListContainer: {
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        paddingTop: 20,
-    },
-    listTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    loader: {
-        marginVertical: 20,
-    },
-    userCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#f9f9f9',
-        borderRadius: 8,
-        marginBottom: 12,
-    },
-    userInfo: {
-        flex: 1,
-    },
-    userName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    userDetail: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-    },
-    deleteButton: {
-        backgroundColor: '#dc3545',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 5,
-    },
-    deleteButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    emptyList: {
-        textAlign: 'center',
-        padding: 20,
-        fontStyle: 'italic',
-        color: '#666',
-    },
-    refreshButton: {
-        backgroundColor: '#6c757d',
-        borderRadius: 8,
-        padding: 12,
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    refreshButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        padding: 20,
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 20,
-        width: '90%',
-        maxHeight: '80%',
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    // Estilos para el botón Volver
     backButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -860,18 +909,260 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     backButtonText: {
-        color: '#007BFF',
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8,
     },
-    userItem: {
+    formSection: {
+        marginBottom: 30,
+    },
+    formSectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 16,
+    },
+    inputGroup: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 15,
+        fontWeight: '500',
+        marginBottom: 8,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    inputIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    input: {
+        flex: 1,
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 16,
+    },
+    methodSelector: {
+        flexDirection: 'row',
+        borderRadius: 10,
+        borderWidth: 1,
+        overflow: 'hidden',
+        marginBottom: 24,
+    },
+    methodOption: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    methodSelected: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 1.5,
+        elevation: 2,
+    },
+    methodText: {
+        fontWeight: '500',
+        marginLeft: 8,
+    },
+    buttonContainer: {
+        borderRadius: 10,
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+    },
+    button: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 15,
+    },
+    buttonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    buttonIcon: {
+        marginRight: 8,
+    },
+    messageContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 8,
+        borderWidth: 1,
+        padding: 12,
+        marginTop: 16,
+    },
+    messageIcon: {
+        marginRight: 10,
+    },
+    messageText: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    sectionDivider: {
+        height: 1,
+        marginVertical: 24,
+    },
+    usersSection: {
+        marginBottom: 20,
+    },
+    usersSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    usersSectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    refreshIconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    usersList: {
+        marginTop: 10,
+    },
+    userCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: '#f9f9f9',
+        borderRadius: 10,
+        borderWidth: 1,
+        marginBottom: 10,
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    userMethodIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    userName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    userIdText: {
+        fontSize: 13,
+        marginLeft: 40, // Alineado con el nombre
+    },
+    deleteButtonContainer: {
         borderRadius: 8,
-        marginBottom: 12,
+        overflow: 'hidden',
+        shadowColor: "#E53E3E",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+    },
+    deleteButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingContainer: {
+        padding: 40,
+        borderRadius: 10,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 16,
+    },
+    emptyContainer: {
+        padding: 30,
+        borderRadius: 10,
+        borderWidth: 1,
+        alignItems: 'center',
+    },
+    emptyIconContainer: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    emptyText: {
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    modalBackground: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContainer: {
+        width: '90%',
+        maxHeight: '80%',
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    globalLoaderContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 9999,
+    },
+    globalLoader: {
+        borderRadius: 12,
+        padding: 20,
+        alignItems: 'center',
+        minWidth: 150,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 8,
+    },
+    loaderText: {
+        marginTop: 10,
+        fontSize: 16,
+        fontWeight: '500',
     },
 });

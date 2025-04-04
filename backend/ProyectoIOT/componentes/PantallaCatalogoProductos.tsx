@@ -15,10 +15,11 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useCart } from './CartContext';
 import ProductCard from './ProductCard ';
-import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar el hook de tema
 
 // Tipos existentes...
 type Product = {
@@ -45,6 +46,7 @@ const { width } = Dimensions.get('window');
 
 export default function PantallaCatalogoProductos() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -140,12 +142,16 @@ export default function PantallaCatalogoProductos() {
         return products.slice(indexOfFirstProduct, indexOfLastProduct);
     };
 
-    // Modificar la función renderProductItem para manejar el ancho de las cards
+    // Renderizar producto adaptado al tema
     const renderProductItem = ({ item }: { item: Product }) => (
         <Animated.View
             style={[
-                styles.productCardContainer,
-                { opacity: fadeAnim }
+                localStyles.productCardContainer,
+                {
+                    opacity: fadeAnim,
+                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                    borderColor: colors.border
+                }
             ]}
         >
             <ProductCard
@@ -163,35 +169,49 @@ export default function PantallaCatalogoProductos() {
     const scrollViewRef = React.useRef<ScrollView>(null);
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView
                 ref={scrollViewRef}
                 style={{ flex: 1 }}
             >
-                <View style={styles.cardContainer}>
-
-
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentContainer,
-                            { transform: [{ scale: scaleAnim }] }
+                            {
+                                width: '100%',
+                                opacity: fadeAnim,
+                                transform: [{ scale: scaleAnim }]
+                            }
                         ]}
                     >
                         {loading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color="#3182CE" />
-                                <Text style={styles.loadingText}>Cargando productos...</Text>
+                            <View style={baseStyles.loadingContainer}>
+                                <ActivityIndicator size="large" color={colors.primary} />
+                                <Text style={[baseStyles.normalText, { marginTop: 15 }]}>
+                                    Cargando productos...
+                                </Text>
                             </View>
                         ) : error ? (
-                            <View style={styles.errorContainer}>
-                                <Text style={styles.errorText}>{error}</Text>
+                            <View style={baseStyles.errorContainer}>
+                                <Feather name="alert-triangle" size={24} color={colors.error} style={{ marginBottom: 8 }} />
+                                <Text style={[baseStyles.normalText, { color: colors.error }]}>{error}</Text>
                             </View>
                         ) : (
-                            <View style={styles.productsSection}>
-                                <Text style={styles.sectionTitle}>Catálogo de Productos</Text>
+                            <View style={[localStyles.productsSection, {
+                                backgroundColor: 'transparent',
+                                borderWidth: 0,
+                                shadowOpacity: 0,
+                                elevation: 0
+                            }]}>
+                                <Text style={[localStyles.sectionTitle, {
+                                    color: colors.text,
+                                    borderBottomColor: colors.primary
+                                }]}>Catálogo de Productos</Text>
 
                                 {products.length === 0 ? (
-                                    <Text style={styles.emptyText}>No hay productos disponibles</Text>
+                                    <Text style={[baseStyles.secondaryText, { textAlign: 'center', marginVertical: 20 }]}>
+                                        No hay productos disponibles
+                                    </Text>
                                 ) : (
                                     <>
                                         <FlatList
@@ -199,45 +219,69 @@ export default function PantallaCatalogoProductos() {
                                             renderItem={renderProductItem}
                                             keyExtractor={(item) => item.id}
                                             scrollEnabled={false}
-                                            contentContainerStyle={styles.listContent}
+                                            contentContainerStyle={localStyles.listContent}
                                         />
 
                                         {/* Controles de paginación */}
-                                        <View style={styles.paginationContainer}>
+                                        <View style={localStyles.paginationContainer}>
                                             <TouchableOpacity
                                                 style={[
-                                                    styles.paginationButton,
-                                                    currentPage === 1 && styles.paginationButtonDisabled
+                                                    localStyles.paginationButton,
+                                                    {
+                                                        backgroundColor: currentPage === 1
+                                                            ? 'transparent'
+                                                            : colors.primaryLight
+                                                    }
                                                 ]}
                                                 onPress={goToPreviousPage}
                                                 disabled={currentPage === 1}
                                                 activeOpacity={0.7}
                                             >
-                                                <Ionicons name="chevron-back" size={22} color={currentPage === 1 ? "#A0AEC0" : "#3182CE"} />
+                                                <Ionicons
+                                                    name="chevron-back"
+                                                    size={22}
+                                                    color={currentPage === 1 ? colors.secondaryText : colors.primary}
+                                                />
                                                 <Text style={[
-                                                    styles.paginationButtonText,
-                                                    currentPage === 1 && styles.paginationButtonTextDisabled
+                                                    localStyles.paginationButtonText,
+                                                    {
+                                                        color: currentPage === 1
+                                                            ? colors.secondaryText
+                                                            : colors.primary
+                                                    }
                                                 ]}>Anterior</Text>
                                             </TouchableOpacity>
 
-                                            <Text style={styles.paginationInfo}>
+                                            <Text style={[localStyles.paginationInfo, { color: colors.secondaryText }]}>
                                                 Página {currentPage} de {totalPages}
                                             </Text>
 
                                             <TouchableOpacity
                                                 style={[
-                                                    styles.paginationButton,
-                                                    currentPage === totalPages && styles.paginationButtonDisabled
+                                                    localStyles.paginationButton,
+                                                    {
+                                                        backgroundColor: currentPage === totalPages
+                                                            ? 'transparent'
+                                                            : colors.primaryLight
+                                                    }
                                                 ]}
                                                 onPress={goToNextPage}
                                                 disabled={currentPage === totalPages}
                                                 activeOpacity={0.7}
                                             >
                                                 <Text style={[
-                                                    styles.paginationButtonText,
-                                                    currentPage === totalPages && styles.paginationButtonTextDisabled
+                                                    localStyles.paginationButtonText,
+                                                    {
+                                                        color: currentPage === totalPages
+                                                            ? colors.secondaryText
+                                                            : colors.primary
+                                                    }
                                                 ]}>Siguiente</Text>
-                                                <Ionicons name="chevron-forward" size={22} color={currentPage === totalPages ? "#A0AEC0" : "#3182CE"} />
+                                                <Ionicons
+                                                    name="chevron-forward"
+                                                    size={22}
+                                                    color={currentPage === totalPages ? colors.secondaryText : colors.primary}
+                                                />
                                             </TouchableOpacity>
                                         </View>
                                     </>
@@ -251,97 +295,21 @@ export default function PantallaCatalogoProductos() {
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8', // Mismo fondo que PantallaPrincipal
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentContainer: {
-        width: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 300,
-    },
+// Estilos locales específicos para este componente
+const localStyles = StyleSheet.create({
     productsSection: {
         width: '100%',
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
+        padding: 10,
         marginBottom: 30,
     },
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 24,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#4A5568',
-        textAlign: 'center',
-        marginTop: 20,
-        marginBottom: 20,
-    },
-    loadingContainer: {
-        padding: 40,
-        alignItems: 'center',
-        backgroundColor: '#F7FAFC',
-        borderRadius: 16,
-        marginVertical: 10,
-        shadowColor: "rgba(0,0,0,0.05)",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: '#EDF2F7',
-        width: '100%',
-    },
-    loadingText: {
-        marginTop: 15,
-        fontSize: 16,
-        color: '#4A5568',
-        fontWeight: '500',
-    },
-    errorContainer: {
-        padding: 22,
-        backgroundColor: '#FFF5F5',
-        borderRadius: 16,
-        borderLeftWidth: 5,
-        borderLeftColor: '#FC8181',
-        marginVertical: 10,
-        shadowColor: "rgba(0,0,0,0.05)",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 2,
-        width: '100%',
-    },
-    errorText: {
-        color: '#C53030',
-        textAlign: 'center',
-        fontSize: 16,
-        fontWeight: '500',
-        letterSpacing: 0.3,
     },
     listContent: {
         width: '100%',
@@ -349,16 +317,13 @@ const styles = StyleSheet.create({
     productCardContainer: {
         width: '100%',
         marginBottom: 16,
-        backgroundColor: '#F7FAFC',
-        borderRadius: 16,
+        borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: "rgba(0,0,0,0.06)",
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowRadius: 2,
+        elevation: 1,
     },
     paginationContainer: {
         flexDirection: 'row',
@@ -373,31 +338,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 10,
         borderRadius: 12,
-        backgroundColor: '#EBF8FF',
-        shadowColor: "rgba(0,0,0,0.05)",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 1,
-    },
-    paginationButtonDisabled: {
-        backgroundColor: '#F7FAFC',
-        shadowOpacity: 0,
-        elevation: 0,
     },
     paginationButtonText: {
-        color: '#3182CE',
         fontWeight: '600',
         fontSize: 14,
         marginHorizontal: 4,
         letterSpacing: 0.2,
     },
-    paginationButtonTextDisabled: {
-        color: '#A0AEC0',
-    },
     paginationInfo: {
         fontSize: 14,
-        color: '#4A5568',
         fontWeight: '500',
     },
 });

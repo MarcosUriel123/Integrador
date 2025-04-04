@@ -16,12 +16,13 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import IPS from '../config/IPS'; // Importamos la configuración de IPs
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme'; // Importar hook de tema
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
-// Actualizar la interfaz Registro para incluir los nuevos campos
+// Interfaz para las FAQs
 interface Registro {
     _id: string;
     mensaje: string;
@@ -33,6 +34,7 @@ interface Registro {
 
 export default function PantallaRegistros() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
     const [registros, setRegistros] = useState<Registro[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -41,7 +43,7 @@ export default function PantallaRegistros() {
     // Animaciones
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
 
     // Para las animaciones de los items de la lista
     const itemAnimations = useRef<{ [key: string]: Animated.Value }>({}).current;
@@ -66,8 +68,6 @@ export default function PantallaRegistros() {
             })
         ]).start();
     }, []);
-
-    // Añadir logs detallados al fetch de registros
 
     const fetchRegistros = async () => {
         try {
@@ -137,35 +137,40 @@ export default function PantallaRegistros() {
         if (lowerMsg.includes('abri') || lowerMsg.includes('entr')) {
             return {
                 icon: 'door-open',
-                color: '#38A169',
-                bgColor: '#F0FFF4',
-                borderColor: '#C6F6D5'
+                color: isDarkMode ? '#68D391' : '#38A169',
+                bgColor: isDarkMode ? 'rgba(56, 161, 105, 0.1)' : '#F0FFF4',
+                borderColor: isDarkMode ? 'rgba(104, 211, 145, 0.5)' : '#C6F6D5'
             };
         } else if (lowerMsg.includes('cerr') || lowerMsg.includes('sali')) {
             return {
                 icon: 'door-closed',
-                color: '#3182CE',
-                bgColor: '#EBF8FF',
-                borderColor: '#BEE3F8'
+                color: isDarkMode ? '#63B3ED' : '#3182CE',
+                bgColor: isDarkMode ? 'rgba(49, 130, 206, 0.1)' : '#EBF8FF',
+                borderColor: isDarkMode ? 'rgba(99, 179, 237, 0.5)' : '#BEE3F8'
             };
         } else if (lowerMsg.includes('fall') || lowerMsg.includes('error') || lowerMsg.includes('rechaz')) {
             return {
                 icon: 'lock-alert',
-                color: '#E53E3E',
-                bgColor: '#FFF5F5',
-                borderColor: '#FED7D7'
+                color: isDarkMode ? '#FC8181' : '#E53E3E',
+                bgColor: isDarkMode ? 'rgba(229, 62, 62, 0.1)' : '#FFF5F5',
+                borderColor: isDarkMode ? 'rgba(252, 129, 129, 0.5)' : '#FED7D7'
             };
         } else {
             return {
                 icon: 'information',
-                color: '#805AD5',
-                bgColor: '#FAF5FF',
-                borderColor: '#E9D8FD'
+                color: isDarkMode ? '#B794F4' : '#805AD5',
+                bgColor: isDarkMode ? 'rgba(128, 90, 213, 0.1)' : '#FAF5FF',
+                borderColor: isDarkMode ? 'rgba(183, 148, 244, 0.5)' : '#E9D8FD'
             };
         }
     };
 
-    // Actualizar el renderRegistroItem para mostrar el método de acceso completo y el valor enmascarado
+    // Obtener colores del gradiente para el botón según el tema
+    const getButtonGradientColors = () => {
+        return isDarkMode
+            ? [colors.primary, '#1e3a8a'] as const // Primario a azul oscuro para tema oscuro
+            : [colors.primary, '#2C5282'] as const; // Primario a azul medio para tema claro
+    };
 
     const renderRegistroItem = ({ item, index }: { item: Registro; index: number }) => {
         const style = getRegistroStyle(item.mensaje);
@@ -189,13 +194,11 @@ export default function PantallaRegistros() {
             }
         }
 
-        // SIMPLIFICACIÓN: Mostrar directamente el método y su valor sin formateo adicional
-        // Formatear el texto del método de acceso de manera simple y directa
+        // Formatear el texto del método de acceso
         let metodoAccesoText = '';
 
         if (item.metodoAcceso && item.metodoAcceso !== 'desconocido') {
             if (item.valorMetodo) {
-                // Mostrar método y valor de manera clara
                 metodoAccesoText = `Método: ${item.metodoAcceso} | Valor: ${item.valorMetodo}`;
             } else {
                 metodoAccesoText = `Método: ${item.metodoAcceso}`;
@@ -205,7 +208,7 @@ export default function PantallaRegistros() {
         return (
             <Animated.View
                 style={[
-                    styles.registroCard,
+                    localStyles.registroCard,
                     {
                         backgroundColor: style.bgColor,
                         borderColor: style.borderColor,
@@ -221,40 +224,59 @@ export default function PantallaRegistros() {
                     }
                 ]}
             >
-                <View style={styles.registroHeader}>
-                    <View style={[styles.iconContainer, { backgroundColor: style.borderColor }]}>
-                        <MaterialCommunityIcons name={style.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={style.color} />
+                <View style={localStyles.registroHeader}>
+                    <View style={[localStyles.iconContainer, { backgroundColor: style.borderColor }]}>
+                        <MaterialCommunityIcons
+                            name={style.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+                            size={20}
+                            color={style.color}
+                        />
                     </View>
-                    <Text style={[styles.registroMensaje, { color: style.color }]}>
+                    <Text style={[localStyles.registroMensaje, { color: style.color }]}>
                         {item.mensaje}
                     </Text>
                 </View>
 
-                <Text style={styles.registroDescripcion}>
+                <Text style={[localStyles.registroDescripcion, { color: colors.secondaryText }]}>
                     {item.descripcion}
                 </Text>
 
                 {metodoAccesoText ? (
-                    <View style={styles.metodoContainer}>
-                        <Text style={styles.registroMetodo}>
+                    <View style={[localStyles.metodoContainer, {
+                        backgroundColor: isDarkMode ? 'rgba(146, 64, 14, 0.1)' : '#FFFBEB',
+                        borderColor: isDarkMode ? 'rgba(252, 211, 77, 0.5)' : '#FCD34D'
+                    }]}>
+                        <Text style={[localStyles.registroMetodo, {
+                            color: isDarkMode ? '#F6AD55' : '#92400E'
+                        }]}>
                             {metodoAccesoText}
                         </Text>
                     </View>
                 ) : null}
 
-                {/* Eliminar cualquier otro contenedor o formato para los valores */}
-
-                <View style={styles.registroFooter}>
-                    <View style={styles.timeContainer}>
-                        <Ionicons name="time-outline" size={14} color="#718096" />
-                        <Text style={styles.registroFecha}>
+                <View style={localStyles.registroFooter}>
+                    <View style={localStyles.timeContainer}>
+                        <Ionicons
+                            name="time-outline"
+                            size={14}
+                            color={isDarkMode ? colors.secondaryText : '#718096'}
+                        />
+                        <Text style={[localStyles.registroFecha, {
+                            color: isDarkMode ? colors.secondaryText : '#718096'
+                        }]}>
                             {fechaFormateada}
                         </Text>
                     </View>
 
-                    <View style={styles.idContainer}>
-                        <Ionicons name="key-outline" size={14} color="#718096" />
-                        <Text style={styles.registroId}>
+                    <View style={localStyles.idContainer}>
+                        <Ionicons
+                            name="key-outline"
+                            size={14}
+                            color={isDarkMode ? colors.secondaryText : '#718096'}
+                        />
+                        <Text style={[localStyles.registroId, {
+                            color: isDarkMode ? colors.secondaryText : '#718096'
+                        }]}>
                             ID: {item._id.substring(item._id.length - 6)}
                         </Text>
                     </View>
@@ -264,28 +286,39 @@ export default function PantallaRegistros() {
     };
 
     const renderEmptyList = () => (
-        <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconContainer}>
-                <Ionicons name="document-text-outline" size={50} color="#A0AEC0" />
+        <View style={localStyles.emptyContainer}>
+            <View style={[localStyles.emptyIconContainer, {
+                backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                borderColor: colors.border
+            }]}>
+                <Ionicons name="document-text-outline" size={50} color={colors.secondaryText} />
             </View>
-            <Text style={styles.emptyTitle}>No hay registros disponibles</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[localStyles.emptyTitle, { color: colors.text }]}>
+                No hay registros disponibles
+            </Text>
+            <Text style={[localStyles.emptyText, { color: colors.secondaryText }]}>
                 Aún no se han registrado eventos de acceso en el sistema.
             </Text>
 
             <TouchableOpacity
-                style={styles.refreshButtonContainer}
+                style={[
+                    localStyles.refreshButtonContainer,
+                    {
+                        shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                        elevation: isDarkMode ? 3 : 2
+                    }
+                ]}
                 onPress={fetchRegistros}
                 activeOpacity={0.8}
             >
                 <LinearGradient
-                    colors={['#3182CE', '#2C5282']}
-                    style={styles.refreshButton}
+                    colors={getButtonGradientColors()}
+                    style={localStyles.refreshButton}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                 >
-                    <Ionicons name="refresh" size={18} color="#FFFFFF" style={styles.buttonIcon} />
-                    <Text style={styles.refreshButtonText}>Actualizar</Text>
+                    <Ionicons name="refresh" size={18} color="#FFFFFF" style={localStyles.buttonIcon} />
+                    <Text style={localStyles.refreshButtonText}>Actualizar</Text>
                 </LinearGradient>
             </TouchableOpacity>
         </View>
@@ -295,9 +328,14 @@ export default function PantallaRegistros() {
     const renderContent = () => {
         if (loading && !refreshing) {
             return (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#3182CE" />
-                    <Text style={styles.loadingText}>Cargando registros...</Text>
+                <View style={[localStyles.loadingContainer, {
+                    backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                    borderColor: colors.border
+                }]}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                        Cargando registros...
+                    </Text>
                 </View>
             );
         }
@@ -309,13 +347,13 @@ export default function PantallaRegistros() {
                 keyExtractor={(item) => item._id}
                 scrollEnabled={true}
                 contentContainerStyle={[
-                    styles.listContent,
-                    registros.length === 0 && styles.emptyList
+                    localStyles.listContent,
+                    registros.length === 0 && localStyles.emptyList
                 ]}
                 ListEmptyComponent={renderEmptyList}
                 ListHeaderComponent={() => (
-                    <View style={styles.listHeader}>
-                        <Text style={styles.listHeaderText}>
+                    <View style={[localStyles.listHeader, { borderBottomColor: colors.divider }]}>
+                        <Text style={[localStyles.listHeaderText, { color: colors.secondaryText }]}>
                             {registros.length} {registros.length === 1 ? 'registro' : 'registros'} encontrados
                         </Text>
                     </View>
@@ -324,8 +362,8 @@ export default function PantallaRegistros() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={["#3182CE"]}
-                        tintColor="#3182CE"
+                        colors={[colors.primary]}
+                        tintColor={colors.primary}
                     />
                 }
                 ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -334,102 +372,81 @@ export default function PantallaRegistros() {
     };
 
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
-
+                <View style={baseStyles.contentContainer}>
                     <Animated.View
                         style={[
-                            styles.contentSection,
                             { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
                         ]}
                     >
-                        <View style={styles.sectionHeader}>
-                            <View style={styles.titleContainer}>
-                                <Ionicons name="list" size={24} color="#3182CE" style={styles.titleIcon} />
-                                <Text style={styles.sectionTitle}>Historial de Eventos</Text>
-                            </View>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>Historial de Eventos</Text>
 
+                        <View style={localStyles.headerControls}>
                             <TouchableOpacity
-                                style={styles.refreshIconButton}
+                                style={[localStyles.refreshIconButton, {
+                                    backgroundColor: isDarkMode
+                                        ? colors.primaryLight + '40'
+                                        : colors.primaryLight
+                                }]}
                                 onPress={onRefresh}
                                 disabled={refreshing || loading}
                             >
                                 <Ionicons
                                     name="refresh"
                                     size={22}
-                                    color={refreshing || loading ? "#A0AEC0" : "#3182CE"}
+                                    color={refreshing || loading
+                                        ? colors.secondaryText
+                                        : colors.primary}
                                 />
                             </TouchableOpacity>
                         </View>
 
                         {error ? (
-                            <View style={styles.errorContainer}>
-                                <Ionicons name="alert-circle-outline" size={22} color="#E53E3E" style={styles.errorIcon} />
-                                <Text style={styles.errorText}>{error}</Text>
+                            <View style={[localStyles.errorContainer, {
+                                backgroundColor: isDarkMode ? 'rgba(254, 178, 178, 0.1)' : '#FFF5F5',
+                                borderLeftColor: colors.error
+                            }]}>
+                                <Feather name="alert-triangle" size={22} color={colors.error} style={localStyles.errorIcon} />
+                                <Text style={[localStyles.errorText, {
+                                    color: isDarkMode ? '#FC8181' : '#C53030'
+                                }]}>{error}</Text>
                             </View>
                         ) : null}
 
-                        <View style={styles.listContainer}>
+                        <View style={localStyles.listContainer}>
                             {renderContent()}
                         </View>
                     </Animated.View>
-
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    contentSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    titleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    titleIcon: {
-        marginRight: 10,
-    },
+// Estilos locales específicos para este componente
+const localStyles = StyleSheet.create({
     sectionTitle: {
-        fontSize: 24,
+        fontSize: 26,
         fontWeight: 'bold',
-        color: '#2D3748',
+        marginBottom: 24,
+        borderBottomWidth: 3,
+        paddingBottom: 12,
+        width: '65%',
+        letterSpacing: 0.5,
+    },
+    headerControls: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginBottom: 16,
     },
     refreshIconButton: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#EBF8FF',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -450,11 +467,9 @@ const styles = StyleSheet.create({
     listHeader: {
         paddingBottom: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
         marginBottom: 16,
     },
     listHeaderText: {
-        color: '#718096',
         fontSize: 14,
         fontWeight: '500',
     },
@@ -483,22 +498,18 @@ const styles = StyleSheet.create({
     },
     registroDescripcion: {
         fontSize: 14,
-        color: '#4A5568',
         marginBottom: 12,
         lineHeight: 20,
     },
     registroMetodo: {
         fontSize: 14,
-        color: '#92400E',
         fontWeight: '500',
     },
     metodoContainer: {
-        backgroundColor: '#FFFBEB',
         borderRadius: 8,
         padding: 10,
         marginVertical: 8,
         borderWidth: 1,
-        borderColor: '#FCD34D',
     },
     registroFooter: {
         flexDirection: 'row',
@@ -511,7 +522,6 @@ const styles = StyleSheet.create({
     },
     registroFecha: {
         fontSize: 12,
-        color: '#718096',
         marginLeft: 5,
     },
     idContainer: {
@@ -520,7 +530,6 @@ const styles = StyleSheet.create({
     },
     registroId: {
         fontSize: 12,
-        color: '#718096',
         marginLeft: 5,
     },
     loadingContainer: {
@@ -529,28 +538,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         minHeight: 300,
         paddingVertical: 40,
+        borderRadius: 16,
+        borderWidth: 1,
     },
     loadingText: {
         marginTop: 16,
         fontSize: 16,
-        color: '#718096',
     },
     errorContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF5F5',
         borderRadius: 8,
         padding: 12,
         marginBottom: 16,
         borderLeftWidth: 4,
-        borderLeftColor: '#FC8181',
     },
     errorIcon: {
         marginRight: 10,
     },
     errorText: {
         flex: 1,
-        color: '#C53030',
         fontSize: 14,
         fontWeight: '500',
     },
@@ -563,22 +570,18 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#F7FAFC',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
     emptyTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#4A5568',
         marginBottom: 8,
     },
     emptyText: {
         fontSize: 14,
-        color: '#718096',
         textAlign: 'center',
         marginBottom: 24,
         maxWidth: '80%',
@@ -587,11 +590,9 @@ const styles = StyleSheet.create({
     refreshButtonContainer: {
         borderRadius: 10,
         overflow: 'hidden',
-        shadowColor: "#2C5282",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
     },
     refreshButton: {
         flexDirection: 'row',
@@ -607,20 +608,5 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
-    },
-    valorRealContainer: {
-        marginTop: 5,
-        marginBottom: 10,
-        backgroundColor: '#FEF9C3', // Fondo amarillo suave para destacar
-        borderRadius: 4,
-        padding: 8,
-        borderLeftWidth: 3,
-        borderColor: '#EAB308',
-    },
-    valorRealText: {
-        fontSize: 13,
-        fontFamily: 'monospace', // Fuente monoespaciada para datos técnicos
-        color: '#854D0E',
-        fontWeight: '500',
     },
 });
