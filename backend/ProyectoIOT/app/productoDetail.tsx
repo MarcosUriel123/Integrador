@@ -301,7 +301,7 @@ export default function ProductDetail() {
 // Estilos locales específicos para este componente
 const localStyles = StyleSheet.create({
     buttonBackContainer: {
-        marginBottom: 15,
+        marginBottom: 0,
     },
     imageContainer: {
         position: 'relative',
@@ -312,7 +312,7 @@ const localStyles = StyleSheet.create({
     },
     image: {
         width: '100%',
-        height: 260,
+        height: 210,
     },
     categoryBadge: {
         position: 'absolute',
