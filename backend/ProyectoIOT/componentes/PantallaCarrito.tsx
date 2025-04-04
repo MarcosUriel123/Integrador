@@ -15,9 +15,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppTheme } from '../hooks/useAppTheme'; // Importar el hook de tema
+import { useAppTheme } from '../hooks/useAppTheme';
+import { LogBox } from 'react-native';
 
-// Obtener dimensiones de pantalla
+LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
+
 const { width } = Dimensions.get('window');
 
 type CartProduct = {
@@ -30,17 +32,14 @@ type CartProduct = {
 
 export default function PantallaCarrito() {
     const router = useRouter();
-    const { colors, styles: baseStyles, isDarkMode } = useAppTheme(); // Obtener colores y estilos del tema
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme();
     const [cartItems, setCartItems] = useState<CartProduct[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Animaciones
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-    // Cargar items del carrito cuando la pantalla se monta
     useEffect(() => {
-        // Animación de entrada
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
@@ -102,7 +101,9 @@ export default function PantallaCarrito() {
     };
 
     const updateQuantity = (productId: string, newQuantity: number) => {
-        if (newQuantity < 1) return;
+        if (newQuantity < 1) {
+            return;
+        }
 
         const updatedCart = cartItems.map(item =>
             item.id === productId ? { ...item, quantity: newQuantity } : item
@@ -116,11 +117,10 @@ export default function PantallaCarrito() {
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     };
 
-    // Obtener colores del gradiente para el botón según el tema
     const getButtonGradientColors = () => {
         return isDarkMode
-            ? [colors.primary, '#1e3a8a'] // Primario a azul oscuro para tema oscuro
-            : [colors.primary, '#2C5282']; // Primario a azul medio para tema claro
+            ? [colors.primary, '#1e3a8a'] as const
+            : [colors.primary, '#2C5282'] as const;
     };
 
     const handleCheckout = async () => {
@@ -129,7 +129,6 @@ export default function PantallaCarrito() {
             return;
         }
 
-        // Verificar si el usuario ha iniciado sesión
         const token = await AsyncStorage.getItem('userToken');
 
         if (!token) {
@@ -150,51 +149,27 @@ export default function PantallaCarrito() {
             return;
         }
 
-        // Navegar a la pantalla de checkout
         router.push('/checkout' as any);
     };
 
     return (
         <SafeAreaView style={baseStyles.screen}>
-            <ScrollView style={{ flex: 1 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={true} >
                 <View style={baseStyles.contentContainer}>
-                    {/* Sección Principal del Carrito */}
-                    <Animated.View
-                        style={[
-                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-                        ]}
-                    >
-                        <Text style={[localStyles.sectionTitle, {
-                            color: colors.text,
-                            borderBottomColor: colors.primary
-                        }]}>Mi Carrito de Compras</Text>
-
+                    <Animated.View style={[{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+                        <Text style={[localStyles.sectionTitle, { color: colors.text, borderBottomColor: colors.primary }]}>Mi Carrito de Compras</Text>
                         {isLoading ? (
-                            <View style={[localStyles.loadingContainer, {
-                                backgroundColor: colors.card,
-                                borderColor: colors.border
-                            }]}>
+                            <View style={[localStyles.loadingContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                                 <MaterialCommunityIcons name="cart-outline" size={36} color={colors.primary} />
-                                <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
-                                    Cargando tu carrito...
-                                </Text>
+                                <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}> Cargando tu carrito...</Text>
                             </View>
                         ) : cartItems.length === 0 ? (
-                            <View style={[localStyles.emptyCartContainer, {
-                                backgroundColor: colors.card,
-                                borderColor: colors.border
-                            }]}>
-                                <View style={[localStyles.emptyCartIconContainer, {
-                                    backgroundColor: colors.primaryLight
-                                }]}>
+                            <View style={[localStyles.emptyCartContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                <View style={[localStyles.emptyCartIconContainer, { backgroundColor: colors.primaryLight }]}>
                                     <MaterialCommunityIcons name="cart-off" size={64} color={colors.primary} />
                                 </View>
-                                <Text style={[localStyles.emptyTitle, { color: colors.text }]}>
-                                    Tu carrito está vacío
-                                </Text>
-                                <Text style={[localStyles.emptyText, { color: colors.secondaryText }]}>
-                                    Añade productos de nuestra tienda para comenzar tu compra
-                                </Text>
+                                <Text style={[localStyles.emptyTitle, { color: colors.text }]}>Tu carrito está vacío</Text>
+                                <Text style={[localStyles.emptyText, { color: colors.secondaryText }]}>Añade productos de nuestra tienda para comenzar tu compra</Text>
                                 <TouchableOpacity
                                     style={[
                                         localStyles.continueShoppingButtonContainer,
@@ -202,23 +177,19 @@ export default function PantallaCarrito() {
                                             shadowOpacity: isDarkMode ? 0.2 : 0.15,
                                             elevation: isDarkMode ? 3 : 2
                                         }
-                                    ]}
-                                    onPress={() => router.push('/CatalogoProductosScreen')}
-                                    activeOpacity={0.8}
-                                >
-                                    <LinearGradient
-                                        colors={getButtonGradientColors()}
-                                        style={localStyles.continueShoppingButton}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                    >
+                                    ]} onPress={() => router.push('/CatalogoProductosScreen')} activeOpacity={0.8} >
+                                    <LinearGradient colors={getButtonGradientColors()} style={localStyles.continueShoppingButton} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} >
                                         <FontAwesome5 name="shopping-bag" size={16} color="#fff" style={{ marginRight: 8 }} />
                                         <Text style={localStyles.continueShoppingText}>Explorar productos</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
                             </View>
                         ) : (
-                            <>
+                            <View style={{ marginTop: 20, paddingBottom: 40 }}> {/* Aumentar paddingBottom */}
+                                {/* Mostrar la cantidad de productos para debug */}
+                                <Text style={{ color: colors.secondaryText, marginBottom: 10 }}>  {cartItems.length} {cartItems.length === 1 ? 'producto' : 'productos'} en el carrito </Text>
+
+                                {/* Mapear todos los productos sin limitación */}
                                 {cartItems.map((item, index) => (
                                     <Animated.View
                                         key={item.id}
@@ -230,53 +201,33 @@ export default function PantallaCarrito() {
                                                 shadowOpacity: isDarkMode ? 0.2 : 0.1,
                                                 elevation: isDarkMode ? 2 : 1,
                                                 opacity: fadeAnim,
-                                                transform: [{
-                                                    translateY: Animated.multiply(fadeAnim, new Animated.Value(-10)).interpolate({
-                                                        inputRange: [0, 1],
-                                                        outputRange: [20, 0]
-                                                    })
-                                                }]
+
+                                                transform: [{ scale: 1 }]
                                             }
-                                        ]}
-                                    >
-                                        <Image
-                                            source={{ uri: item.image }}
-                                            style={localStyles.itemImage}
-                                        />
+                                        ]}>
+                                        <Image source={{ uri: item.image }} style={localStyles.itemImage} resizeMode="cover" />
                                         <View style={localStyles.itemDetails}>
-                                            <Text style={[localStyles.itemName, { color: colors.text }]}>
-                                                {item.name}
-                                            </Text>
-                                            <Text style={[localStyles.itemPrice, { color: colors.primary }]}>
-                                                ${item.price.toFixed(2)}
-                                            </Text>
+                                            <Text style={[localStyles.itemName, { color: colors.text }]}> {item.name} </Text>
+                                            <Text style={[localStyles.itemPrice, { color: colors.primary }]}> ${item.price.toFixed(2)} </Text>
                                             <View style={localStyles.quantityContainer}>
                                                 <TouchableOpacity
                                                     style={[localStyles.quantityButton, {
                                                         backgroundColor: colors.primaryLight,
                                                         borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                                                    }]}
-                                                    onPress={() => updateQuantity(item.id, item.quantity - 1)}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <Text style={[localStyles.quantityButtonText, { color: colors.primary }]}>-</Text>
+                                                    }]} onPress={() => updateQuantity(item.id, item.quantity - 1)} activeOpacity={0.7}>
+                                                <Text style={[localStyles.quantityButtonText, { color: colors.primary }]}>-</Text>
                                                 </TouchableOpacity>
                                                 <View style={[localStyles.quantityTextContainer, {
                                                     backgroundColor: isDarkMode ? colors.card : '#FFFFFF',
                                                     borderColor: colors.border
                                                 }]}>
-                                                    <Text style={[localStyles.quantityText, { color: colors.text }]}>
-                                                        {item.quantity}
-                                                    </Text>
+                                                    <Text style={[localStyles.quantityText, { color: colors.text }]}> {item.quantity}</Text>
                                                 </View>
                                                 <TouchableOpacity
                                                     style={[localStyles.quantityButton, {
                                                         backgroundColor: colors.primaryLight,
                                                         borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                                                    }]}
-                                                    onPress={() => updateQuantity(item.id, item.quantity + 1)}
-                                                    activeOpacity={0.7}
-                                                >
+                                                    }]} onPress={() => updateQuantity(item.id, item.quantity + 1)} activeOpacity={0.7}>
                                                     <Text style={[localStyles.quantityButtonText, { color: colors.primary }]}>+</Text>
                                                 </TouchableOpacity>
                                             </View>
@@ -296,60 +247,35 @@ export default function PantallaCarrito() {
                                     </Animated.View>
                                 ))}
 
-                                <View style={[localStyles.summaryContainer, {
-                                    backgroundColor: colors.card,
-                                    borderColor: colors.border
-                                }]}>
-                                    <View style={localStyles.summaryRow}>
-                                        <Text style={[localStyles.summaryText, { color: colors.secondaryText }]}>
-                                            Subtotal:
-                                        </Text>
-                                        <Text style={[localStyles.summaryValue, { color: colors.text }]}>
-                                            ${calculateTotal().toFixed(2)}
-                                        </Text>
-                                    </View>
-
-                                    <View style={localStyles.summaryRow}>
-                                        <Text style={[localStyles.summaryText, { color: colors.secondaryText }]}>
-                                            Envío:
-                                        </Text>
-                                        <Text style={[localStyles.summaryValue, { color: colors.text }]}>
-                                            $0.00
-                                        </Text>
-                                    </View>
-
-                                    <View style={[localStyles.totalRow, { borderTopColor: colors.border }]}>
-                                        <Text style={[localStyles.totalText, { color: colors.text }]}>
-                                            Total:
-                                        </Text>
-                                        <Text style={[localStyles.totalValue, { color: colors.primary }]}>
-                                            ${calculateTotal().toFixed(2)}
-                                        </Text>
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={[
-                                            localStyles.checkoutButtonContainer,
-                                            {
-                                                shadowOpacity: isDarkMode ? 0.2 : 0.15,
-                                                elevation: isDarkMode ? 3 : 2
-                                            }
-                                        ]}
-                                        onPress={handleCheckout}
-                                        activeOpacity={0.8}
-                                    >
-                                        <LinearGradient
-                                            colors={getButtonGradientColors()}
-                                            style={localStyles.checkoutButtonGradient}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                        >
-                                            <Text style={localStyles.checkoutButtonText}>Realizar compra</Text>
-                                            <Feather name="arrow-right" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
-                                        </LinearGradient>
-                                    </TouchableOpacity>
+                                {/* Información de total */}
+                                <View style={[
+                                    localStyles.totalRow,
+                                    {
+                                        borderTopColor: isDarkMode ? colors.border : '#E2E8F0',
+                                        marginTop: 24
+                                    }
+                                ]}>
+                                    <Text style={[localStyles.totalText, { color: colors.text }]}>Total:</Text>
+                                    <Text style={[localStyles.totalValue, { color: colors.primary }]}>${calculateTotal().toFixed(2)}</Text>
                                 </View>
-                            </>
+
+                                {/* Botón de compra */}
+                                <TouchableOpacity
+                                    style={[
+                                        localStyles.checkoutButtonContainer,
+                                        {
+                                            shadowOpacity: isDarkMode ? 0.2 : 0.15,
+                                            elevation: isDarkMode ? 3 : 2,
+                                            marginTop: 20,
+                                            marginBottom: 32
+                                        }
+                                    ]} onPress={handleCheckout} activeOpacity={0.8} >
+                                    <LinearGradient colors={getButtonGradientColors()} style={localStyles.checkoutButtonGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                                        <Text style={localStyles.checkoutButtonText}>Realizar compra</Text>
+                                        <Feather name="arrow-right" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </Animated.View>
                 </View>
@@ -358,7 +284,6 @@ export default function PantallaCarrito() {
     );
 }
 
-// Estilos locales específicos para este componente
 const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
@@ -432,17 +357,20 @@ const localStyles = StyleSheet.create({
         flexDirection: 'row',
         borderRadius: 16,
         padding: 16,
-        marginBottom: 12,
+        marginBottom: 16,
         alignItems: 'center',
         borderWidth: 1,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
+        shadowRadius: 2,
+        minHeight: 100,
     },
     itemImage: {
         width: 70,
         height: 70,
         borderRadius: 10,
         marginRight: 16,
+        backgroundColor: '#f0f0f0',
     },
     itemDetails: {
         flex: 1,
@@ -497,9 +425,15 @@ const localStyles = StyleSheet.create({
     },
     summaryContainer: {
         marginTop: 24,
+        marginBottom: 20,
         padding: 20,
         borderRadius: 16,
         borderWidth: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
     summaryRow: {
         flexDirection: 'row',
@@ -509,10 +443,11 @@ const localStyles = StyleSheet.create({
     totalRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingTop: 12,
+        paddingTop: 16,
+        paddingBottom: 16,
         borderTopWidth: 1,
-        marginTop: 6,
-        marginBottom: 16,
+        marginTop: 24,
+        marginBottom: 0,
     },
     summaryText: {
         fontSize: 16,
@@ -539,9 +474,11 @@ const localStyles = StyleSheet.create({
     },
     checkoutButtonGradient: {
         paddingVertical: 16,
+        paddingHorizontal: 16,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
+        borderRadius: 12,
     },
     checkoutButtonText: {
         color: '#FFFFFF',
