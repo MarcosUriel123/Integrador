@@ -14,9 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
-import Header from '../componentes/Header';
-import Footer from '../componentes/Footer';
-import BotonVolver from '../componentes/BotonVolver';
+
 import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 // Obtener dimensiones de pantalla
@@ -78,11 +76,7 @@ export default function VisionScreen() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Nuestra Visión" />
 
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/empresa" />
-                    </View>
 
                     <Animated.View
                         style={[
@@ -162,7 +156,6 @@ export default function VisionScreen() {
                         </View>
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

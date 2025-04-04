@@ -13,8 +13,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
-import Header from './Header';
-import Footer from './Footer';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 type CartProduct = {
@@ -207,7 +205,6 @@ export default function PantallaCheckout() {
             <SafeAreaView style={styles.screen}>
                 <ScrollView>
                     <View style={styles.cardContainer}>
-                        <Header title="Checkout" />
                         <View style={styles.contentContainer}>
                             <Text style={styles.title}>No hay productos en el carrito</Text>
                             <TouchableOpacity
@@ -217,7 +214,7 @@ export default function PantallaCheckout() {
                                 <Text style={styles.backButtonText}>Ir a la tienda</Text>
                             </TouchableOpacity>
                         </View>
-                        <Footer />
+
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -228,7 +225,6 @@ export default function PantallaCheckout() {
         <SafeAreaView style={styles.screen}>
             <ScrollView>
                 <View style={styles.cardContainer}>
-                    <Header title="Checkout" />
 
                     <View style={styles.contentContainer}>
                         <Text style={styles.title}>Finalizar Compra</Text>
@@ -324,8 +320,6 @@ export default function PantallaCheckout() {
                             <Text style={styles.backButtonText}>Volver al Carrito</Text>
                         </TouchableOpacity>
                     </View>
-
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

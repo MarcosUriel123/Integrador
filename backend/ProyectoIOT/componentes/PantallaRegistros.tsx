@@ -16,9 +16,6 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Header from './Header';
-import Footer from './Footer';
-import BotonVolver from './BotonVolver';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -340,11 +337,6 @@ export default function PantallaRegistros() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Registros de Acceso" />
-
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/puerta" />
-                    </View>
 
                     <Animated.View
                         style={[
@@ -383,7 +375,6 @@ export default function PantallaRegistros() {
                         </View>
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

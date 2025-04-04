@@ -15,10 +15,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
-import BotonVolver from '../componentes/BotonVolver';
 import InputApp from './Inputapp';
-import Header from './Header';
-import Footer from './Footer';
+
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -181,11 +179,7 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Registro de Usuario" showMenu={false} />
 
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/Login1" />
-                    </View>
 
                     <Animated.View
                         style={[
@@ -436,7 +430,6 @@ export default function PantallaRegistro1({ onNext, isLoading = false }: Pantall
                         </View>
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

@@ -17,9 +17,6 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Header from './Header';
-import Footer from './Footer';
-import BotonVolver from './BotonVolver';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -187,12 +184,6 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Mi Perfil" />
-
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/" />
-                    </View>
-
                     <Animated.View
                         style={[
                             styles.profileSection,
@@ -380,7 +371,6 @@ export default function PantallaPerfil({ userId }: PantallaPerfilProps) {
                         )}
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

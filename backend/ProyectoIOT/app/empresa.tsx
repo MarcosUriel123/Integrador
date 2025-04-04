@@ -13,9 +13,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Header from '../componentes/Header';
-import Footer from '../componentes/Footer';
-import BotonVolver from '../componentes/BotonVolver';
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -94,11 +91,7 @@ export default function EmpresaScreen() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Nuestra Empresa" />
 
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/" />
-                    </View>
 
                     <Animated.View
                         style={[
@@ -280,8 +273,6 @@ export default function EmpresaScreen() {
                             </View>
                         </View>
                     </Animated.View>
-
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

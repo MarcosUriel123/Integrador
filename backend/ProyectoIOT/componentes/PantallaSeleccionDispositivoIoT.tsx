@@ -16,9 +16,6 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Header from './Header';
-import Footer from './Footer';
-import BotonVolver from '../componentes/BotonVolver';
 import IPS from '../config/IPS'; // Importar la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -211,12 +208,6 @@ export default function PantallaSeleccionDispositivoIoT() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Mis Dispositivos IoT" />
-
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/" />
-                    </View>
-
                     <Animated.View
                         style={[
                             styles.devicesSection,
@@ -279,7 +270,6 @@ export default function PantallaSeleccionDispositivoIoT() {
                         )}
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

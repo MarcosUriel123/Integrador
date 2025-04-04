@@ -15,10 +15,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import BotonVolver from '../componentes/BotonVolver';
 import InputApp from './Inputapp';
-import Header from './Header';
-import Footer from './Footer';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -140,12 +137,6 @@ export default function PantallaLogin1() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Iniciar Sesión" showMenu={false} />
-
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/" />
-                    </View>
-
                     <Animated.View
                         style={[
                             styles.loginSection,
@@ -261,8 +252,6 @@ export default function PantallaLogin1() {
                             </View>
                         </View>
                     </Animated.View>
-
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

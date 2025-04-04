@@ -17,8 +17,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-import Header from '../componentes/Header';
-import Footer from '../componentes/Footer';
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -155,7 +153,6 @@ export default function ProductDetail() {
             <SafeAreaView style={styles.screen}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.cardContainer}>
-                        <Header />
                         <Animated.View
                             style={[
                                 styles.errorContainer,
@@ -175,7 +172,6 @@ export default function ProductDetail() {
                                 <Text style={styles.backToProductsText}>Ver catálogo de productos</Text>
                             </TouchableOpacity>
                         </Animated.View>
-                        <Footer />
                     </View>
                 </ScrollView>
             </SafeAreaView>
@@ -187,7 +183,6 @@ export default function ProductDetail() {
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
-                    <Header title="Detalle de Producto" />
 
                     <View style={styles.buttonBackContainer}>
                         <BotonVolver destino="/CatalogoProductosScreen" />
@@ -288,8 +283,6 @@ export default function ProductDetail() {
                             )}
                         </View>
                     </Animated.View>
-
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

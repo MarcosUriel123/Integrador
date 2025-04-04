@@ -14,12 +14,8 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { FontAwesome5 } from '@expo/vector-icons'; // Importamos FontAwesome5 para el ícono de volver
-import Header from './Header';
-import Footer from './Footer';
 import RFIDControlModal from './RFIDControlModal';
 import FingerprintRegistrationModal from './FingerprintRegistrationModal';
-import BotonVolver from './BotonVolver'; // Importar el componente de botón volver
 import IPS from '../config/IPS'; // Importar la configuración de IPs
 
 interface SubUser {
@@ -543,9 +539,6 @@ export default function PantallaRegistroUsuarios() {
         <SafeAreaView style={styles.screen}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.cardContainer}>
-                    {/* Botón Volver - similar al de PantallaLogin1 */}
-                    <BotonVolver destino="/puerta" />
-
 
                     <Text style={styles.title}>Registro de Usuarios</Text>
                     <Text style={styles.subtitle}>Agregue usuarios que pueden acceder a su puerta</Text>

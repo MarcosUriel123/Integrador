@@ -14,8 +14,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import Header from './Header';
-import Footer from './Footer';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Obtener dimensiones de pantalla
@@ -151,7 +149,6 @@ export default function PantallaCarrito() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Mi Carrito" />
 
                     {/* Sección Principal del Carrito */}
                     <Animated.View
@@ -278,7 +275,6 @@ export default function PantallaCarrito() {
                         )}
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

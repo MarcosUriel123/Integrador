@@ -19,9 +19,6 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import BotonVolver from '../componentes/BotonVolver';
-import Header from '../componentes/Header';
-import Footer from '../componentes/Footer';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -299,11 +296,8 @@ export default function PantallaConfigurarDispositivo() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Configuración" />
 
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/puerta" />
-                    </View>
+
 
                     <Animated.View
                         style={[
@@ -469,7 +463,6 @@ export default function PantallaConfigurarDispositivo() {
                         </View>
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
 

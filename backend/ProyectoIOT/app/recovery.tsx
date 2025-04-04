@@ -17,9 +17,8 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
-import BotonVolver from '../componentes/BotonVolver';
-import Header from '../componentes/Header';
-import Footer from '../componentes/Footer';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
+
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
@@ -83,7 +82,9 @@ export default function RecoveryScreen() {
         const loadSecretQuestions = async () => {
             try {
                 setIsLoadingQuestions(true);
-                const response = await axios.get<SecretQuestion[]>('http://192.168.1.68:8082/api/secretQuestions');
+                const response = await axios.get<SecretQuestion[]>(
+                    `${IPS.SERVER_URL}${IPS.API.SECRET_QUESTION_URL}`
+                );
 
                 if (response.status === 200) {
                     const validQuestions = response.data.filter(q => q && q._id !== undefined);
@@ -155,11 +156,14 @@ export default function RecoveryScreen() {
             setMessage('');
 
             // Hacer la solicitud para verificar las credenciales
-            const response = await axios.post('http://192.168.1.68:8082/api/users/verify-recovery', {
-                email,
-                secretQuestion: selectedQuestion,
-                secretAnswer
-            });
+            const response = await axios.post(
+                `${IPS.SERVER_URL}${IPS.API.USER_URL}/verify-recovery`,
+                {
+                    email,
+                    secretQuestion: selectedQuestion,
+                    secretAnswer
+                }
+            );
 
             if (response.status === 200) {
                 setIsVerified(true);
@@ -215,12 +219,15 @@ export default function RecoveryScreen() {
             setMessage('');
 
             // Hacer la solicitud para actualizar la contraseña
-            const response = await axios.post('http://192.168.1.68:8082/api/users/reset-password', {
-                email,
-                secretQuestion: selectedQuestion,
-                secretAnswer,
-                newPassword
-            });
+            const response = await axios.post(
+                `${IPS.SERVER_URL}${IPS.API.USER_URL}/reset-password`,
+                {
+                    email,
+                    secretQuestion: selectedQuestion,
+                    secretAnswer,
+                    newPassword
+                }
+            );
 
             if (response.status === 200) {
                 setMessage('¡Éxito! Tu contraseña ha sido actualizada. Redirigiendo a inicio de sesión...');
@@ -244,11 +251,6 @@ export default function RecoveryScreen() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Recuperar Contraseña" showMenu={false} />
-
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/Login1" />
-                    </View>
 
                     <Animated.View
                         style={[
@@ -460,8 +462,6 @@ export default function RecoveryScreen() {
                             )}
                         </Animated.View>
                     </Animated.View>
-
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

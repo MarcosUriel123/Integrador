@@ -14,8 +14,6 @@ import { useRouter } from 'expo-router';
 import { Entypo, Feather } from '@expo/vector-icons'; // Añadir Feather
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Añadir AsyncStorage
-import Header from './Header';
-import Footer from './Footer';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Interfaz para las FAQs
@@ -130,8 +128,6 @@ export default function PantallaPrincipal() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    {/* Usar el componente Header */}
-                    <Header />
 
                     {/* Sección Hero */}
                     <View style={styles.heroSection}>
@@ -184,8 +180,6 @@ export default function PantallaPrincipal() {
                         )}
                     </View>
 
-                    {/* Usar el componente Footer */}
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

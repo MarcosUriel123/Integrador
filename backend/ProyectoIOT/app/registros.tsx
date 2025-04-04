@@ -14,6 +14,7 @@ import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Entypo, Feather, MaterialIcons } from '@expo/vector-icons';
 import BotonVolver from '../componentes/BotonVolver';
+import IPS from '../config/IPS'; // Importamos la configuración centralizada
 
 interface Registro {
     _id: string;
@@ -31,7 +32,8 @@ export default function PantallaRegistros() {
 
     const fetchRegistros = async () => {
         try {
-            const response = await axios.get('http://192.168.1.68:8082/api/registros/get');
+            // Usar la configuración centralizada en lugar de IPs hardcodeadas
+            const response = await axios.get(`${IPS.SERVER_URL}${IPS.API.REGISTRO_URL}/get`);
             if (response.status === 200) {
                 setRegistros(response.data as Registro[]);
             }
@@ -62,7 +64,8 @@ export default function PantallaRegistros() {
                     onPress: async () => {
                         try {
                             setEliminando(true);
-                            const response = await axios.delete('http://192.168.1.68:8082/api/registros/deleteAll');
+                            // Usar la configuración centralizada en lugar de IPs hardcodeadas
+                            const response = await axios.delete(`${IPS.SERVER_URL}${IPS.API.REGISTRO_URL}/deleteAll`);
                             if (response.status === 200) {
                                 setRegistros([]);
                                 Alert.alert("Éxito", "Todos los registros han sido eliminados");

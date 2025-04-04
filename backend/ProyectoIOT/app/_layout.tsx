@@ -1,9 +1,13 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, AppState, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, AppState, StyleSheet, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { CartProvider } from '../componentes/CartContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext'; // Importar useTheme también
+import HeaderBar from '../components/HeaderBar';
+import TabBar from '../components/TabBar';
+import IPS from '../config/IPS';
 
 // Función para verificar la validez del token
 const verifyToken = async (): Promise<boolean> => {
@@ -11,26 +15,25 @@ const verifyToken = async (): Promise<boolean> => {
     const token = await AsyncStorage.getItem('userToken');
     if (!token) return false;
 
-    // Intentar verificar el token con el backend
-    const response = await axios.post('http://192.168.1.68:8082/api/users/verify-token', {}, {
+    const response = await axios.post(`${IPS.SERVER_URL}${IPS.API.USER_URL}/verify-token`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     return response.status === 200;
   } catch (error) {
     console.log('Token inválido o expirado');
-    // Limpiar datos de sesión si el token no es válido
     await AsyncStorage.multiRemove(['userToken', 'userId', 'user']);
     return false;
   }
 };
 
-export default function Layout() {
+// Componente interno que usa ThemeContext
+const LayoutContent = () => {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isTokenValid, setIsTokenValid] = useState(false);
+  const { isDarkMode } = useTheme(); // Ahora es seguro usar useTheme aquí
 
   useEffect(() => {
-    // Verificar el token al cargar la aplicación
     const checkToken = async () => {
       try {
         const isValid = await verifyToken();
@@ -39,7 +42,6 @@ export default function Layout() {
       } catch (error) {
         console.error('Error verificando token:', error);
       } finally {
-        // Siempre terminar la verificación, independientemente del resultado
         setIsVerifying(false);
       }
     };
@@ -48,10 +50,8 @@ export default function Layout() {
   }, []);
 
   useEffect(() => {
-    // Preparar listener para cambios de estado de la app
     const subscription = AppState.addEventListener('change', nextAppState => {
       console.log('App pasó a segundo plano, limpiando sesión...');
-      // Sin condición - eliminar siempre
       AsyncStorage.removeItem('userToken')
         .then(() => console.log('Token eliminado al cerrar app'))
         .catch(e => console.error('Error al eliminar token:', e));
@@ -62,54 +62,91 @@ export default function Layout() {
     };
   }, []);
 
-  // Mientras verifica, mostrar una pantalla de carga
   if (isVerifying) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={{ marginTop: 20, fontSize: 16 }}>Verificando sesión...</Text>
+      <View style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: isDarkMode ? '#0d1117' : '#f5f5f5'
+      }}>
+        <ActivityIndicator size="large" color={isDarkMode ? '#58a6ff' : '#0969da'} />
+        <Text style={{
+          marginTop: 20,
+          fontSize: 16,
+          color: isDarkMode ? '#c9d1d9' : '#24292f'
+        }}>
+          Verificando sesión...
+        </Text>
       </View>
     );
   }
 
-  // Una vez verificado, renderizar el stack de navegación
   return (
-    <CartProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* La pantalla index ahora redirigirá a principal */}
-        <Stack.Screen name="index" />
+    <View style={styles.container}>
+      <HeaderBar />
+      <View style={styles.content}>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* Rutas existentes */}
+          <Stack.Screen name="index" />
+          <Stack.Screen name="principal" />
+          <Stack.Screen
+            name="login"
+            options={{
+              animation: isTokenValid ? 'slide_from_right' : 'fade'
+            }}
+          />
+          <Stack.Screen name="registro" />
+          <Stack.Screen name="Datosperfil" />
+          <Stack.Screen name="ActualizarPerfil" />
+          <Stack.Screen name="puerta" />
+          <Stack.Screen name="empresa" />
+          <Stack.Screen name="registroDispositivo" />
+          <Stack.Screen name="carrito" />
+          <Stack.Screen
+            name="seleccionDispositivo"
+            options={{
+              title: "Seleccionar Dispositivo",
+            }}
+          />
+          <Stack.Screen name="menu" />
+          <Stack.Screen name="Login1" />
+          <Stack.Screen name="registro1" />
+          <Stack.Screen name="registroUsuarios" />
+          <Stack.Screen name="registros" />
+          <Stack.Screen name="recovery" />
+          <Stack.Screen name="mision" />
+          <Stack.Screen name="vision" />
+          <Stack.Screen name="valores" />
+          <Stack.Screen name="politicas" />
+        </Stack>
+      </View>
+      <TabBar />
+    </View>
+  );
+};
 
-        {/* Pantalla principal como destino inicial */}
-        <Stack.Screen name="principal" />
+// Componente principal que envuelve todo con los providers necesarios
+export default function Layout() {
+  // Usar el tema del sistema solo para la primera carga
+  const colorScheme = useColorScheme();
+  const initialIsDark = colorScheme === 'dark';
 
-        {/* Pantallas de autenticación */}
-        <Stack.Screen name="login" options={{
-          // Podemos usar el estado de token para configurar opciones específicas
-          animation: isTokenValid ? 'slide_from_right' : 'fade'
-        }} />
-        <Stack.Screen name="registro" />
-
-        {/* Pantallas de perfil */}
-        <Stack.Screen name="Datosperfil" />
-        <Stack.Screen name="ActualizarPerfil" />
-
-        {/* Pantallas existentes */}
-        <Stack.Screen name="puerta" />
-        <Stack.Screen name="empresa" />
-
-        {/* Otras pantallas de tu aplicación */}
-        <Stack.Screen name="registroDispositivo" />
-        <Stack.Screen name="carrito" />
-
-        {/* Pantalla de selección de dispositivo */}
-        <Stack.Screen
-          name="seleccionDispositivo"
-          options={{
-            title: "Seleccionar Dispositivo",
-            headerShown: false
-          }}
-        />
-      </Stack>
-    </CartProvider>
+  return (
+    <ThemeProvider>
+      <CartProvider>
+        <LayoutContent />
+      </CartProvider>
+    </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingBottom: 60, // Espacio para el TabBar
+  },
+});

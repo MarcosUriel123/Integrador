@@ -14,9 +14,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Header from '../componentes/Header';
-import Footer from '../componentes/Footer';
-import BotonVolver from '../componentes/BotonVolver';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Obtener dimensiones de pantalla
@@ -165,12 +162,8 @@ export default function PantallaPuerta() {
         <SafeAreaView style={styles.screen}>
             <ScrollView style={{ flex: 1 }}>
                 <View style={styles.cardContainer}>
-                    <Header title="Control de Acceso" />
 
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/devices" />
-                    </View>
-
+   
                     <Animated.View
                         style={[
                             styles.contentSection,
@@ -320,7 +313,6 @@ export default function PantallaPuerta() {
                         </TouchableOpacity>
                     </Animated.View>
 
-                    <Footer />
                 </View>
             </ScrollView>
         </SafeAreaView>

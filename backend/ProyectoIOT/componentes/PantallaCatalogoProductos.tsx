@@ -16,11 +16,8 @@ import {
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import Header from './Header';
-import Footer from './Footer';
 import { useCart } from './CartContext';
 import ProductCard from './ProductCard ';
-import BotonVolver from '../componentes/BotonVolver';
 import IPS from '../config/IPS'; // Importamos la configuración de IPs
 
 // Tipos existentes...
@@ -172,11 +169,7 @@ export default function PantallaCatalogoProductos() {
                 style={{ flex: 1 }}
             >
                 <View style={styles.cardContainer}>
-                    <Header title="Catálogo de Productos" />
 
-                    <View style={styles.buttonBackContainer}>
-                        <BotonVolver destino="/" />
-                    </View>
 
                     <Animated.View
                         style={[
@@ -252,8 +245,6 @@ export default function PantallaCatalogoProductos() {
                             </View>
                         )}
                     </Animated.View>
-
-                    <Footer showContactInfo={true} showTerms={true} />
                 </View>
             </ScrollView>
         </SafeAreaView>
