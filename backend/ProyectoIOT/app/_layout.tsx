@@ -1,3 +1,4 @@
+import React from 'react';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, AppState, StyleSheet, useColorScheme } from 'react-native';
@@ -8,6 +9,7 @@ import { ThemeProvider, useTheme } from '../context/ThemeContext'; // Importar u
 import HeaderBar from '../components/HeaderBar';
 import TabBar from '../components/TabBar';
 import IPS from '../config/IPS';
+import StatusBarManager from '../components/StatusBarManager';
 
 // Función para verificar la validez del token
 const verifyToken = async (): Promise<boolean> => {
@@ -127,13 +129,14 @@ const LayoutContent = () => {
 };
 
 // Componente principal que envuelve todo con los providers necesarios
-export default function Layout() {
+export default function RootLayout() {
   // Usar el tema del sistema solo para la primera carga
   const colorScheme = useColorScheme();
   const initialIsDark = colorScheme === 'dark';
 
   return (
     <ThemeProvider>
+      <StatusBarManager />
       <CartProvider>
         <LayoutContent />
       </CartProvider>

@@ -14,6 +14,11 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    // Colores del sistema
+    statusBar: '#ffffff',
+    statusBarStyle: 'dark-content',
+    navigationBar: '#ffffff',
+    navigationBarStyle: 'dark',
   },
   dark: {
     text: '#ECEDEE',
@@ -22,5 +27,10 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    // Colores del sistema
+    statusBar: '#0d1117',
+    statusBarStyle: 'light-content',
+    navigationBar: '#0d1117',
+    navigationBarStyle: 'light',
   },
 };
