@@ -10,23 +10,25 @@ import {
     SafeAreaView,
     Animated,
     Dimensions,
-    ScrollView
+    ScrollView,
+    StatusBar
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import IPS from '../config/IPS'; // Importar la configuración de IPs
+import IPS from '../config/IPS';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 // Obtener dimensiones de pantalla
 const { width } = Dimensions.get('window');
 
-// Actualizar la interfaz para usar macAddress en lugar de mac
+// Interfaz para dispositivos
 interface DeviceItem {
     _id: string;
     name: string;
     deviceId: string;
-    macAddress: string; // Cambiar mac por macAddress
+    macAddress: string;
     status: string;
     isConfigured: boolean;
     serialNumber?: string;
@@ -36,12 +38,13 @@ interface DeviceItem {
 }
 
 // Componente separado para el ítem del dispositivo
-const DeviceItemComponent = ({ item, index, onPress }: {
+const DeviceItemComponent = ({ item, index, onPress, colors, isDarkMode }: {
     item: DeviceItem,
     index: number,
-    onPress: (device: DeviceItem) => void
+    onPress: (device: DeviceItem) => void,
+    colors: any,
+    isDarkMode: boolean
 }) => {
-    // En un componente separado, PODEMOS usar hooks de forma segura
     const itemAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -71,42 +74,75 @@ const DeviceItemComponent = ({ item, index, onPress }: {
         >
             <TouchableOpacity
                 style={[
-                    styles.deviceCard,
-                    !item.isConfigured && styles.deviceCardNotConfigured
+                    localStyles.deviceCard,
+                    !item.isConfigured && localStyles.deviceCardNotConfigured,
+                    {
+                        backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                        borderColor: colors.border,
+                        borderLeftColor: !item.isConfigured ?
+                            (isDarkMode ? '#DD6B20' : '#DD6B20') :
+                            colors.border
+                    }
                 ]}
                 onPress={() => onPress(item)}
                 activeOpacity={0.7}
             >
-                <View style={styles.deviceIconContainer}>
+                <View style={[
+                    localStyles.deviceIconContainer,
+                    {
+                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                    }
+                ]}>
                     <MaterialCommunityIcons
                         name={item.isConfigured ? "security" : "shield-alert"}
                         size={28}
-                        color={item.isConfigured ? "#3182CE" : "#DD6B20"}
+                        color={item.isConfigured ?
+                            colors.primary :
+                            (isDarkMode ? '#F6AD55' : '#DD6B20')}
                     />
                 </View>
 
-                <View style={styles.deviceInfo}>
-                    <Text style={styles.deviceName}>{item.name || 'Dispositivo sin nombre'}</Text>
-                    <Text style={styles.deviceId}>MAC: {item.macAddress || 'No disponible'}</Text>
+                <View style={localStyles.deviceInfo}>
+                    <Text style={[localStyles.deviceName, { color: colors.text }]}>
+                        {item.name || 'Dispositivo sin nombre'}
+                    </Text>
+                    <Text style={[localStyles.deviceId, { color: colors.secondaryText }]}>
+                        MAC: {item.macAddress || 'No disponible'}
+                    </Text>
 
                     {!item.isConfigured ? (
-                        <View style={styles.configWarning}>
-                            <Ionicons name="warning-outline" size={16} color="#DD6B20" />
-                            <Text style={styles.configWarningText}>Requiere configuración</Text>
+                        <View style={localStyles.configWarning}>
+                            <Ionicons name="warning-outline" size={16}
+                                color={isDarkMode ? '#F6AD55' : '#DD6B20'} />
+                            <Text style={[localStyles.configWarningText, {
+                                color: isDarkMode ? '#F6AD55' : '#DD6B20'
+                            }]}>
+                                Requiere configuración
+                            </Text>
                         </View>
                     ) : (
-                        <View style={styles.configSuccess}>
-                            <Ionicons name="checkmark-circle-outline" size={16} color="#38A169" />
-                            <Text style={styles.configSuccessText}>Listo para usar</Text>
+                        <View style={localStyles.configSuccess}>
+                            <Ionicons name="checkmark-circle-outline" size={16}
+                                color={isDarkMode ? '#68D391' : '#38A169'} />
+                            <Text style={[localStyles.configSuccessText, {
+                                color: isDarkMode ? '#68D391' : '#38A169'
+                            }]}>
+                                Listo para usar
+                            </Text>
                         </View>
                     )}
                 </View>
 
-                <View style={styles.chevronContainer}>
+                <View style={[
+                    localStyles.chevronContainer,
+                    {
+                        backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                    }
+                ]}>
                     <Ionicons
                         name="chevron-forward"
                         size={22}
-                        color="#3182CE"
+                        color={colors.primary}
                     />
                 </View>
             </TouchableOpacity>
@@ -116,6 +152,7 @@ const DeviceItemComponent = ({ item, index, onPress }: {
 
 export default function PantallaSeleccionDispositivoIoT() {
     const router = useRouter();
+    const { colors, styles: baseStyles, isDarkMode } = useAppTheme();
     const [devices, setDevices] = useState<DeviceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -204,56 +241,120 @@ export default function PantallaSeleccionDispositivoIoT() {
         }
     };
 
+    // Obtener colores del gradiente para el botón según el tema
+    const getButtonGradientColors = () => {
+        return isDarkMode
+            ? [colors.primary, '#1e3a8a'] as const // Primario a azul oscuro para tema oscuro
+            : [colors.primary, '#2C5282'] as const; // Primario a azul medio para tema claro
+    };
+
     return (
-        <SafeAreaView style={styles.screen}>
+        <SafeAreaView style={baseStyles.screen}>
+            <StatusBar
+                backgroundColor={isDarkMode ? colors.background : '#FFFFFF'}
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+            />
             <ScrollView style={{ flex: 1 }}>
-                <View style={styles.cardContainer}>
+                <View style={baseStyles.contentContainer}>
+                    {/* Título y subtítulo ahora directamente en el contentContainer sin el contenedor adicional */}
                     <Animated.View
-                        style={[
-                            styles.devicesSection,
-                            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-                        ]}
+                        style={{
+                            opacity: fadeAnim,
+                            transform: [{ scale: scaleAnim }],
+                            marginBottom: 20
+                        }}
                     >
-                        <Text style={styles.sectionTitle}>Mis Dispositivos IoT</Text>
-                        <Text style={styles.sectionSubtitle}>
+                        <Text style={[localStyles.sectionTitle, {
+                            color: colors.text,
+                            borderBottomColor: colors.primary
+                        }]}>
+                            Mis Dispositivos IoT
+                        </Text>
+                        <Text style={[localStyles.sectionSubtitle, { color: colors.secondaryText }]}>
                             Selecciona un dispositivo para configurarlo o controlarlo
                         </Text>
+                    </Animated.View>
 
-                        {loading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color="#3182CE" />
-                                <Text style={styles.loadingText}>Cargando tus dispositivos...</Text>
+                    {loading ? (
+                        <View style={[localStyles.loadingContainer, {
+                            backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                            borderColor: colors.border
+                        }]}>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                            <Text style={[localStyles.loadingText, { color: colors.secondaryText }]}>
+                                Cargando tus dispositivos...
+                            </Text>
+                        </View>
+                    ) : error ? (
+                        <View style={[localStyles.errorContainer, {
+                            backgroundColor: isDarkMode ? 'rgba(229, 62, 62, 0.1)' : '#FFF5F5',
+                            borderLeftColor: isDarkMode ? '#FC8181' : '#FC8181'
+                        }]}>
+                            <Text style={[localStyles.errorText, {
+                                color: isDarkMode ? '#FC8181' : '#C53030'
+                            }]}>
+                                {error}
+                            </Text>
+                            <TouchableOpacity
+                                style={[localStyles.retryButton, {
+                                    backgroundColor: colors.primary,
+                                    shadowOpacity: isDarkMode ? 0.3 : 0.2
+                                }]}
+                                onPress={fetchUserDevices}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={localStyles.retryButtonText}>Reintentar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : devices.length === 0 ? (
+                        <View style={[localStyles.emptyContainer, {
+                            backgroundColor: isDarkMode ? colors.card : '#F7FAFC',
+                        }]}>
+                            <View style={[localStyles.emptyIconContainer, {
+                                backgroundColor: isDarkMode ? colors.primaryLight + '40' : '#EBF8FF'
+                            }]}>
+                                <MaterialCommunityIcons
+                                    name="devices"
+                                    size={64}
+                                    color={colors.primary}
+                                />
                             </View>
-                        ) : error ? (
-                            <View style={styles.errorContainer}>
-                                <Text style={styles.errorText}>{error}</Text>
-                                <TouchableOpacity
-                                    style={styles.retryButton}
-                                    onPress={fetchUserDevices}
-                                    activeOpacity={0.7}
+                            <Text style={[localStyles.emptyTitle, { color: colors.text }]}>
+                                No tienes dispositivos registrados
+                            </Text>
+                            <Text style={[localStyles.emptyText, { color: colors.secondaryText }]}>
+                                Registra un nuevo dispositivo para comenzar a controlarlo desde la aplicación
+                            </Text>
+                            <TouchableOpacity
+                                style={[
+                                    localStyles.buttonContainer,
+                                    {
+                                        shadowOpacity: isDarkMode ? 0.3 : 0.2,
+                                        elevation: isDarkMode ? 4 : 3
+                                    }
+                                ]}
+                                onPress={() => router.push('/registroDispositivo')}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={getButtonGradientColors()}
+                                    style={localStyles.button}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
                                 >
-                                    <Text style={styles.retryButtonText}>Reintentar</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : devices.length === 0 ? (
-                            <View style={styles.emptyContainer}>
-                                <View style={styles.emptyIconContainer}>
-                                    <MaterialCommunityIcons name="devices" size={64} color="#3182CE" />
-                                </View>
-                                <Text style={styles.emptyTitle}>No tienes dispositivos registrados</Text>
-                                <Text style={styles.emptyText}>
-                                    Registra un nuevo dispositivo para comenzar a controlarlo desde la aplicación
-                                </Text>
-                                <TouchableOpacity
-                                    style={styles.registrarButton}
-                                    onPress={() => router.push('/registroDispositivo')}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.registrarButtonText}>Registrar un dispositivo</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : (
-                            // Importante: Usamos el componente DeviceItemComponent aquí
+                                    <Text style={localStyles.buttonText}>
+                                        Registrar un dispositivo
+                                    </Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <Animated.View
+                            style={{
+                                opacity: fadeAnim,
+                                transform: [{ scale: scaleAnim }]
+                            }}
+                        >
                             <FlatList
                                 data={devices}
                                 renderItem={({ item, index }) => (
@@ -261,88 +362,57 @@ export default function PantallaSeleccionDispositivoIoT() {
                                         item={item}
                                         index={index}
                                         onPress={handleDeviceSelect}
+                                        colors={colors}
+                                        isDarkMode={isDarkMode}
                                     />
                                 )}
                                 keyExtractor={(item) => item._id}
-                                contentContainerStyle={styles.listContent}
+                                contentContainerStyle={localStyles.listContent}
                                 scrollEnabled={false}
                             />
-                        )}
-                    </Animated.View>
-
+                        </Animated.View>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        backgroundColor: '#f0f4f8',
-    },
-    cardContainer: {
-        padding: 20,
-    },
-    buttonBackContainer: {
-        marginBottom: 15,
-        marginTop: 5,
-    },
-    devicesSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 24,
-        padding: 22,
-        shadowColor: "rgba(0,0,0,0.2)",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-        marginBottom: 25,
-        marginTop: 15,
-    },
+const localStyles = StyleSheet.create({
     sectionTitle: {
         fontSize: 26,
         fontWeight: 'bold',
         marginBottom: 6,
-        color: '#1A365D',
         borderBottomWidth: 3,
-        borderBottomColor: '#3182CE',
         paddingBottom: 12,
         width: '65%',
         letterSpacing: 0.5,
     },
     sectionSubtitle: {
         fontSize: 16,
-        color: '#4A5568',
         marginBottom: 20,
         marginTop: 6,
     },
     loadingContainer: {
         padding: 40,
         alignItems: 'center',
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         marginVertical: 10,
+        borderWidth: 1,
     },
     loadingText: {
         marginTop: 15,
         fontSize: 16,
-        color: '#4A5568',
         fontWeight: '500',
     },
     errorContainer: {
         padding: 22,
-        backgroundColor: '#FFF5F5',
         borderRadius: 16,
         borderLeftWidth: 5,
-        borderLeftColor: '#FC8181',
         marginVertical: 10,
         alignItems: 'center',
     },
     errorText: {
-        color: '#C53030',
         textAlign: 'center',
         fontSize: 16,
         fontWeight: '500',
@@ -350,13 +420,11 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     retryButton: {
-        backgroundColor: '#3182CE',
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 12,
         shadowColor: "#2C5282",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
     },
@@ -369,12 +437,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 40,
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         paddingHorizontal: 20,
     },
     emptyIconContainer: {
-        backgroundColor: '#EBF8FF',
         width: 100,
         height: 100,
         borderRadius: 50,
@@ -385,29 +451,28 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#2D3748',
         marginBottom: 8,
     },
     emptyText: {
-        color: '#4A5568',
         fontSize: 15,
         marginBottom: 24,
         textAlign: 'center',
         lineHeight: 22,
         maxWidth: '90%',
     },
-    registrarButton: {
-        backgroundColor: '#3182CE',
+    buttonContainer: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 8,
+    },
+    button: {
         paddingVertical: 12,
         paddingHorizontal: 24,
-        borderRadius: 12,
-        shadowColor: "#2C5282",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
+        alignItems: 'center',
     },
-    registrarButtonText: {
+    buttonText: {
         color: '#FFFFFF',
         fontWeight: 'bold',
         fontSize: 16,
@@ -416,7 +481,6 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
     },
     deviceCard: {
-        backgroundColor: '#F7FAFC',
         borderRadius: 16,
         padding: 16,
         marginBottom: 14,
@@ -428,14 +492,11 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
     deviceCardNotConfigured: {
         borderLeftWidth: 4,
-        borderLeftColor: '#DD6B20',
     },
     deviceIconContainer: {
-        backgroundColor: '#EBF8FF',
         width: 50,
         height: 50,
         borderRadius: 25,
@@ -449,13 +510,11 @@ const styles = StyleSheet.create({
     deviceName: {
         fontSize: 17,
         fontWeight: '600',
-        color: '#2D3748',
         marginBottom: 6,
         letterSpacing: 0.2,
     },
     deviceId: {
         fontSize: 14,
-        color: '#718096',
         marginBottom: 6,
     },
     configWarning: {
@@ -464,7 +523,6 @@ const styles = StyleSheet.create({
     },
     configWarningText: {
         fontSize: 14,
-        color: '#DD6B20',
         marginLeft: 5,
         fontWeight: '500',
     },
@@ -474,12 +532,10 @@ const styles = StyleSheet.create({
     },
     configSuccessText: {
         fontSize: 14,
-        color: '#38A169',
         marginLeft: 5,
         fontWeight: '500',
     },
     chevronContainer: {
-        backgroundColor: '#EBF8FF',
         width: 36,
         height: 36,
         borderRadius: 18,

@@ -145,9 +145,9 @@ export default function MenuScreen() {
         // Solo mostrar opciones de dispositivos si el usuario está logueado y tiene un dispositivo
         if (isLoggedIn && hasDevice) {
             baseItems.push({
-                title: 'Dispositivo IoT',
+                title: 'Mis Dispositivos',
                 icon: 'hardware-chip-outline',
-                onPress: () => navigateWithAuthCheck('/puerta'),
+                onPress: () => navigateWithAuthCheck('/devices'),
             });
 
             baseItems.push({
@@ -287,8 +287,8 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        borderRadius: 8,
+        padding: 33,
+        borderRadius: 10,
         marginBottom: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -297,8 +297,8 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     themeToggleButton: {
-        padding: 16,
-        borderRadius: 8,
+        padding: 20,
+        borderRadius: 28,
         marginBottom: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
